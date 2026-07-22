@@ -1,19 +1,52 @@
-import { XCircle } from 'lucide-react'
+import {
+  XCircle,
+} from 'lucide-react'
+
 import {
   useRef,
   useState,
 } from 'react'
 
-import { AtlasCard } from '../../atlas/components/AtlasCard'
-import { PageHeader } from '../../atlas/layout/PageHeader'
-import { SectionHeader } from '../../atlas/layout/SectionHeader'
+import {
+  AtlasCard,
+} from '../../atlas/components/AtlasCard'
 
-import { DataCenterImportPanel } from './components/DataCenterImportPanel'
-import { SalesImportSummary } from './components/SalesImportSummary'
-import { SpreadsheetFileInformation } from './components/SpreadsheetFileInformation'
-import { SpreadsheetPreview } from './components/SpreadsheetPreview'
-import { SpreadsheetStructure } from './components/SpreadsheetStructure'
-import { SpreadsheetUploadArea } from './components/SpreadsheetUploadArea'
+import {
+  PageHeader,
+} from '../../atlas/layout/PageHeader'
+
+import {
+  SectionHeader,
+} from '../../atlas/layout/SectionHeader'
+
+import {
+  DataCatalog,
+} from './components/DataCatalog'
+
+import {
+  DataCenterImportPanel,
+} from './components/DataCenterImportPanel'
+
+import {
+  SalesImportSummary,
+} from './components/SalesImportSummary'
+
+import {
+  SpreadsheetFileInformation,
+} from './components/SpreadsheetFileInformation'
+
+import {
+  SpreadsheetPreview,
+} from './components/SpreadsheetPreview'
+
+import {
+  SpreadsheetStructure,
+} from './components/SpreadsheetStructure'
+
+import {
+  SpreadsheetUploadArea,
+} from './components/SpreadsheetUploadArea'
+
 import {
   acceptedSpreadsheetFormats,
   parseSpreadsheetFile,
@@ -21,7 +54,10 @@ import {
   type ParsedSpreadsheet,
   type SpreadsheetRow,
 } from './parsers/spreadsheetParser'
-import { useDataCenterStore } from './store/dataCenterStore'
+
+import {
+  useDataCenterStore,
+} from './store/dataCenterStore'
 
 export function DataCenterPage() {
   const inputRef =
@@ -35,41 +71,62 @@ export function DataCenterPage() {
 
   const importStatus =
     useDataCenterStore(
-      (state) => state.importStatus,
+      (state) =>
+        state.importStatus,
     )
 
-  const [loadedSpreadsheet, setLoadedSpreadsheet] =
+  const [
+    loadedSpreadsheet,
+    setLoadedSpreadsheet,
+  ] =
     useState<ParsedSpreadsheet | null>(
       null,
     )
 
-  const [selectedSheet, setSelectedSheet] =
-    useState('')
+  const [
+    selectedSheet,
+    setSelectedSheet,
+  ] = useState('')
 
-  const [rows, setRows] = useState<
-    SpreadsheetRow[]
-  >([])
+  const [
+    rows,
+    setRows,
+  ] =
+    useState<SpreadsheetRow[]>([])
 
-  const [columns, setColumns] =
+  const [
+    columns,
+    setColumns,
+  ] =
     useState<string[]>([])
 
-  const [isLoading, setIsLoading] =
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
     useState(false)
 
   const [
     isProcessingSheet,
     setIsProcessingSheet,
-  ] = useState(false)
+  ] =
+    useState(false)
 
-  const [error, setError] =
+  const [
+    error,
+    setError,
+  ] =
     useState<string | null>(null)
 
   const isImporting =
-    importStatus === 'validating' ||
-    importStatus === 'processing'
+    importStatus ===
+      'validating' ||
+    importStatus ===
+      'processing'
 
   async function processSheet(
-    spreadsheet: ParsedSpreadsheet,
+    spreadsheet:
+      ParsedSpreadsheet,
     sheetName: string,
   ) {
     setIsProcessingSheet(true)
@@ -77,9 +134,14 @@ export function DataCenterPage() {
     resetCurrentImport()
 
     try {
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, 50)
-      })
+      await new Promise<void>(
+        (resolve) => {
+          window.setTimeout(
+            resolve,
+            50,
+          )
+        },
+      )
 
       const parsedSheet =
         parseSpreadsheetSheet(
@@ -88,7 +150,9 @@ export function DataCenterPage() {
         )
 
       setRows(parsedSheet.rows)
-      setColumns(parsedSheet.columns)
+      setColumns(
+        parsedSheet.columns,
+      )
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
@@ -103,7 +167,9 @@ export function DataCenterPage() {
     }
   }
 
-  async function handleFile(file: File) {
+  async function handleFile(
+    file: File,
+  ) {
     setError(null)
     setIsLoading(true)
 
@@ -115,7 +181,9 @@ export function DataCenterPage() {
 
     try {
       const spreadsheet =
-        await parseSpreadsheetFile(file)
+        await parseSpreadsheetFile(
+          file,
+        )
 
       const firstSheet =
         spreadsheet.sheetNames[0]
@@ -126,8 +194,13 @@ export function DataCenterPage() {
         )
       }
 
-      setLoadedSpreadsheet(spreadsheet)
-      setSelectedSheet(firstSheet)
+      setLoadedSpreadsheet(
+        spreadsheet,
+      )
+
+      setSelectedSheet(
+        firstSheet,
+      )
 
       await processSheet(
         spreadsheet,
@@ -178,8 +251,10 @@ export function DataCenterPage() {
       <PageHeader
         eyebrow="Data Operations"
         title="Data Center"
-        description="Carga, valida y prepara archivos comerciales para PM Intelligence."
+        description="Administra, carga y valida las fuentes de información de PM Intelligence."
       />
+
+      <DataCatalog />
 
       <AtlasCard className="p-6">
         <SectionHeader
@@ -237,18 +312,26 @@ export function DataCenterPage() {
             sheetNames={
               loadedSpreadsheet.sheetNames
             }
-            selectedSheet={selectedSheet}
+            selectedSheet={
+              selectedSheet
+            }
             columns={columns}
             isProcessingSheet={
               isProcessingSheet
             }
-            isImporting={isImporting}
-            onSheetChange={(sheetName) =>
+            isImporting={
+              isImporting
+            }
+            onSheetChange={(
+              sheetName,
+            ) =>
               void handleSheetChange(
                 sheetName,
               )
             }
-            onRemoveFile={resetImport}
+            onRemoveFile={
+              resetImport
+            }
           />
 
           {!isProcessingSheet && (
@@ -265,7 +348,9 @@ export function DataCenterPage() {
                 fileSize={
                   loadedSpreadsheet.fileSize
                 }
-                sheetName={selectedSheet}
+                sheetName={
+                  selectedSheet
+                }
                 rows={rows}
                 columns={columns}
               />

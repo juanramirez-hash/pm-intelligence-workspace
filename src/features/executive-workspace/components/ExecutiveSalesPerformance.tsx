@@ -7,8 +7,10 @@ import {
   TrendingUp,
 } from 'lucide-react'
 
-import type { SalesComparisonMetric } from '../analytics/executiveSalesAnalytics'
-import { useExecutiveDashboard } from '../hooks/useExecutiveDashboard'
+import type {
+  RevenueComparisonMetric,
+  RevenueMetrics,
+} from '../../../core/business/metrics/revenueMetrics'
 
 type PerformanceLevel =
   | 'excellent'
@@ -27,6 +29,16 @@ interface PerformanceStatus {
   iconClasses: string
   barClasses: string
   cardClasses: string
+}
+
+interface ExecutiveSalesPerformanceProps {
+  revenue: RevenueMetrics | null
+}
+
+const emptyComparison: RevenueComparisonMetric = {
+  currentValue: null,
+  previousValue: null,
+  variationPercentage: null,
 }
 
 const currencyFormatter =
@@ -197,10 +209,14 @@ function getIntensityPercentage(
     return 0
   }
 
-  const absoluteValue = Math.abs(value)
+  const absoluteValue =
+    Math.abs(value)
 
   return Math.min(
-    Math.max(absoluteValue * 2.5, 8),
+    Math.max(
+      absoluteValue * 2.5,
+      8,
+    ),
     100,
   )
 }
@@ -212,7 +228,10 @@ function VariationIcon({
   value: number | null
   size?: number
 }) {
-  if (value === null || value === 0) {
+  if (
+    value === null ||
+    value === 0
+  ) {
     return (
       <Minus
         size={size}
@@ -242,7 +261,7 @@ interface ComparisonCardProps {
   title: string
   shortTitle: string
   badge: string
-  metric: SalesComparisonMetric
+  metric: RevenueComparisonMetric
   description: string
 }
 
@@ -381,36 +400,59 @@ function ComparisonCard({
   )
 }
 
-export function ExecutiveSalesPerformance() {
-  const {
-    salesAnalytics,
-    normalizedSalesCount,
-  } = useExecutiveDashboard()
+export function ExecutiveSalesPerformance({
+  revenue,
+}: ExecutiveSalesPerformanceProps) {
+  const hasData =
+    revenue?.hasData ?? false
+
+  const currentMonthSales =
+    revenue?.currentMonthSales ??
+    null
+
+  const latestPeriodLabel =
+    revenue?.latestPeriodLabel ??
+    null
+
+  const monthComparison =
+    revenue?.monthComparison ??
+    emptyComparison
+
+  const quarterComparison =
+    revenue?.quarterComparison ??
+    emptyComparison
+
+  const yearComparison =
+    revenue?.yearComparison ??
+    emptyComparison
 
   const monthDescription =
-    salesAnalytics.hasData &&
-    salesAnalytics.latestPeriodLabel &&
-    salesAnalytics.previousMonthLabel
-      ? `${salesAnalytics.latestPeriodLabel} vs. ${salesAnalytics.previousMonthLabel}`
+    hasData &&
+    latestPeriodLabel &&
+    revenue?.previousMonthLabel
+      ? `${latestPeriodLabel} vs. ${revenue.previousMonthLabel}`
       : 'Último mes contra mes anterior.'
 
   const quarterDescription =
-    salesAnalytics.hasData &&
-    salesAnalytics.currentQuarterLabel &&
-    salesAnalytics.previousQuarterLabel
-      ? `${salesAnalytics.currentQuarterLabel} vs. ${salesAnalytics.previousQuarterLabel}`
-      : 'Periodo comparable contra trimestre anterior.'
+    revenue?.quarterComparisonDetail ??
+    (
+      hasData &&
+      revenue?.currentQuarterLabel &&
+      revenue?.previousQuarterLabel
+        ? `${revenue.currentQuarterLabel} vs. ${revenue.previousQuarterLabel}`
+        : 'Periodo comparable contra trimestre anterior.'
+    )
 
   const yearDescription =
-    salesAnalytics.hasData &&
-    salesAnalytics.latestPeriodLabel &&
-    salesAnalytics.previousYear
-      ? `${salesAnalytics.latestPeriodLabel} vs. el mismo mes de ${salesAnalytics.previousYear}`
+    hasData &&
+    latestPeriodLabel &&
+    revenue?.previousYear
+      ? `${latestPeriodLabel} vs. el mismo mes de ${revenue.previousYear}`
       : 'Mismo mes contra el año anterior.'
 
   const monthStatus =
     getPerformanceStatus(
-      salesAnalytics.monthComparison
+      monthComparison
         .variationPercentage,
     )
 
@@ -431,7 +473,7 @@ export function ExecutiveSalesPerformance() {
           </p>
         </div>
 
-        {salesAnalytics.hasData ? (
+        {hasData ? (
           <div
             className={[
               'inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold',
@@ -476,13 +518,13 @@ export function ExecutiveSalesPerformance() {
 
               <p className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
                 {formatCompactCurrency(
-                  salesAnalytics.currentMonthSales,
+                  currentMonthSales,
                 )}
               </p>
 
               <p className="mt-2 text-sm font-medium text-slate-300">
                 {formatCurrency(
-                  salesAnalytics.currentMonthSales,
+                  currentMonthSales,
                 )}
               </p>
             </div>
@@ -496,18 +538,18 @@ export function ExecutiveSalesPerformance() {
                     </p>
 
                     <p className="mt-1 text-lg font-semibold text-white">
-                      {salesAnalytics.latestPeriodLabel ??
+                      {latestPeriodLabel ??
                         'Sin datos disponibles'}
                     </p>
                   </div>
 
-                  {salesAnalytics.hasData ? (
+                  {hasData ? (
                     <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
-                      {salesAnalytics.monthComparison
+                      {monthComparison
                         .variationPercentage !==
                       null ? (
                         <>
-                          {salesAnalytics.monthComparison
+                          {monthComparison
                             .variationPercentage >=
                           0 ? (
                             <TrendingUp
@@ -544,9 +586,7 @@ export function ExecutiveSalesPerformance() {
           title="Mes contra mes"
           shortTitle="Variación mensual"
           badge="M vs M"
-          metric={
-            salesAnalytics.monthComparison
-          }
+          metric={monthComparison}
           description={monthDescription}
         />
 
@@ -554,9 +594,7 @@ export function ExecutiveSalesPerformance() {
           title="Trimestre contra trimestre"
           shortTitle="Variación trimestral"
           badge="Q vs Q"
-          metric={
-            salesAnalytics.quarterComparison
-          }
+          metric={quarterComparison}
           description={quarterDescription}
         />
 
@@ -564,26 +602,10 @@ export function ExecutiveSalesPerformance() {
           title="Año contra año"
           shortTitle="Variación anual"
           badge="Y vs Y"
-          metric={
-            salesAnalytics.yearComparison
-          }
+          metric={yearComparison}
           description={yearDescription}
         />
       </div>
-
-      {normalizedSalesCount > 0 ? (
-        <div className="mt-4 flex justify-end">
-          <p className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-400 shadow-sm">
-            Calculado con{' '}
-            <span className="font-semibold text-slate-600">
-              {normalizedSalesCount.toLocaleString(
-                'es-MX',
-              )}
-            </span>{' '}
-            registros normalizados
-          </p>
-        </div>
-      ) : null}
     </section>
   )
 }

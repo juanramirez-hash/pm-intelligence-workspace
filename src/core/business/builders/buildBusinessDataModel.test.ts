@@ -1,0 +1,342 @@
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest'
+
+import type {
+  NormalizedSalesRow,
+} from '../../../features/data-center/importers/sales/salesTypes'
+
+import {
+  buildBusinessDataModel,
+} from './buildBusinessDataModel'
+
+function createTestRows():
+  NormalizedSalesRow[] {
+  return [
+    {
+      date: '2026-01-05',
+      brand: 'UNV',
+      revenue: 100,
+      grossProfit: 30,
+
+      customerId: '100001',
+      customerName:
+        'Integrador Uno',
+
+      model: 'IPC-A',
+      quantity: 2,
+
+      documentNumber: 'F001',
+      location: 'CDMX',
+      salesRep: 'Ana',
+      currency: 'MXN',
+    },
+
+    {
+      date: '2026-01-20',
+      brand: 'UNV',
+      revenue: 200,
+      grossProfit: 60,
+
+      customerId: '100001',
+      customerName:
+        'Integrador Uno',
+
+      model: 'IPC-B',
+      quantity: 1,
+
+      documentNumber: 'F002',
+      location: 'CDMX',
+      salesRep: 'Ana',
+      currency: 'MXN',
+    },
+
+    {
+      date: '2026-02-10',
+      brand: 'AJAX',
+      revenue: 300,
+      grossProfit: 90,
+
+      customerId: '100002',
+      customerName:
+        'Integrador Dos',
+
+      model: 'HUB-2',
+      quantity: 3,
+
+      documentNumber: 'F003',
+      location: 'QRO',
+      salesRep: 'Luis',
+      currency: 'USD',
+    },
+
+    {
+      date: '2026-02-12',
+      brand: 'UNV',
+      revenue: 50,
+      grossProfit: 15,
+
+      customerId: '100001',
+      customerName:
+        'Integrador Uno',
+
+      model: 'IPC-A',
+      quantity: 1,
+
+      documentNumber: 'F001',
+      location: 'CDMX',
+      salesRep: 'Ana',
+      currency: 'MXN',
+    },
+
+    {
+      date: '2026-02-15',
+      brand: '',
+      revenue: 999,
+      grossProfit: 999,
+
+      customerId: '100003',
+      customerName:
+        'Registro inválido',
+
+      model: 'INVALIDO',
+      quantity: 99,
+
+      documentNumber: 'F999',
+      location: 'CDMX',
+      salesRep: 'Ana',
+      currency: 'MXN',
+    },
+  ]
+}
+
+describe(
+  'buildBusinessDataModel',
+  () => {
+    it(
+      'calcula correctamente los totales generales',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        expect(
+          model.totals.revenue,
+        ).toBe(650)
+
+        expect(
+          model.totals.grossProfit,
+        ).toBe(195)
+
+        expect(
+          model.totals.quantity,
+        ).toBe(7)
+
+        expect(
+          model.totals.documents,
+        ).toBe(3)
+      },
+    )
+
+    it(
+      'crea las entidades únicas del modelo',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        expect(
+          model.customers.size,
+        ).toBe(2)
+
+        expect(
+          model.brands.size,
+        ).toBe(2)
+
+        expect(
+          model.products.size,
+        ).toBe(3)
+
+        expect(
+          model.periods.size,
+        ).toBe(2)
+      },
+    )
+
+    it(
+      'consolida correctamente la información de cada cliente',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        const customer =
+          model.customers.get(
+            '100001',
+          )
+
+        expect(
+          customer,
+        ).toBeDefined()
+
+        expect(
+          customer?.name,
+        ).toBe('Integrador Uno')
+
+        expect(
+          customer?.revenue,
+        ).toBe(350)
+
+        expect(
+          customer?.grossProfit,
+        ).toBe(105)
+
+        expect(
+          customer?.quantity,
+        ).toBe(4)
+
+        expect(
+          customer?.documents,
+        ).toBe(2)
+
+        expect(
+          customer?.firstPurchase,
+        ).toBe('2026-01-05')
+
+        expect(
+          customer?.lastPurchase,
+        ).toBe('2026-02-12')
+
+        expect(
+          customer?.brands,
+        ).toEqual(
+          new Set([
+            'UNV',
+          ]),
+        )
+
+        expect(
+          customer?.products,
+        ).toEqual(
+          new Set([
+            'IPC-A',
+            'IPC-B',
+          ]),
+        )
+
+        expect(
+          customer?.locations,
+        ).toEqual(
+          new Set([
+            'CDMX',
+          ]),
+        )
+      },
+    )
+
+    it(
+      'consolida correctamente los periodos mensuales',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        const january =
+          model.periods.get(
+            '2026-01',
+          )
+
+        const february =
+          model.periods.get(
+            '2026-02',
+          )
+
+        expect(
+          january?.revenue,
+        ).toBe(300)
+
+        expect(
+          january?.grossProfit,
+        ).toBe(90)
+
+        expect(
+          january?.quantity,
+        ).toBe(3)
+
+        expect(
+          january?.documents,
+        ).toBe(2)
+
+        expect(
+          february?.revenue,
+        ).toBe(350)
+
+        expect(
+          february?.grossProfit,
+        ).toBe(105)
+
+        expect(
+          february?.quantity,
+        ).toBe(4)
+
+        expect(
+          february?.documents,
+        ).toBe(2)
+      },
+    )
+
+    it(
+      'ignora filas sin fecha válida o sin marca',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        expect(
+          model.processedRows,
+        ).toBe(4)
+
+        expect(
+          model.ignoredRows,
+        ).toBe(1)
+
+        expect(
+          model.documentNumbers.has(
+            'F999',
+          ),
+        ).toBe(false)
+
+        expect(
+          model.products.has(
+            'INVALIDO',
+          ),
+        ).toBe(false)
+      },
+    )
+
+    it(
+      'determina correctamente el rango total de fechas',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        expect(
+          model.periodStart,
+        ).toBe('2026-01-05')
+
+        expect(
+          model.periodEnd,
+        ).toBe('2026-02-12')
+      },
+    )
+  },
+)

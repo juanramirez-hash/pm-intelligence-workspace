@@ -1,48 +1,52 @@
 import {
   AlertTriangle,
-  ArrowRight,
-  Building2,
   CheckCircle2,
   CircleDashed,
   Clock3,
-  Crosshair,
   Database,
-  DollarSign,
-  PackageSearch,
   RefreshCw,
-  ShoppingCart,
   TrendingUp,
   Users,
 } from 'lucide-react'
 
-import { useDataCenterStore } from '../data-center/store/dataCenterStore'
-import { ExecutiveSalesPerformance } from './components/ExecutiveSalesPerformance'
+import {
+  mapDatasetHealth,
+} from './adapters/datasetHealthAdapter'
 
-type DatasetStatus =
-  | 'ready'
-  | 'pending'
-  | 'warning'
+import type {
+  DatasetHealthStatus,
+} from './adapters/datasetHealthAdapter'
 
-interface DatasetHealthItem {
-  id: string
-  name: string
-  description: string
-  status: DatasetStatus
-  statusLabel: string
-  updatedAt: string
-  icon: typeof Database
-}
+import {
+  ExecutiveAttentionCenter,
+} from './components/ExecutiveAttentionCenter'
+
+import {
+  ExecutiveSalesPerformance,
+} from './components/ExecutiveSalesPerformance'
+
+import {
+  useExecutiveWorkspace,
+} from './hooks/useExecutiveWorkspace'
+
+import {
+  ExecutiveBrandOverview,
+} from './components/ExecutiveBrandOverview'
 
 function formatDateTime(
   value: string | null,
-) {
+): string {
   if (!value) {
     return 'Sin sincronizaciones'
   }
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return 'Fecha no disponible'
   }
 
@@ -57,7 +61,7 @@ function formatDateTime(
 
 function getImportStatusLabel(
   importStatus: string,
-) {
+): string {
   switch (importStatus) {
     case 'completed':
       return 'Sistema listo para análisis'
@@ -79,7 +83,7 @@ function getImportStatusLabel(
 function DatasetStatusIcon({
   status,
 }: {
-  status: DatasetStatus
+  status: DatasetHealthStatus
 }) {
   if (status === 'ready') {
     return (
@@ -111,14 +115,16 @@ function DatasetStatusIcon({
 }
 
 function getDatasetStatusClasses(
-  status: DatasetStatus,
+  status: DatasetHealthStatus,
 ) {
   if (status === 'ready') {
     return {
       card:
         'border-emerald-200 bg-emerald-50/40 before:bg-emerald-500',
+
       icon:
         'bg-emerald-100 text-emerald-700',
+
       badge:
         'bg-emerald-100 text-emerald-700',
     }
@@ -128,8 +134,10 @@ function getDatasetStatusClasses(
     return {
       card:
         'border-amber-200 bg-amber-50/40 before:bg-amber-500',
+
       icon:
         'bg-amber-100 text-amber-700',
+
       badge:
         'bg-amber-100 text-amber-700',
     }
@@ -138,119 +146,32 @@ function getDatasetStatusClasses(
   return {
     card:
       'border-slate-200 bg-white before:bg-slate-300',
+
     icon:
       'bg-slate-100 text-slate-500',
+
     badge:
       'bg-slate-100 text-slate-500',
   }
 }
 
 export function ExecutiveWorkspacePage() {
-  const importStatus =
-    useDataCenterStore(
-      (state) =>
-        state.importStatus,
+  const executive =
+    useExecutiveWorkspace()
+
+  const datasets =
+    mapDatasetHealth(
+      executive.datasets,
     )
 
-  const lastImportedAt =
-    useDataCenterStore(
-      (state) =>
-        state.lastImportedAt,
-    )
-
-  const salesSummary =
-    useDataCenterStore(
-      (state) =>
-        state.salesSummary,
-    )
-
-  const hasSalesData =
-    salesSummary !== null
-
-  const datasets: DatasetHealthItem[] = [
-    {
-      id: 'sales',
-      name: 'Ventas',
-      description:
-        'Ventas, clientes, productos, marcas y rentabilidad.',
-      status: hasSalesData
-        ? 'ready'
-        : 'pending',
-      statusLabel: hasSalesData
-        ? 'Actualizado'
-        : 'Sin datos',
-      updatedAt: hasSalesData
-        ? formatDateTime(
-            lastImportedAt,
-          )
-        : 'Pendiente de carga',
-      icon: TrendingUp,
-    },
-    {
-      id: 'objectives',
-      name: 'Objetivos',
-      description:
-        'Cuotas mensuales y objetivos comerciales anuales.',
-      status: 'pending',
-      statusLabel: 'Sin datos',
-      updatedAt:
-        'Pendiente de desarrollo',
-      icon: Crosshair,
-    },
-    {
-      id: 'inventory',
-      name: 'Inventario',
-      description:
-        'Existencias, rotación, cobertura y riesgo de inventario.',
-      status: 'pending',
-      statusLabel: 'Sin datos',
-      updatedAt:
-        'Pendiente de desarrollo',
-      icon: PackageSearch,
-    },
-    {
-      id: 'purchasing',
-      name: 'Compras',
-      description:
-        'Órdenes de compra, solicitudes y mercancía en tránsito.',
-      status: 'pending',
-      statusLabel: 'Sin datos',
-      updatedAt:
-        'Pendiente de desarrollo',
-      icon: ShoppingCart,
-    },
-    {
-      id: 'pricing',
-      name: 'Pricing',
-      description:
-        'Costos, precios, descuentos y niveles de rentabilidad.',
-      status: 'pending',
-      statusLabel: 'Sin datos',
-      updatedAt:
-        'Pendiente de desarrollo',
-      icon: DollarSign,
-    },
-  ]
-
-  const readyDatasets =
-    datasets.filter(
-      (dataset) =>
-        dataset.status === 'ready',
-    ).length
-
-  const totalDatasets =
-    datasets.length
-
-  const coveragePercentage =
-    Math.round(
-      (readyDatasets /
-        totalDatasets) *
-        100,
-    )
-
-  const systemReady =
-    importStatus === 'completed' &&
-    hasSalesData
+  const {
+    readyDatasets,
+    totalDatasets,
+    coveragePercentage,
+    systemReady,
+    importStatus,
+    lastImportedAt,
+  } = executive.health
 
   return (
     <div className="space-y-10">
@@ -277,6 +198,7 @@ export function ExecutiveWorkspacePage() {
         <div
           className={[
             'inline-flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm',
+
             systemReady
               ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
               : 'border-amber-200 bg-amber-50 text-amber-700',
@@ -294,108 +216,27 @@ export function ExecutiveWorkspacePage() {
         </div>
       </section>
 
-      <ExecutiveSalesPerformance />
+      <ExecutiveSalesPerformance
+        revenue={
+          executive.metrics?.revenue ??
+          null
+        }
+      />
 
-      <section>
-        <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">
-            Centro de atención
-          </p>
+      <ExecutiveAttentionCenter
+        customers={
+          executive.customers
+        }
+        brands={
+          executive.brands
+        }
+      />
 
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
-            Prioridades que requieren
-            revisión
-          </h2>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <article className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-start justify-between">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <Building2
-                  size={21}
-                />
-              </div>
-
-              <ArrowRight
-                className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-blue-600"
-                size={19}
-              />
-            </div>
-
-            <p className="mt-5 text-sm font-medium text-slate-500">
-              Marcas
-            </p>
-
-            <p className="mt-1 text-2xl font-semibold text-slate-950">
-              Pendiente
-            </p>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Detectaremos marcas con
-              caída, bajo margen o
-              desviación contra objetivo.
-            </p>
-          </article>
-
-          <article className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-start justify-between">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <Users size={21} />
-              </div>
-
-              <ArrowRight
-                className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-emerald-600"
-                size={19}
-              />
-            </div>
-
-            <p className="mt-5 text-sm font-medium text-slate-500">
-              Clientes
-            </p>
-
-            <p className="mt-1 text-2xl font-semibold text-slate-950">
-              Pendiente
-            </p>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Identificaremos clientes en
-              caída, inactivos y con
-              oportunidad de recuperación.
-            </p>
-          </article>
-
-          <article className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-start justify-between">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <AlertTriangle
-                  size={21}
-                />
-              </div>
-
-              <ArrowRight
-                className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-amber-600"
-                size={19}
-              />
-            </div>
-
-            <p className="mt-5 text-sm font-medium text-slate-500">
-              Productos
-            </p>
-
-            <p className="mt-1 text-2xl font-semibold text-slate-950">
-              Pendiente
-            </p>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Señalaremos productos con
-              caída, aceleración o
-              comportamiento comercial
-              atípico.
-            </p>
-          </article>
-        </div>
-      </section>
+      <ExecutiveBrandOverview
+         brands={
+            executive.brands
+        }
+      />
 
       <section>
         <div className="mb-4">
@@ -432,25 +273,7 @@ export function ExecutiveWorkspacePage() {
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex min-h-72 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
-              <div className="text-center">
-                <Building2
-                  className="mx-auto text-slate-300"
-                  size={34}
-                />
 
-                <h3 className="mt-4 font-semibold text-slate-800">
-                  Top 10 marcas
-                </h3>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  Ranking por venta del
-                  periodo seleccionado.
-                </p>
-              </div>
-            </div>
-          </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex min-h-72 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
@@ -531,9 +354,7 @@ export function ExecutiveWorkspacePage() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                  <Database
-                    size={19}
-                  />
+                  <Database size={19} />
                 </div>
 
                 <div>
@@ -558,7 +379,8 @@ export function ExecutiveWorkspacePage() {
               <div
                 className="h-full rounded-full bg-blue-500 transition-all duration-700"
                 style={{
-                  width: `${coveragePercentage}%`,
+                  width:
+                    `${coveragePercentage}%`,
                 }}
               />
             </div>
@@ -574,14 +396,13 @@ export function ExecutiveWorkspacePage() {
               <div
                 className={[
                   'flex size-10 items-center justify-center rounded-xl',
+
                   systemReady
                     ? 'bg-emerald-50 text-emerald-600'
                     : 'bg-amber-50 text-amber-600',
                 ].join(' ')}
               >
-                <RefreshCw
-                  size={19}
-                />
+                <RefreshCw size={19} />
               </div>
 
               <div>
@@ -600,6 +421,7 @@ export function ExecutiveWorkspacePage() {
             <div
               className={[
                 'mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold',
+
                 systemReady
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                   : 'border-amber-200 bg-amber-50 text-amber-700',
@@ -638,6 +460,7 @@ export function ExecutiveWorkspacePage() {
                   key={dataset.id}
                   className={[
                     'relative overflow-hidden rounded-2xl border p-5 shadow-sm transition before:absolute before:inset-y-0 before:left-0 before:w-1 hover:-translate-y-0.5 hover:shadow-md',
+
                     classes.card,
                   ].join(' ')}
                 >
@@ -645,6 +468,7 @@ export function ExecutiveWorkspacePage() {
                     <div
                       className={[
                         'flex size-10 shrink-0 items-center justify-center rounded-xl',
+
                         classes.icon,
                       ].join(' ')}
                     >
@@ -657,6 +481,7 @@ export function ExecutiveWorkspacePage() {
                     <div
                       className={[
                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+
                         classes.badge,
                       ].join(' ')}
                     >

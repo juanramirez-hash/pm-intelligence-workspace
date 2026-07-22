@@ -1,0 +1,774 @@
+import type {
+  BusinessBrand,
+} from '../../business/entities/brand'
+
+import type {
+  BusinessBrandPeriod,
+} from '../../business/entities/brandPeriod'
+
+import type {
+  BusinessDataModel,
+  BusinessPeriod,
+} from '../../business/models/businessDataModel'
+
+import type {
+  BrandIntelligenceItem,
+  BrandIntelligenceSummary,
+  BrandLifecycleStatus,
+  BrandPeriodMetrics,
+  BrandTrendStatus,
+} from './brandIntelligenceTypes'
+
+export interface BrandIntelligenceOptions {
+  stableVariationThreshold?: number
+  attentionDeclineThreshold?: number
+}
+
+const DEFAULT_STABLE_THRESHOLD = 0.05
+const DEFAULT_ATTENTION_DECLINE_THRESHOLD = -0.15
+
+function createEmptyPeriodMetrics():
+  BrandPeriodMetrics {
+  return {
+    revenue: 0,
+    grossProfit: 0,
+    quantity: 0,
+    documents: 0,
+
+    customers: 0,
+    products: 0,
+
+    margin: null,
+  }
+}
+
+function buildPeriodMetrics(
+  brandPeriod:
+    BusinessBrandPeriod | undefined,
+): BrandPeriodMetrics {
+  if (!brandPeriod) {
+    return createEmptyPeriodMetrics()
+  }
+
+  return {
+    revenue:
+      brandPeriod.revenue,
+
+    grossProfit:
+      brandPeriod.grossProfit,
+
+    quantity:
+      brandPeriod.quantity,
+
+    documents:
+      brandPeriod.documents,
+
+    customers:
+      brandPeriod.customers.size,
+
+    products:
+      brandPeriod.products.size,
+
+    margin:
+      getMargin(
+        brandPeriod.revenue,
+        brandPeriod.grossProfit,
+      ),
+  }
+}
+
+function getMargin(
+  revenue: number,
+  grossProfit: number,
+): number | null {
+  if (revenue === 0) {
+    return null
+  }
+
+  return grossProfit / revenue
+}
+
+function getVariationPercentage(
+  currentValue: number,
+  previousValue: number,
+): number | null {
+  if (previousValue === 0) {
+    return currentValue === 0
+      ? 0
+      : null
+  }
+
+  return (
+    currentValue -
+    previousValue
+  ) / previousValue
+}
+
+function getBrandPeriodId(
+  periodId: string,
+  brandId: string,
+): string {
+  return `${periodId}::${brandId}`
+}
+
+function getPreviousPeriodId(
+  period: BusinessPeriod,
+): string {
+  const previousMonthDate =
+    new Date(
+      Date.UTC(
+        period.year,
+        period.month - 2,
+        1,
+      ),
+    )
+
+  const year =
+    previousMonthDate
+      .getUTCFullYear()
+
+  const month =
+    String(
+      previousMonthDate
+        .getUTCMonth() + 1,
+    ).padStart(2, '0')
+
+  return `${year}-${month}`
+}
+
+function getLatestPeriod(
+  model: BusinessDataModel,
+): BusinessPeriod | null {
+  let latestPeriod:
+    BusinessPeriod | null = null
+
+  for (
+    const period of
+      model.periods.values()
+  ) {
+    if (
+      !latestPeriod ||
+      period.id >
+        latestPeriod.id
+    ) {
+      latestPeriod =
+        period
+    }
+  }
+
+  return latestPeriod
+}
+
+function hasBrandActivity(
+  metrics: BrandPeriodMetrics,
+): boolean {
+  return (
+    metrics.revenue !== 0 ||
+    metrics.grossProfit !== 0 ||
+    metrics.quantity !== 0 ||
+    metrics.documents > 0 ||
+    metrics.customers > 0 ||
+    metrics.products > 0
+  )
+}
+
+function hasActivityBeforePeriod(
+  model: BusinessDataModel,
+  brandId: string,
+  periodId: string,
+): boolean {
+  for (
+    const brandPeriod of
+      model.brandPeriods.values()
+  ) {
+    if (
+      brandPeriod.brandId ===
+        brandId &&
+      brandPeriod.periodId <
+        periodId &&
+      (
+        brandPeriod.revenue !== 0 ||
+        brandPeriod.grossProfit !== 0 ||
+        brandPeriod.quantity !== 0 ||
+        brandPeriod.documents > 0
+      )
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function determineLifecycleStatus(
+  currentPeriod:
+    BrandPeriodMetrics,
+  previousPeriod:
+    BrandPeriodMetrics,
+  hadActivityBeforePreviousPeriod:
+    boolean,
+): BrandLifecycleStatus {
+  const hasCurrentActivity =
+    hasBrandActivity(
+      currentPeriod,
+    )
+
+  const hasPreviousActivity =
+    hasBrandActivity(
+      previousPeriod,
+    )
+
+  if (
+    hasCurrentActivity &&
+    !hasPreviousActivity &&
+    !hadActivityBeforePreviousPeriod
+  ) {
+    return 'new'
+  }
+
+  if (
+    hasCurrentActivity &&
+    !hasPreviousActivity &&
+    hadActivityBeforePreviousPeriod
+  ) {
+    return 'recovered'
+  }
+
+  if (
+    !hasCurrentActivity &&
+    hasPreviousActivity
+  ) {
+    return 'lost'
+  }
+
+  if (
+    !hasCurrentActivity &&
+    !hasPreviousActivity
+  ) {
+    return 'inactive'
+  }
+
+  return 'active'
+}
+
+function determineTrendStatus(
+  currentRevenue: number,
+  previousRevenue: number,
+  stableThreshold: number,
+): BrandTrendStatus {
+  if (
+    currentRevenue === 0 &&
+    previousRevenue === 0
+  ) {
+    return 'without_comparison'
+  }
+
+  if (previousRevenue === 0) {
+    return 'without_comparison'
+  }
+
+  const variation =
+    (
+      currentRevenue -
+      previousRevenue
+    ) / previousRevenue
+
+  if (
+    variation >
+    stableThreshold
+  ) {
+    return 'growing'
+  }
+
+  if (
+    variation <
+    -stableThreshold
+  ) {
+    return 'declining'
+  }
+
+  return 'stable'
+}
+
+function getAttentionReason(
+  lifecycleStatus:
+    BrandLifecycleStatus,
+  trendStatus:
+    BrandTrendStatus,
+  revenueVariationPercentage:
+    number | null,
+  attentionDeclineThreshold:
+    number,
+): string | null {
+  if (
+    lifecycleStatus === 'lost'
+  ) {
+    return 'Marca con venta en el periodo anterior y sin actividad en el periodo actual.'
+  }
+
+  if (
+    lifecycleStatus === 'inactive'
+  ) {
+    return 'Marca sin actividad en los periodos actual y anterior.'
+  }
+
+  if (
+    trendStatus ===
+      'declining' &&
+    revenueVariationPercentage !==
+      null &&
+    revenueVariationPercentage <=
+      attentionDeclineThreshold
+  ) {
+    return 'Marca con caída relevante de venta frente al periodo anterior.'
+  }
+
+  return null
+}
+
+function buildBrandItem(
+  model: BusinessDataModel,
+  brand: BusinessBrand,
+  currentPeriodId: string,
+  previousPeriodId: string,
+  currentPeriodRevenue: number,
+  stableThreshold: number,
+  attentionDeclineThreshold: number,
+): BrandIntelligenceItem {
+  const currentBrandPeriod =
+    model.brandPeriods.get(
+      getBrandPeriodId(
+        currentPeriodId,
+        brand.id,
+      ),
+    )
+
+  const previousBrandPeriod =
+    model.brandPeriods.get(
+      getBrandPeriodId(
+        previousPeriodId,
+        brand.id,
+      ),
+    )
+
+  const currentPeriod =
+    buildPeriodMetrics(
+      currentBrandPeriod,
+    )
+
+  const previousPeriod =
+    buildPeriodMetrics(
+      previousBrandPeriod,
+    )
+
+  const hadActivityBeforePreviousPeriod =
+    hasActivityBeforePeriod(
+      model,
+      brand.id,
+      previousPeriodId,
+    )
+
+  const lifecycleStatus =
+    determineLifecycleStatus(
+      currentPeriod,
+      previousPeriod,
+      hadActivityBeforePreviousPeriod,
+    )
+
+  const trendStatus =
+    determineTrendStatus(
+      currentPeriod.revenue,
+      previousPeriod.revenue,
+      stableThreshold,
+    )
+
+  const revenueVariation =
+    currentPeriod.revenue -
+    previousPeriod.revenue
+
+  const revenueVariationPercentage =
+    getVariationPercentage(
+      currentPeriod.revenue,
+      previousPeriod.revenue,
+    )
+
+  const grossProfitVariation =
+    currentPeriod.grossProfit -
+    previousPeriod.grossProfit
+
+  const grossProfitVariationPercentage =
+    getVariationPercentage(
+      currentPeriod.grossProfit,
+      previousPeriod.grossProfit,
+    )
+
+  const marginVariation =
+    currentPeriod.margin !== null &&
+    previousPeriod.margin !== null
+      ? currentPeriod.margin -
+        previousPeriod.margin
+      : null
+
+  const customerVariation =
+    currentPeriod.customers -
+    previousPeriod.customers
+
+  const productVariation =
+    currentPeriod.products -
+    previousPeriod.products
+
+  const revenueParticipation =
+    currentPeriodRevenue === 0
+      ? 0
+      : currentPeriod.revenue /
+        currentPeriodRevenue
+
+  const attentionReason =
+    getAttentionReason(
+      lifecycleStatus,
+      trendStatus,
+      revenueVariationPercentage,
+      attentionDeclineThreshold,
+    )
+
+  return {
+    brandId:
+      brand.id,
+
+    brandName:
+      brand.name,
+
+    lifecycleStatus,
+
+    trendStatus,
+
+    currentPeriod,
+
+    previousPeriod,
+
+    revenueVariation,
+
+    revenueVariationPercentage,
+
+    grossProfitVariation,
+
+    grossProfitVariationPercentage,
+
+    marginVariation,
+
+    customerVariation,
+
+    productVariation,
+
+    historicalRevenue:
+      brand.revenue,
+
+    historicalGrossProfit:
+      brand.grossProfit,
+
+    historicalQuantity:
+      brand.quantity,
+
+    historicalCustomers:
+      brand.customers.size,
+
+    historicalProducts:
+      brand.products.size,
+
+    revenueParticipation,
+
+    requiresAttention:
+      attentionReason !== null,
+
+    attentionReason,
+  }
+}
+
+function sortByRevenueDescending(
+  left: BrandIntelligenceItem,
+  right: BrandIntelligenceItem,
+): number {
+  return (
+    right.currentPeriod.revenue -
+    left.currentPeriod.revenue
+  )
+}
+
+function sortByVariationDescending(
+  left: BrandIntelligenceItem,
+  right: BrandIntelligenceItem,
+): number {
+  return (
+    right.revenueVariation -
+    left.revenueVariation
+  )
+}
+
+function sortByVariationAscending(
+  left: BrandIntelligenceItem,
+  right: BrandIntelligenceItem,
+): number {
+  return (
+    left.revenueVariation -
+    right.revenueVariation
+  )
+}
+
+function sortAttentionBrands(
+  left: BrandIntelligenceItem,
+  right: BrandIntelligenceItem,
+): number {
+  const lifecyclePriority:
+    Record<
+      BrandLifecycleStatus,
+      number
+    > = {
+      lost: 5,
+      inactive: 4,
+      recovered: 3,
+      new: 2,
+      active: 1,
+    }
+
+  const priorityDifference =
+    lifecyclePriority[
+      right.lifecycleStatus
+    ] -
+    lifecyclePriority[
+      left.lifecycleStatus
+    ]
+
+  if (
+    priorityDifference !== 0
+  ) {
+    return priorityDifference
+  }
+
+  return (
+    left.revenueVariation -
+    right.revenueVariation
+  )
+}
+
+export function buildBrandIntelligence(
+  model: BusinessDataModel,
+  options:
+    BrandIntelligenceOptions = {},
+): BrandIntelligenceSummary | null {
+  const currentPeriod =
+    getLatestPeriod(model)
+
+  if (!currentPeriod) {
+    return null
+  }
+
+  const previousPeriodId =
+    getPreviousPeriodId(
+      currentPeriod,
+    )
+
+  const previousPeriod =
+    model.periods.get(
+      previousPeriodId,
+    )
+
+  const stableThreshold =
+    options
+      .stableVariationThreshold ??
+    DEFAULT_STABLE_THRESHOLD
+
+  const attentionDeclineThreshold =
+    options
+      .attentionDeclineThreshold ??
+    DEFAULT_ATTENTION_DECLINE_THRESHOLD
+
+  const brands:
+    BrandIntelligenceItem[] =
+    []
+
+  for (
+    const brand of
+      model.brands.values()
+  ) {
+    brands.push(
+      buildBrandItem(
+        model,
+        brand,
+        currentPeriod.id,
+        previousPeriodId,
+        currentPeriod.revenue,
+        stableThreshold,
+        attentionDeclineThreshold,
+      ),
+    )
+  }
+
+  const attentionBrands =
+    brands
+      .filter(
+        (brand) =>
+          brand.requiresAttention,
+      )
+      .sort(
+        sortAttentionBrands,
+      )
+
+  const topGrowingBrands =
+    brands
+      .filter(
+        (brand) =>
+          brand.trendStatus ===
+          'growing',
+      )
+      .sort(
+        sortByVariationDescending,
+      )
+      .slice(0, 10)
+
+  const topDecliningBrands =
+    brands
+      .filter(
+        (brand) =>
+          brand.trendStatus ===
+          'declining',
+      )
+      .sort(
+        sortByVariationAscending,
+      )
+      .slice(0, 10)
+
+  const topRevenueBrands =
+    [...brands]
+      .sort(
+        sortByRevenueDescending,
+      )
+      .slice(0, 10)
+
+  const previousPeriodRevenue =
+    previousPeriod?.revenue ?? 0
+
+  const revenueVariation =
+    currentPeriod.revenue -
+    previousPeriodRevenue
+
+  const revenueVariationPercentage =
+    getVariationPercentage(
+      currentPeriod.revenue,
+      previousPeriodRevenue,
+    )
+
+  return {
+    analysisDate:
+      model.periodEnd ??
+      currentPeriod.periodEnd,
+
+    currentPeriodId:
+      currentPeriod.id,
+
+    currentPeriodStart:
+      currentPeriod.periodStart,
+
+    currentPeriodEnd:
+      currentPeriod.periodEnd,
+
+    previousPeriodId,
+
+    previousPeriodStart:
+      previousPeriod
+        ?.periodStart ??
+      `${previousPeriodId}-01`,
+
+    previousPeriodEnd:
+      previousPeriod
+        ?.periodEnd ??
+      `${previousPeriodId}-01`,
+
+    totalBrands:
+      brands.length,
+
+    activeBrands:
+      brands.filter(
+        (brand) =>
+          brand.lifecycleStatus ===
+          'active',
+      ).length,
+
+    newBrands:
+      brands.filter(
+        (brand) =>
+          brand.lifecycleStatus ===
+          'new',
+      ).length,
+
+    recoveredBrands:
+      brands.filter(
+        (brand) =>
+          brand.lifecycleStatus ===
+          'recovered',
+      ).length,
+
+    inactiveBrands:
+      brands.filter(
+        (brand) =>
+          brand.lifecycleStatus ===
+          'inactive',
+      ).length,
+
+    lostBrands:
+      brands.filter(
+        (brand) =>
+          brand.lifecycleStatus ===
+          'lost',
+      ).length,
+
+    growingBrands:
+      brands.filter(
+        (brand) =>
+          brand.trendStatus ===
+          'growing',
+      ).length,
+
+    decliningBrands:
+      brands.filter(
+        (brand) =>
+          brand.trendStatus ===
+          'declining',
+      ).length,
+
+    stableBrands:
+      brands.filter(
+        (brand) =>
+          brand.trendStatus ===
+          'stable',
+      ).length,
+
+    brandsWithoutComparison:
+      brands.filter(
+        (brand) =>
+          brand.trendStatus ===
+          'without_comparison',
+      ).length,
+
+    brandsRequiringAttention:
+      attentionBrands.length,
+
+    currentPeriodRevenue:
+      currentPeriod.revenue,
+
+    previousPeriodRevenue,
+
+    revenueVariation,
+
+    revenueVariationPercentage,
+
+    brands,
+
+    attentionBrands,
+
+    topGrowingBrands,
+
+    topDecliningBrands,
+
+    topRevenueBrands,
+  }
+}
