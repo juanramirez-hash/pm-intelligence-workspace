@@ -3,6 +3,10 @@ import type {
 } from '../entities/customer'
 
 import type {
+  BusinessCustomerPeriod,
+} from '../entities/customerPeriod'
+
+import type {
   BusinessDataModel,
 } from '../models'
 
@@ -17,6 +21,20 @@ function normalizeLimit(
   }
 
   return Math.floor(limit)
+}
+
+function normalizeIdentifier(
+  value: string,
+): string {
+  return value
+    .trim()
+    .toLocaleUpperCase('es-MX')
+}
+
+function normalizePeriodId(
+  value: string,
+): string {
+  return value.trim()
 }
 
 export class CustomerQueries {
@@ -40,9 +58,7 @@ export class CustomerQueries {
     id: string,
   ): BusinessCustomer | undefined {
     const normalizedId =
-      id
-        .trim()
-        .toLocaleUpperCase('es-MX')
+      normalizeIdentifier(id)
 
     if (!normalizedId) {
       return undefined
@@ -110,6 +126,74 @@ export class CustomerQueries {
       .slice(
         0,
         normalizedLimit,
+      )
+  }
+
+  findPeriodsByCustomerId(
+    customerId: string,
+  ): BusinessCustomerPeriod[] {
+    const normalizedCustomerId =
+      normalizeIdentifier(
+        customerId,
+      )
+
+    if (!normalizedCustomerId) {
+      return []
+    }
+
+    return [
+      ...this.model.customerPeriods.values(),
+    ].filter(
+      customerPeriod =>
+        customerPeriod.customerId ===
+        normalizedCustomerId,
+    )
+  }
+
+  findPeriod(
+    customerId: string,
+    periodId: string,
+  ): BusinessCustomerPeriod | undefined {
+    const normalizedCustomerId =
+      normalizeIdentifier(
+        customerId,
+      )
+
+    const normalizedPeriodId =
+      normalizePeriodId(
+        periodId,
+      )
+
+    if (
+      !normalizedCustomerId ||
+      !normalizedPeriodId
+    ) {
+      return undefined
+    }
+
+    const customerPeriodId =
+      `${normalizedPeriodId}::${normalizedCustomerId}`
+
+    return this.model.customerPeriods.get(
+      customerPeriodId,
+    )
+  }
+
+  getCustomerTimeline(
+    customerId: string,
+  ): BusinessCustomerPeriod[] {
+    return this
+      .findPeriodsByCustomerId(
+        customerId,
+      )
+      .sort(
+        (
+          customerPeriodA,
+          customerPeriodB,
+        ) =>
+          customerPeriodA.periodId.localeCompare(
+            customerPeriodB.periodId,
+          ),
       )
   }
 }

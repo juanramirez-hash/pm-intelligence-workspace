@@ -33,34 +33,37 @@ import {
 export function buildBusinessIntelligence(
   rows: NormalizedSalesRow[],
 ): BusinessIntelligenceModel {
-  // 1. Construye el modelo central de datos.
+  // 1. Construye el modelo central
+  // de datos.
   const data =
     buildBusinessDataModel(
       rows,
     )
 
-  // 2. Crea una única instancia del repositorio.
+  // 2. Crea una única instancia
+  // del repositorio.
   const repository =
     new BusinessRepository(
       data,
     )
 
-  // 3. Construye las métricas utilizando
-  // el repositorio.
+  // 3. Construye las métricas
+  // utilizando el repositorio.
   const metrics =
     buildBusinessMetrics(
       repository,
     )
 
-  // 4. Temporalmente Customer Intelligence
-  // continúa trabajando con las filas normalizadas.
+  // 4. Customer Intelligence
+  // consume el BusinessRepository.
   const customers =
     buildCustomerIntelligence(
-      rows,
+      repository,
+      data.periodEnd,
     )
 
-  // 5. Brand Intelligence ya utiliza
-  // directamente el modelo central.
+  // 5. Brand Intelligence utiliza
+  // el modelo central.
   const brands =
     buildBrandIntelligence(
       data,

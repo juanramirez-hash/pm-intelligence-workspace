@@ -1,12 +1,19 @@
 import type {
-  NormalizedSalesRow,
-} from '../../../features/data-center/importers/sales/salesTypes'
+  BusinessCustomer,
+} from '../../business/entities/customer'
+
+import type {
+  BusinessCustomerPeriod,
+} from '../../business/entities/customerPeriod'
+
+import type {
+  BusinessRepository,
+} from '../../business/repository'
 
 import {
   addMonths,
   endOfMonth,
   getDaysBetween,
-  isDateWithinRange,
   parseIsoDate,
   startOfMonth,
   toIsoDate,
@@ -20,31 +27,17 @@ import type {
   CustomerTrendStatus,
 } from './customerIntelligenceTypes'
 
-interface MutableCustomerRecord {
-  customerId: string
-  customerName: string
+interface CustomerAnalysisRecord {
+  customer: BusinessCustomer
 
   firstPurchaseDate: Date
   lastPurchaseDate: Date
-
-  historicalRevenue: number
-  historicalGrossProfit: number
-  historicalQuantity: number
-
-  historicalDocuments:
-    Set<string>
 
   currentPeriod:
     CustomerPeriodMetrics
 
   previousPeriod:
     CustomerPeriodMetrics
-
-  currentDocuments:
-    Set<string>
-
-  previousDocuments:
-    Set<string>
 
   purchasedBeforePreviousPeriod:
     boolean
@@ -60,36 +53,6 @@ const DEFAULT_INACTIVE_DAYS = 90
 const DEFAULT_LOST_DAYS = 180
 const DEFAULT_STABLE_THRESHOLD = 0.05
 
-function normalizeCustomerId(
-  value: string | null,
-): string | null {
-  if (!value) {
-    return null
-  }
-
-  const normalizedValue =
-    value
-      .trim()
-      .toLocaleUpperCase(
-        'es-MX',
-      )
-
-  return normalizedValue || null
-}
-
-function normalizeCustomerName(
-  value: string | null,
-  customerId: string,
-): string {
-  const normalizedName =
-    value
-      ?.trim()
-      .replace(/\s+/g, ' ')
-
-  return normalizedName ||
-    `Cliente ${customerId}`
-}
-
 function createPeriodMetrics():
   CustomerPeriodMetrics {
   return {
@@ -98,6 +61,55 @@ function createPeriodMetrics():
     quantity: 0,
     documents: 0,
   }
+}
+
+function mapPeriodMetrics(
+  period:
+    BusinessCustomerPeriod |
+    undefined,
+): CustomerPeriodMetrics {
+  if (!period) {
+    return createPeriodMetrics()
+  }
+
+  return {
+    revenue:
+      period.revenue,
+
+    grossProfit:
+      period.grossProfit,
+
+    quantity:
+      period.quantity,
+
+    documents:
+      period.documents,
+  }
+}
+
+function getPeriodId(
+  date: Date,
+): string {
+  const year =
+    date.getUTCFullYear()
+
+  const month =
+    String(
+      date.getUTCMonth() + 1,
+    ).padStart(2, '0')
+
+  return `${year}-${month}`
+}
+
+function hasPeriodActivity(
+  period:
+    CustomerPeriodMetrics,
+): boolean {
+  return (
+    period.revenue !== 0 ||
+    period.quantity !== 0 ||
+    period.documents > 0
+  )
 }
 
 function getRevenueVariationPercentage(
@@ -111,28 +123,30 @@ function getRevenueVariationPercentage(
   }
 
   return (
-    (currentRevenue -
-      previousRevenue) /
+    (
+      currentRevenue -
+      previousRevenue
+    ) /
     previousRevenue
   )
 }
 
 function determineLifecycleStatus(
-  record: MutableCustomerRecord,
+  record: CustomerAnalysisRecord,
   currentPeriodStart: Date,
   daysSinceLastPurchase: number,
   inactiveDays: number,
   lostDays: number,
 ): CustomerLifecycleStatus {
   const hasCurrentPurchases =
-    record.currentPeriod.revenue !== 0 ||
-    record.currentPeriod.quantity !== 0 ||
-    record.currentDocuments.size > 0
+    hasPeriodActivity(
+      record.currentPeriod,
+    )
 
   const hasPreviousPurchases =
-    record.previousPeriod.revenue !== 0 ||
-    record.previousPeriod.quantity !== 0 ||
-    record.previousDocuments.size > 0
+    hasPeriodActivity(
+      record.previousPeriod,
+    )
 
   const isNewCustomer =
     hasCurrentPurchases &&
@@ -146,7 +160,8 @@ function determineLifecycleStatus(
   const isRecoveredCustomer =
     hasCurrentPurchases &&
     !hasPreviousPurchases &&
-    record.purchasedBeforePreviousPeriod
+    record
+      .purchasedBeforePreviousPeriod
 
   if (isRecoveredCustomer) {
     return 'recovered'
@@ -186,8 +201,10 @@ function determineTrendStatus(
   }
 
   const variation =
-    (currentRevenue -
-      previousRevenue) /
+    (
+      currentRevenue -
+      previousRevenue
+    ) /
     previousRevenue
 
   if (
@@ -243,8 +260,14 @@ function sortByVariationDescending(
     CustomerIntelligenceItem,
 ): number {
   return (
-    (right.revenueVariation ?? 0) -
-    (left.revenueVariation ?? 0)
+    (
+      right.revenueVariation ??
+      0
+    ) -
+    (
+      left.revenueVariation ??
+      0
+    )
   )
 }
 
@@ -255,55 +278,46 @@ function sortByVariationAscending(
     CustomerIntelligenceItem,
 ): number {
   return (
-    (left.revenueVariation ?? 0) -
-    (right.revenueVariation ?? 0)
+    (
+      left.revenueVariation ??
+      0
+    ) -
+    (
+      right.revenueVariation ??
+      0
+    )
   )
 }
 
 export function buildCustomerIntelligence(
-  rows: NormalizedSalesRow[],
+  repository: BusinessRepository,
+  analysisDate:
+    string | null,
   options:
     CustomerIntelligenceOptions = {},
 ): CustomerIntelligenceSummary | null {
-  const validDates =
-    rows
-      .map((row) =>
-        parseIsoDate(row.date),
-      )
-      .filter(
-        (
-          date,
-        ): date is Date =>
-          date !== null,
-      )
-
-  if (validDates.length === 0) {
+  if (!analysisDate) {
     return null
   }
 
-const analysisTimestamp =
-  validDates.reduce(
-    (
-      latestTimestamp,
-      date,
-    ) =>
-      Math.max(
-        latestTimestamp,
-        date.getTime(),
-      ),
-    Number.NEGATIVE_INFINITY,
-  )
+  const parsedAnalysisDate =
+    parseIsoDate(
+      analysisDate,
+    )
 
-const analysisDate =
-  new Date(
-    analysisTimestamp,
-  )
+  if (!parsedAnalysisDate) {
+    return null
+  }
 
   const currentPeriodStart =
-    startOfMonth(analysisDate)
+    startOfMonth(
+      parsedAnalysisDate,
+    )
 
   const currentPeriodEnd =
-    endOfMonth(analysisDate)
+    endOfMonth(
+      parsedAnalysisDate,
+    )
 
   const previousPeriodReference =
     addMonths(
@@ -321,6 +335,16 @@ const analysisDate =
       previousPeriodReference,
     )
 
+  const currentPeriodId =
+    getPeriodId(
+      currentPeriodStart,
+    )
+
+  const previousPeriodId =
+    getPeriodId(
+      previousPeriodStart,
+    )
+
   const inactiveDays =
     options.inactiveDays ??
     DEFAULT_INACTIVE_DAYS
@@ -334,199 +358,92 @@ const analysisDate =
       .stableVariationThreshold ??
     DEFAULT_STABLE_THRESHOLD
 
-  const customerRecords =
-    new Map<
-      string,
-      MutableCustomerRecord
-    >()
-
-  for (const row of rows) {
-    const customerId =
-      normalizeCustomerId(
-        row.customerId,
-      )
-
-    const rowDate =
-      parseIsoDate(row.date)
-
-    if (
-      !customerId ||
-      !rowDate
-    ) {
-      continue
-    }
-
-    let record =
-      customerRecords.get(
-        customerId,
-      )
-
-    if (!record) {
-      record = {
-        customerId,
-
-        customerName:
-          normalizeCustomerName(
-            row.customerName,
-            customerId,
-          ),
-
-        firstPurchaseDate:
-          rowDate,
-
-        lastPurchaseDate:
-          rowDate,
-
-        historicalRevenue: 0,
-
-        historicalGrossProfit: 0,
-
-        historicalQuantity: 0,
-
-        historicalDocuments:
-          new Set<string>(),
-
-        currentPeriod:
-          createPeriodMetrics(),
-
-        previousPeriod:
-          createPeriodMetrics(),
-
-        currentDocuments:
-          new Set<string>(),
-
-        previousDocuments:
-          new Set<string>(),
-
-        purchasedBeforePreviousPeriod:
-          false,
-      }
-
-      customerRecords.set(
-        customerId,
-        record,
-      )
-    }
-
-    if (
-      rowDate <
-      record.firstPurchaseDate
-    ) {
-      record.firstPurchaseDate =
-        rowDate
-    }
-
-    if (
-      rowDate >
-      record.lastPurchaseDate
-    ) {
-      record.lastPurchaseDate =
-        rowDate
-    }
-
-    if (
-      row.customerName?.trim()
-    ) {
-      record.customerName =
-        normalizeCustomerName(
-          row.customerName,
-          customerId,
-        )
-    }
-
-    record.historicalRevenue +=
-      row.revenue
-
-    record.historicalGrossProfit +=
-      row.grossProfit
-
-    record.historicalQuantity +=
-      row.quantity
-
-    if (row.documentNumber) {
-      record.historicalDocuments.add(
-        row.documentNumber,
-      )
-    }
-
-    if (
-      isDateWithinRange(
-        rowDate,
-        currentPeriodStart,
-        currentPeriodEnd,
-      )
-    ) {
-      record.currentPeriod.revenue +=
-        row.revenue
-
-      record.currentPeriod.grossProfit +=
-        row.grossProfit
-
-      record.currentPeriod.quantity +=
-        row.quantity
-
-      if (row.documentNumber) {
-        record.currentDocuments.add(
-          row.documentNumber,
-        )
-      }
-
-      continue
-    }
-
-    if (
-      isDateWithinRange(
-        rowDate,
-        previousPeriodStart,
-        previousPeriodEnd,
-      )
-    ) {
-      record.previousPeriod.revenue +=
-        row.revenue
-
-      record.previousPeriod.grossProfit +=
-        row.grossProfit
-
-      record.previousPeriod.quantity +=
-        row.quantity
-
-      if (row.documentNumber) {
-        record.previousDocuments.add(
-          row.documentNumber,
-        )
-      }
-
-      continue
-    }
-
-    if (
-      rowDate <
-      previousPeriodStart
-    ) {
-      record
-        .purchasedBeforePreviousPeriod =
-        true
-    }
-  }
-
   const customers:
     CustomerIntelligenceItem[] =
     []
 
   for (
-    const record of
-      customerRecords.values()
-  ) {
-    record.currentPeriod.documents =
-      record.currentDocuments.size
+  const customer of
+    repository.customer.getAll()
+) {
+  const firstPurchase =
+    customer.firstPurchase
 
-    record.previousPeriod.documents =
-      record.previousDocuments.size
+  const lastPurchase =
+    customer.lastPurchase
+
+  if (
+    !firstPurchase ||
+    !lastPurchase
+  ) {
+    continue
+  }
+
+  const firstPurchaseDate =
+    parseIsoDate(
+      firstPurchase,
+    )
+
+  const lastPurchaseDate =
+    parseIsoDate(
+      lastPurchase,
+    )
+
+  if (
+    !firstPurchaseDate ||
+    !lastPurchaseDate
+  ) {
+    continue
+  }
+
+    const currentPeriod =
+      mapPeriodMetrics(
+        repository.customer
+          .findPeriod(
+            customer.id,
+            currentPeriodId,
+          ),
+      )
+
+    const previousPeriod =
+      mapPeriodMetrics(
+        repository.customer
+          .findPeriod(
+            customer.id,
+            previousPeriodId,
+          ),
+      )
+
+    const timeline =
+      repository.customer
+        .getCustomerTimeline(
+          customer.id,
+        )
+
+    const purchasedBeforePreviousPeriod =
+      timeline.some(
+        customerPeriod =>
+          customerPeriod.periodId <
+          previousPeriodId,
+      )
+
+    const record:
+      CustomerAnalysisRecord = {
+      customer,
+
+      firstPurchaseDate,
+      lastPurchaseDate,
+
+      currentPeriod,
+      previousPeriod,
+
+      purchasedBeforePreviousPeriod,
+    }
 
     const daysSinceLastPurchase =
       getDaysBetween(
-        record.lastPurchaseDate,
-        analysisDate,
+        lastPurchaseDate,
+        parsedAnalysisDate,
       )
 
     const lifecycleStatus =
@@ -540,23 +457,19 @@ const analysisDate =
 
     const trendStatus =
       determineTrendStatus(
-        record.currentPeriod
-          .revenue,
-        record.previousPeriod
-          .revenue,
+        currentPeriod.revenue,
+        previousPeriod.revenue,
         stableThreshold,
       )
 
     const revenueVariation =
-      record.currentPeriod.revenue -
-      record.previousPeriod.revenue
+      currentPeriod.revenue -
+      previousPeriod.revenue
 
     const revenueVariationPercentage =
       getRevenueVariationPercentage(
-        record.currentPeriod
-          .revenue,
-        record.previousPeriod
-          .revenue,
+        currentPeriod.revenue,
+        previousPeriod.revenue,
       )
 
     const attentionReason =
@@ -567,28 +480,25 @@ const analysisDate =
 
     customers.push({
       customerId:
-        record.customerId,
+        customer.id,
 
       customerName:
-        record.customerName,
+        customer.name,
 
       lifecycleStatus,
 
       trendStatus,
 
       lastPurchaseDate:
-        toIsoDate(
-          record.lastPurchaseDate,
-        ),
-
+        lastPurchase,
       daysSinceLastPurchase,
 
       currentPeriod: {
-        ...record.currentPeriod,
+        ...currentPeriod,
       },
 
       previousPeriod: {
-        ...record.previousPeriod,
+        ...previousPeriod,
       },
 
       revenueVariation,
@@ -596,18 +506,16 @@ const analysisDate =
       revenueVariationPercentage,
 
       historicalRevenue:
-        record.historicalRevenue,
+        customer.revenue,
 
       historicalGrossProfit:
-        record.historicalGrossProfit,
+        customer.grossProfit,
 
       historicalQuantity:
-        record.historicalQuantity,
+        customer.quantity,
 
       historicalDocuments:
-        record
-          .historicalDocuments
-          .size,
+        customer.documents,
 
       requiresAttention:
         attentionReason !== null,
@@ -619,7 +527,7 @@ const analysisDate =
   const attentionCustomers =
     customers
       .filter(
-        (customer) =>
+        customer =>
           customer
             .requiresAttention,
       )
@@ -642,17 +550,23 @@ const analysisDate =
             )
           }
 
-            return (
-             (left.revenueVariation ?? 0) -
-             (right.revenueVariation ?? 0)
+          return (
+            (
+              left.revenueVariation ??
+              0
+            ) -
+            (
+              right.revenueVariation ??
+              0
             )
+          )
         },
       )
 
   const topGrowingCustomers =
     customers
       .filter(
-        (customer) =>
+        customer =>
           customer.trendStatus ===
           'growing',
       )
@@ -664,7 +578,7 @@ const analysisDate =
   const topDecliningCustomers =
     customers
       .filter(
-        (customer) =>
+        customer =>
           customer.trendStatus ===
           'declining',
       )
@@ -675,7 +589,9 @@ const analysisDate =
 
   return {
     analysisDate:
-      toIsoDate(analysisDate),
+      toIsoDate(
+        parsedAnalysisDate,
+      ),
 
     currentPeriodStart:
       toIsoDate(
@@ -702,7 +618,7 @@ const analysisDate =
 
     activeCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .lifecycleStatus ===
           'active',
@@ -710,7 +626,7 @@ const analysisDate =
 
     newCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .lifecycleStatus ===
           'new',
@@ -718,7 +634,7 @@ const analysisDate =
 
     recoveredCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .lifecycleStatus ===
           'recovered',
@@ -726,7 +642,7 @@ const analysisDate =
 
     inactiveCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .lifecycleStatus ===
           'inactive',
@@ -734,7 +650,7 @@ const analysisDate =
 
     lostCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .lifecycleStatus ===
           'lost',
@@ -742,7 +658,7 @@ const analysisDate =
 
     growingCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .trendStatus ===
           'growing',
@@ -750,7 +666,7 @@ const analysisDate =
 
     decliningCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .trendStatus ===
           'declining',
@@ -758,7 +674,7 @@ const analysisDate =
 
     stableCustomers:
       customers.filter(
-        (customer) =>
+        customer =>
           customer
             .trendStatus ===
           'stable',

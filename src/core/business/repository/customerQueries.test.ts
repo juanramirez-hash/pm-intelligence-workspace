@@ -226,5 +226,118 @@ describe(
         ).toEqual([])
       },
     )
+
+        it(
+      'obtiene todos los periodos de un cliente',
+      () => {
+        const repository =
+          createRepository()
+
+        const periods =
+          repository.customer
+            .findPeriodsByCustomerId(
+              '100001',
+            )
+
+        expect(
+          periods,
+        ).toHaveLength(2)
+
+        expect(
+          periods.map(
+            period =>
+              period.periodId,
+          ),
+        ).toContain(
+          '2026-01',
+        )
+
+        expect(
+          periods.map(
+            period =>
+              period.periodId,
+          ),
+        ).toContain(
+          '2026-02',
+        )
+      },
+    )
+
+    it(
+      'encuentra un periodo específico de un cliente',
+      () => {
+        const repository =
+          createRepository()
+
+        const period =
+          repository.customer
+            .findPeriod(
+              '100001',
+              '2026-02',
+            )
+
+        expect(
+          period,
+        ).toBeDefined()
+
+        expect(
+          period?.revenue,
+        ).toBe(250)
+
+        expect(
+          period?.grossProfit,
+        ).toBe(80)
+
+        expect(
+          period?.quantity,
+        ).toBe(1)
+
+        expect(
+          period?.documents,
+        ).toBe(1)
+      },
+    )
+
+    it(
+      'devuelve la línea de tiempo ordenada cronológicamente',
+      () => {
+        const repository =
+          createRepository()
+
+        const timeline =
+          repository.customer
+            .getCustomerTimeline(
+              '100001',
+            )
+
+        expect(
+          timeline.map(
+            period =>
+              period.periodId,
+          ),
+        ).toEqual([
+          '2026-01',
+          '2026-02',
+        ])
+      },
+    )
+
+    it(
+      'normaliza el identificador en consultas de periodos',
+      () => {
+        const repository =
+          createRepository()
+
+        const periods =
+          repository.customer
+            .findPeriodsByCustomerId(
+              ' 100001 ',
+            )
+
+        expect(
+          periods,
+        ).toHaveLength(2)
+      },
+    )
   },
 )
