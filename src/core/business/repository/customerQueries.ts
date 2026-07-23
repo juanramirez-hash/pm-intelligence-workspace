@@ -41,10 +41,61 @@ export class CustomerQueries {
   private readonly model:
     BusinessDataModel
 
+  private readonly periodsByCustomerId:
+    Map<
+      string,
+      BusinessCustomerPeriod[]
+    >
+
   constructor(
     model: BusinessDataModel,
   ) {
     this.model = model
+
+    this.periodsByCustomerId =
+      new Map<
+        string,
+        BusinessCustomerPeriod[]
+      >()
+
+    for (
+      const customerPeriod of
+        model.customerPeriods.values()
+    ) {
+      let customerPeriods =
+        this.periodsByCustomerId.get(
+          customerPeriod.customerId,
+        )
+
+      if (!customerPeriods) {
+        customerPeriods = []
+
+        this.periodsByCustomerId.set(
+          customerPeriod.customerId,
+          customerPeriods,
+        )
+      }
+
+      customerPeriods.push(
+        customerPeriod,
+      )
+    }
+
+    for (
+      const customerPeriods of
+        this.periodsByCustomerId.values()
+    ) {
+      customerPeriods.sort(
+        (
+          customerPeriodA,
+          customerPeriodB,
+        ) =>
+          customerPeriodA.periodId
+            .localeCompare(
+              customerPeriodB.periodId,
+            ),
+      )
+    }
   }
 
   getAll():
@@ -141,13 +192,18 @@ export class CustomerQueries {
       return []
     }
 
-    return [
-      ...this.model.customerPeriods.values(),
-    ].filter(
-      customerPeriod =>
-        customerPeriod.customerId ===
+    const customerPeriods =
+      this.periodsByCustomerId.get(
         normalizedCustomerId,
-    )
+      )
+
+    if (!customerPeriods) {
+      return []
+    }
+
+    return [
+      ...customerPeriods,
+    ]
   }
 
   findPeriod(
@@ -182,18 +238,8 @@ export class CustomerQueries {
   getCustomerTimeline(
     customerId: string,
   ): BusinessCustomerPeriod[] {
-    return this
-      .findPeriodsByCustomerId(
-        customerId,
-      )
-      .sort(
-        (
-          customerPeriodA,
-          customerPeriodB,
-        ) =>
-          customerPeriodA.periodId.localeCompare(
-            customerPeriodB.periodId,
-          ),
-      )
+    return this.findPeriodsByCustomerId(
+      customerId,
+    )
   }
 }
