@@ -1,4 +1,8 @@
 import type {
+  BusinessCustomerPeriod,
+} from '../entities/customerPeriod'
+
+import type {
   BusinessBrand,
 } from '../entities/brand'
 
@@ -49,6 +53,9 @@ export interface BusinessDataModel {
 
   customers:
     Map<string, BusinessCustomer>
+
+  customerPeriods:
+    Map<string, BusinessCustomerPeriod>
 
   brands:
     Map<string, BusinessBrand>

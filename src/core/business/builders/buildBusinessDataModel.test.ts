@@ -239,6 +239,145 @@ describe(
       },
     )
 
+        it(
+      'consolida correctamente la información de cliente por periodo',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        expect(
+          model.customerPeriods.size,
+        ).toBe(3)
+
+        const januaryCustomer =
+          model.customerPeriods.get(
+            '2026-01::100001',
+          )
+
+        expect(
+          januaryCustomer,
+        ).toBeDefined()
+
+        expect(
+          januaryCustomer?.customerId,
+        ).toBe('100001')
+
+        expect(
+          januaryCustomer?.periodId,
+        ).toBe('2026-01')
+
+        expect(
+          januaryCustomer?.revenue,
+        ).toBe(300)
+
+        expect(
+          januaryCustomer?.grossProfit,
+        ).toBe(90)
+
+        expect(
+          januaryCustomer?.quantity,
+        ).toBe(3)
+
+        expect(
+          januaryCustomer?.documents,
+        ).toBe(2)
+
+        expect(
+          januaryCustomer?.brands,
+        ).toEqual(
+          new Set([
+            'UNV',
+          ]),
+        )
+
+        expect(
+          januaryCustomer?.products,
+        ).toEqual(
+          new Set([
+            'IPC-A',
+            'IPC-B',
+          ]),
+        )
+
+        const februaryCustomer =
+          model.customerPeriods.get(
+            '2026-02::100001',
+          )
+
+        expect(
+          februaryCustomer,
+        ).toBeDefined()
+
+        expect(
+          februaryCustomer?.revenue,
+        ).toBe(50)
+
+        expect(
+          februaryCustomer?.grossProfit,
+        ).toBe(15)
+
+        expect(
+          februaryCustomer?.quantity,
+        ).toBe(1)
+
+        expect(
+          februaryCustomer?.documents,
+        ).toBe(1)
+
+        expect(
+          februaryCustomer?.brands,
+        ).toEqual(
+          new Set([
+            'UNV',
+          ]),
+        )
+
+        expect(
+          februaryCustomer?.products,
+        ).toEqual(
+          new Set([
+            'IPC-A',
+          ]),
+        )
+      },
+    )
+
+    it(
+      'mantiene documentos únicos dentro de cada cliente y periodo',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+          )
+
+        const januaryCustomer =
+          model.customerPeriods.get(
+            '2026-01::100001',
+          )
+
+        const februaryCustomer =
+          model.customerPeriods.get(
+            '2026-02::100001',
+          )
+
+        expect(
+          januaryCustomer?.documents,
+        ).toBe(2)
+
+        expect(
+          februaryCustomer?.documents,
+        ).toBe(1)
+
+        expect(
+          model.customers.get(
+            '100001',
+          )?.documents,
+        ).toBe(2)
+      },
+    )
+
     it(
       'consolida correctamente los periodos mensuales',
       () => {
