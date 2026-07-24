@@ -1,37 +1,50 @@
-import type { BusinessRepository } from '../../repository';
+import type {
+  BusinessRepository,
+} from '../../repository';
 
 import type {
   CubeExecutionOptions,
   CubeQuery,
-  CubeQueryEngine,
   CubeResult,
 } from '../shared';
 
-import { CubeQueryValidator } from './cubeQueryValidator';
+import {
+  CubeQueryValidator,
+} from './cubeQueryValidator';
 
 import {
-  RevenueExecutor,
+  PeriodMetricExecutor,
 } from './executors';
 
 /**
  * Motor genérico de consultas del Business Cube.
  */
-export class GenericCubeQueryEngine implements CubeQueryEngine {
-  protected readonly repository: BusinessRepository;
-
+export class GenericCubeQueryEngine {
   private readonly validator: CubeQueryValidator;
 
-  private readonly revenueExecutor: RevenueExecutor;
+  private readonly revenueExecutor: PeriodMetricExecutor;
+
+  private readonly grossProfitExecutor: PeriodMetricExecutor;
 
   public constructor(
     repository: BusinessRepository,
     _domain: string,
   ) {
-    this.repository = repository;
-    this.validator = new CubeQueryValidator();
+    this.validator =
+      new CubeQueryValidator();
+
     this.revenueExecutor =
-      new RevenueExecutor(
+      new PeriodMetricExecutor(
         repository,
+        'revenue',
+        period => period.revenue,
+      );
+
+    this.grossProfitExecutor =
+      new PeriodMetricExecutor(
+        repository,
+        'grossProfit',
+        period => period.grossProfit,
       );
   }
 
@@ -39,15 +52,24 @@ export class GenericCubeQueryEngine implements CubeQueryEngine {
     query: CubeQuery,
     _options?: CubeExecutionOptions,
   ): CubeResult {
-    this.validator.validate(query);
+    this.validator.validate(
+      query,
+    );
 
     switch (query.metric) {
       case 'revenue':
-        return this.revenueExecutor.execute(query);
+        return this.revenueExecutor.execute(
+          query,
+        );
+
+      case 'grossProfit':
+        return this.grossProfitExecutor.execute(
+          query,
+        );
 
       default:
         throw new Error(
-          `Metric "${query.metric}" is not implemented yet.`,
+          `Unsupported cube metric: ${query.metric}`,
         );
     }
   }

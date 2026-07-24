@@ -15,6 +15,10 @@ import type {
 } from '../entities/product'
 
 import {
+  BrandQueries,
+} from './brandQueries'
+
+import {
   CustomerQueries,
 } from './customerQueries'
 
@@ -26,6 +30,9 @@ export class BusinessRepository {
   private readonly model:
     BusinessDataModel
 
+  readonly brand:
+    BrandQueries
+
   readonly customer:
     CustomerQueries
 
@@ -36,6 +43,11 @@ export class BusinessRepository {
     model: BusinessDataModel,
   ) {
     this.model = model
+
+    this.brand =
+      new BrandQueries(
+        model,
+      )
 
     this.customer =
       new CustomerQueries(
@@ -55,9 +67,7 @@ export class BusinessRepository {
 
   getBrands():
     BusinessBrand[] {
-    return [
-      ...this.model.brands.values(),
-    ]
+    return this.brand.getAll()
   }
 
   getProducts():
@@ -78,7 +88,7 @@ export class BusinessRepository {
   findBrand(
     id: string,
   ): BusinessBrand | undefined {
-    return this.model.brands.get(
+    return this.brand.findById(
       id,
     )
   }

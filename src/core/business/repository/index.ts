@@ -3,6 +3,10 @@ export {
 } from './businessRepository'
 
 export {
+  BrandQueries,
+} from './brandQueries'
+
+export {
   CustomerQueries,
 } from './customerQueries'
 

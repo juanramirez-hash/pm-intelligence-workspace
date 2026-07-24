@@ -7,9 +7,12 @@ import type {
 } from '../../business/entities/brandPeriod'
 
 import type {
-  BusinessDataModel,
   BusinessPeriod,
 } from '../../business/models/businessDataModel'
+
+import type {
+  BusinessRepository,
+} from '../../business/repository'
 
 import type {
   BrandIntelligenceItem,
@@ -25,7 +28,9 @@ export interface BrandIntelligenceOptions {
 }
 
 const DEFAULT_STABLE_THRESHOLD = 0.05
-const DEFAULT_ATTENTION_DECLINE_THRESHOLD = -0.15
+
+const DEFAULT_ATTENTION_DECLINE_THRESHOLD =
+  -0.15
 
 function createEmptyPeriodMetrics():
   BrandPeriodMetrics {
@@ -104,13 +109,6 @@ function getVariationPercentage(
   ) / previousValue
 }
 
-function getBrandPeriodId(
-  periodId: string,
-  brandId: string,
-): string {
-  return `${periodId}::${brandId}`
-}
-
 function getPreviousPeriodId(
   period: BusinessPeriod,
 ): string {
@@ -131,20 +129,23 @@ function getPreviousPeriodId(
     String(
       previousMonthDate
         .getUTCMonth() + 1,
-    ).padStart(2, '0')
+    ).padStart(
+      2,
+      '0',
+    )
 
   return `${year}-${month}`
 }
 
 function getLatestPeriod(
-  model: BusinessDataModel,
+  repository: BusinessRepository,
 ): BusinessPeriod | null {
   let latestPeriod:
     BusinessPeriod | null = null
 
   for (
     const period of
-      model.periods.values()
+      repository.getPeriods()
   ) {
     if (
       !latestPeriod ||
@@ -173,17 +174,21 @@ function hasBrandActivity(
 }
 
 function hasActivityBeforePeriod(
-  model: BusinessDataModel,
+  repository: BusinessRepository,
   brandId: string,
   periodId: string,
 ): boolean {
+  const brandTimeline =
+    repository.brand
+      .getBrandTimeline(
+        brandId,
+      )
+
   for (
     const brandPeriod of
-      model.brandPeriods.values()
+      brandTimeline
   ) {
     if (
-      brandPeriod.brandId ===
-        brandId &&
       brandPeriod.periodId <
         periodId &&
       (
@@ -301,13 +306,15 @@ function getAttentionReason(
     number,
 ): string | null {
   if (
-    lifecycleStatus === 'lost'
+    lifecycleStatus ===
+    'lost'
   ) {
     return 'Marca con venta en el periodo anterior y sin actividad en el periodo actual.'
   }
 
   if (
-    lifecycleStatus === 'inactive'
+    lifecycleStatus ===
+    'inactive'
   ) {
     return 'Marca sin actividad en los periodos actual y anterior.'
   }
@@ -327,7 +334,7 @@ function getAttentionReason(
 }
 
 function buildBrandItem(
-  model: BusinessDataModel,
+  repository: BusinessRepository,
   brand: BusinessBrand,
   currentPeriodId: string,
   previousPeriodId: string,
@@ -336,19 +343,15 @@ function buildBrandItem(
   attentionDeclineThreshold: number,
 ): BrandIntelligenceItem {
   const currentBrandPeriod =
-    model.brandPeriods.get(
-      getBrandPeriodId(
-        currentPeriodId,
-        brand.id,
-      ),
+    repository.brand.findPeriod(
+      brand.id,
+      currentPeriodId,
     )
 
   const previousBrandPeriod =
-    model.brandPeriods.get(
-      getBrandPeriodId(
-        previousPeriodId,
-        brand.id,
-      ),
+    repository.brand.findPeriod(
+      brand.id,
+      previousPeriodId,
     )
 
   const currentPeriod =
@@ -363,7 +366,7 @@ function buildBrandItem(
 
   const hadActivityBeforePreviousPeriod =
     hasActivityBeforePeriod(
-      model,
+      repository,
       brand.id,
       previousPeriodId,
     )
@@ -551,12 +554,14 @@ function sortAttentionBrands(
 }
 
 export function buildBrandIntelligence(
-  model: BusinessDataModel,
+  repository: BusinessRepository,
   options:
     BrandIntelligenceOptions = {},
 ): BrandIntelligenceSummary | null {
   const currentPeriod =
-    getLatestPeriod(model)
+    getLatestPeriod(
+      repository,
+    )
 
   if (!currentPeriod) {
     return null
@@ -568,9 +573,13 @@ export function buildBrandIntelligence(
     )
 
   const previousPeriod =
-    model.periods.get(
-      previousPeriodId,
-    )
+    repository
+      .getPeriods()
+      .find(
+        (period) =>
+          period.id ===
+          previousPeriodId,
+      )
 
   const stableThreshold =
     options
@@ -588,11 +597,11 @@ export function buildBrandIntelligence(
 
   for (
     const brand of
-      model.brands.values()
+      repository.brand.getAll()
   ) {
     brands.push(
       buildBrandItem(
-        model,
+        repository,
         brand,
         currentPeriod.id,
         previousPeriodId,
@@ -623,7 +632,10 @@ export function buildBrandIntelligence(
       .sort(
         sortByVariationDescending,
       )
-      .slice(0, 10)
+      .slice(
+        0,
+        10,
+      )
 
   const topDecliningBrands =
     brands
@@ -635,14 +647,20 @@ export function buildBrandIntelligence(
       .sort(
         sortByVariationAscending,
       )
-      .slice(0, 10)
+      .slice(
+        0,
+        10,
+      )
 
   const topRevenueBrands =
     [...brands]
       .sort(
         sortByRevenueDescending,
       )
-      .slice(0, 10)
+      .slice(
+        0,
+        10,
+      )
 
   const previousPeriodRevenue =
     previousPeriod?.revenue ?? 0
@@ -659,7 +677,6 @@ export function buildBrandIntelligence(
 
   return {
     analysisDate:
-      model.periodEnd ??
       currentPeriod.periodEnd,
 
     currentPeriodId:

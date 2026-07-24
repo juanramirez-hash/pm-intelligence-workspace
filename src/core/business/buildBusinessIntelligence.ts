@@ -62,11 +62,11 @@ export function buildBusinessIntelligence(
       data.periodEnd,
     )
 
-  // 5. Brand Intelligence utiliza
-  // el modelo central.
+  // 5. Brand Intelligence
+  // consume el BusinessRepository.
   const brands =
     buildBrandIntelligence(
-      data,
+      repository,
     )
 
   // 6. Genera los insights actuales.
