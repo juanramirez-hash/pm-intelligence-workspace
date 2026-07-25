@@ -1,0 +1,3 @@
+export {
+  BrandTable,
+} from './BrandTable'
