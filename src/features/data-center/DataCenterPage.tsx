@@ -1,4 +1,5 @@
 import {
+  Download,
   XCircle,
 } from 'lucide-react'
 
@@ -30,6 +31,10 @@ import {
 import {
   SalesImportSummary,
 } from './components/SalesImportSummary'
+
+import {
+  TargetImportSummary,
+} from './components/TargetImportSummary'
 
 import {
   SpreadsheetFileInformation,
@@ -257,10 +262,21 @@ export function DataCenterPage() {
       <DataCatalog />
 
       <AtlasCard className="p-6">
-        <SectionHeader
-          title="Cargar fuente de datos"
-          description="El archivo se procesa localmente dentro del navegador."
-        />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <SectionHeader
+            title="Cargar fuente de datos"
+            description="El archivo se procesa localmente dentro del navegador."
+          />
+
+          <a
+            href="/templates/plantilla-objetivos-comerciales.xlsx"
+            download
+            className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+          >
+            <Download size={17} />
+            Plantilla de objetivos
+          </a>
+        </div>
 
         <SpreadsheetUploadArea
           inputRef={inputRef}
@@ -356,6 +372,8 @@ export function DataCenterPage() {
               />
 
               <SalesImportSummary />
+
+              <TargetImportSummary />
             </>
           )}
         </>

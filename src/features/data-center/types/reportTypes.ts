@@ -18,6 +18,10 @@ export const REPORT_TYPES: ReportType[] = [
   'customers',
   'other',
 ]
+import type { TargetDatasetSummary } from '../importers/targets/targetTypes'
+
+export type { TargetDatasetSummary }
+
 export interface SalesSummaryItem {
   key: string
   label: string

@@ -11,12 +11,20 @@ import type {
 } from '../../../../core/business/metrics'
 
 import type {
+  BusinessRepository,
+} from '../../../../core/business/repository'
+
+import type {
   DatasetRegistryItem,
 } from '../../../../core/datasets/datasetTypes'
 
 import type {
   BusinessInsight,
 } from '../../../../core/insights/insightTypes'
+
+import type {
+  ExecutiveBrief,
+} from '../../../../core/business/executiveBrief'
 
 import type {
   DataCenterState,
@@ -33,6 +41,12 @@ export interface WorkspaceContextModel {
   metrics:
     BusinessMetrics | null
 
+  repository:
+    BusinessRepository | null
+
+  currentPeriodId:
+    string | null
+
   customers:
     CustomerIntelligenceSummary | null
 
@@ -41,6 +55,9 @@ export interface WorkspaceContextModel {
 
   insights:
     BusinessInsight[]
+
+  executiveBrief:
+    ExecutiveBrief | null
 
   datasets:
     DatasetRegistryItem[]

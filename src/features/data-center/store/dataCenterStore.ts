@@ -10,6 +10,7 @@ import type {
 import type {
   ReportType,
   SalesDatasetSummary,
+  TargetDatasetSummary,
 } from '../types/reportTypes'
 import type {
   SpreadsheetRow,
@@ -20,6 +21,9 @@ import type {
 import type {
   NormalizedSalesRow,
 } from '../importers/sales/salesTypes'
+import type {
+  NormalizedTargetRow,
+} from '../importers/targets/targetTypes'
 
 import {
   runDataCenterImport,
@@ -46,6 +50,16 @@ export interface DataCenterState {
 
   normalizedSales:
     NormalizedSalesRow[]
+
+  targetSummary:
+    TargetDatasetSummary | null
+
+  normalizedTargets:
+    NormalizedTargetRow[]
+
+  targetsLastImportedFile: string | null
+
+  targetsLastImportedAt: string | null
 
   inventorySummary: unknown | null
 
@@ -90,6 +104,14 @@ export interface DataCenterState {
 
   setNormalizedSales: (
     rows: NormalizedSalesRow[],
+  ) => void
+
+  setTargetSummary: (
+    summary: TargetDatasetSummary | null,
+  ) => void
+
+  setNormalizedTargets: (
+    rows: NormalizedTargetRow[],
   ) => void
 
   setInventorySummary: (
@@ -164,6 +186,14 @@ export const useDataCenterStore =
 
       normalizedSales: [],
 
+      targetSummary: null,
+
+      normalizedTargets: [],
+
+      targetsLastImportedFile: null,
+
+      targetsLastImportedAt: null,
+
       inventorySummary: null,
 
       forecastSummary: null,
@@ -212,6 +242,16 @@ export const useDataCenterStore =
       setNormalizedSales: (rows) =>
         set({
           normalizedSales: rows,
+        }),
+
+      setTargetSummary: (summary) =>
+        set({
+          targetSummary: summary,
+        }),
+
+      setNormalizedTargets: (rows) =>
+        set({
+          normalizedTargets: rows,
         }),
 
       setInventorySummary: (
@@ -371,9 +411,48 @@ export const useDataCenterStore =
               break
             }
 
+            case 'quota': {
+              const importedAt = new Date().toISOString()
+
+              set({
+                targetSummary: result.summary,
+                normalizedTargets: result.normalizedRows,
+                targetsLastImportedFile: metadata.fileName,
+                targetsLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .saveTargetDataset({
+                  summary: result.summary,
+                  normalizedRows: result.normalizedRows,
+                  lastImportedFile: metadata.fileName,
+                  lastImportedAt: importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: getErrorMessage(
+                      persistenceError,
+                      'No fue posible guardar los objetivos comerciales.',
+                    ),
+                  })
+                })
+
+              break
+            }
+
             default:
               throw new Error(
-                `No existe un destino de almacenamiento para el reporte "${result.reportType}".`,
+                'No existe un destino de almacenamiento para el reporte detectado.',
               )
           }
 
@@ -406,79 +485,53 @@ export const useDataCenterStore =
         async () => {
           const currentState = get()
 
-          if (
-            currentState.isHydrating ||
-            currentState.isHydrated
-          ) {
+          if (currentState.isHydrating || currentState.isHydrated) {
             return
           }
 
           set({
             isHydrating: true,
-
             persistenceError: null,
           })
 
           try {
-            const persistedDataset =
-              await indexedDbDataRepository
-                .loadSalesDataset()
-
-            if (!persistedDataset) {
-              set({
-                isHydrating: false,
-
-                isHydrated: true,
-              })
-
-              return
-            }
+            const [persistedSales, persistedTargets] = await Promise.all([
+              indexedDbDataRepository.loadSalesDataset(),
+              indexedDbDataRepository.loadTargetDataset(),
+            ])
 
             set({
-              activeReportType:
-                'sales',
-
+              activeReportType: persistedTargets
+                ? 'quota'
+                : persistedSales
+                  ? 'sales'
+                  : null,
               importStatus:
-                'completed',
-
+                persistedSales || persistedTargets
+                  ? 'completed'
+                  : 'idle',
               fileMetadata: null,
-
               importErrors: [],
-
-              salesSummary:
-                persistedDataset
-                  .summary,
-
-              normalizedSales:
-                persistedDataset
-                  .normalizedRows,
-
-              lastImportedFile:
-                persistedDataset
-                  .lastImportedFile,
-
-              lastImportedAt:
-                persistedDataset
-                  .lastImportedAt,
-
+              salesSummary: persistedSales?.summary ?? null,
+              normalizedSales: persistedSales?.normalizedRows ?? [],
+              lastImportedFile: persistedSales?.lastImportedFile ?? null,
+              lastImportedAt: persistedSales?.lastImportedAt ?? null,
+              targetSummary: persistedTargets?.summary ?? null,
+              normalizedTargets: persistedTargets?.normalizedRows ?? [],
+              targetsLastImportedFile: persistedTargets?.lastImportedFile ?? null,
+              targetsLastImportedAt: persistedTargets?.lastImportedAt ?? null,
               isHydrating: false,
-
               isHydrated: true,
-
-              persistenceError:
-                null,
+              persistenceError: null,
             })
           } catch (caughtError) {
             set({
               isHydrating: false,
-
               isHydrated: true,
-
-              persistenceError:
-                getErrorMessage(
-                  caughtError,
-                  'No fue posible recuperar la información almacenada localmente.',
-                ),
+              persistenceError: getErrorMessage(
+                caughtError,
+                'No fue posible recuperar la información almacenada localmente.',
+              ),
             })
           }
         },
@@ -576,6 +629,14 @@ export const useDataCenterStore =
               salesSummary: null,
 
               normalizedSales: [],
+
+              targetSummary: null,
+
+              normalizedTargets: [],
+
+              targetsLastImportedFile: null,
+
+              targetsLastImportedAt: null,
 
               inventorySummary:
                 null,

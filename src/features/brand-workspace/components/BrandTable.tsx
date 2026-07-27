@@ -250,17 +250,19 @@ export function BrandTable({
 
                 return (
                   <tr
-                    className={[
-                      'transition-colors hover:bg-slate-50',
-
-                      isSelected
-                        ? 'bg-violet-50/60'
-                        : '',
-                    ].join(' ')}
-                    key={
-                      brand.brandId
-                    }
-                  >
+  className={[
+    'cursor-pointer transition-colors hover:bg-slate-50',
+    isSelected
+      ? 'bg-violet-50/60'
+      : '',
+  ].join(' ')}
+  key={brand.brandId}
+  onClick={() =>
+    onSelectBrand?.(
+      brand.brandId,
+    )
+  }
+>
                     <td className="px-4 py-4">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">

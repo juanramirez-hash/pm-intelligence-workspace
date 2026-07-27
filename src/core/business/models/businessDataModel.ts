@@ -3,6 +3,10 @@ import type {
 } from '../entities/customerPeriod'
 
 import type {
+  BusinessCustomerBrandPeriod,
+} from '../entities/customerBrandPeriod'
+
+import type {
   BusinessBrand,
 } from '../entities/brand'
 
@@ -11,12 +15,20 @@ import type {
 } from '../entities/brandPeriod'
 
 import type {
+  BusinessBrandTarget,
+} from '../entities/brandTarget'
+
+import type {
   BusinessCustomer,
 } from '../entities/customer'
 
 import type {
   BusinessProduct,
 } from '../entities/product'
+
+import type {
+  BusinessProductPeriod,
+} from '../entities/productPeriod'
 
 export interface BusinessDataTotals {
   revenue: number
@@ -57,14 +69,23 @@ export interface BusinessDataModel {
   customerPeriods:
     Map<string, BusinessCustomerPeriod>
 
+  customerBrandPeriods:
+    Map<string, BusinessCustomerBrandPeriod>
+
   brands:
     Map<string, BusinessBrand>
 
   brandPeriods:
     Map<string, BusinessBrandPeriod>
 
+  brandTargets:
+    Map<string, BusinessBrandTarget>
+
   products:
     Map<string, BusinessProduct>
+
+  productPeriods:
+    Map<string, BusinessProductPeriod>
 
   periods:
     Map<string, BusinessPeriod>

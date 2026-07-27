@@ -6,17 +6,30 @@ import type {
 import type { SpreadsheetRow } from '../parsers/spreadsheetParser'
 import type { NormalizedSalesRow } from '../importers/sales/salesTypes'
 import type { SalesBusinessModel } from '../importers/sales/salesBusinessModel'
+import type { TargetBusinessModel } from '../importers/targets/targetBusinessModel'
+import type { NormalizedTargetRow, TargetDatasetSummary } from '../importers/targets/targetTypes'
+import { salesImportPlugin } from '../importers/sales/salesPlugin'
+import { targetImportPlugin } from '../importers/targets/targetPlugin'
 
 import { runImportEngine } from '../engine/importEngine'
 import { importPluginRegistry } from '../engine/importPluginRegistry'
 import { detectReportType } from './reportDetector'
 
+export type SalesImportResult = ImportEngineResult<
+  SalesDatasetSummary,
+  NormalizedSalesRow,
+  SalesBusinessModel
+> & { reportType: 'sales' }
+
+export type TargetImportResult = ImportEngineResult<
+  TargetDatasetSummary,
+  NormalizedTargetRow,
+  TargetBusinessModel
+> & { reportType: 'quota' }
+
 export type DataCenterImportResult =
-  ImportEngineResult<
-    SalesDatasetSummary,
-    NormalizedSalesRow,
-    SalesBusinessModel
-  >
+  | SalesImportResult
+  | TargetImportResult
 
 function extractSpreadsheetHeaders(
   rows: SpreadsheetRow[],
@@ -89,22 +102,24 @@ export function runDataCenterImport(
     )
   }
 
-  const plugin =
-    importPluginRegistry.find(
-      (registeredPlugin) =>
-        registeredPlugin.reportType ===
-        detection.detectedReportType,
-    )
+  switch (detection.detectedReportType) {
+    case 'sales':
+      return runImportEngine(
+        salesImportPlugin,
+        rows,
+        headers,
+      ) as SalesImportResult
 
-  if (!plugin) {
-    throw new Error(
-      `El reporte "${detection.detectedReportType}" fue detectado, pero no existe un plugin registrado para procesarlo.`,
-    )
+    case 'quota':
+      return runImportEngine(
+        targetImportPlugin,
+        rows,
+        headers,
+      ) as TargetImportResult
+
+    default:
+      throw new Error(
+        `El reporte "${detection.detectedReportType}" fue detectado, pero no existe un plugin registrado para procesarlo.`,
+      )
   }
-
-  return runImportEngine(
-    plugin,
-    rows,
-    headers,
-  )
 }

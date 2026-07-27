@@ -1,76 +1,47 @@
-import type {
-  BusinessRepository,
-} from '../../repository';
-
+import type { BusinessRepository } from '../../repository';
+import type { BusinessCubeMetrics } from '../metrics';
 import type {
   CubeExecutionOptions,
   CubeQuery,
   CubeResult,
 } from '../shared';
+import { CubeQueryValidator } from './cubeQueryValidator';
+import { PeriodMetricExecutor } from './executors';
+import { getPeriodMetricDefinition } from './registry';
 
-import {
-  CubeQueryValidator,
-} from './cubeQueryValidator';
-
-import {
-  PeriodMetricExecutor,
-} from './executors';
-
-/**
- * Motor genérico de consultas del Business Cube.
- */
 export class GenericCubeQueryEngine {
+  private readonly repository: BusinessRepository;
+
+  private readonly metrics: BusinessCubeMetrics;
+
   private readonly validator: CubeQueryValidator;
-
-  private readonly revenueExecutor: PeriodMetricExecutor;
-
-  private readonly grossProfitExecutor: PeriodMetricExecutor;
 
   public constructor(
     repository: BusinessRepository,
+    metrics: BusinessCubeMetrics,
     _domain: string,
   ) {
-    this.validator =
-      new CubeQueryValidator();
-
-    this.revenueExecutor =
-      new PeriodMetricExecutor(
-        repository,
-        'revenue',
-        period => period.revenue,
-      );
-
-    this.grossProfitExecutor =
-      new PeriodMetricExecutor(
-        repository,
-        'grossProfit',
-        period => period.grossProfit,
-      );
+    this.repository = repository;
+    this.metrics = metrics;
+    this.validator = new CubeQueryValidator();
   }
 
   public query(
     query: CubeQuery,
     _options?: CubeExecutionOptions,
   ): CubeResult {
-    this.validator.validate(
-      query,
-    );
+    this.validator.validate(query);
 
-    switch (query.metric) {
-      case 'revenue':
-        return this.revenueExecutor.execute(
-          query,
-        );
+    const definition = getPeriodMetricDefinition(query.metric);
 
-      case 'grossProfit':
-        return this.grossProfitExecutor.execute(
-          query,
-        );
-
-      default:
-        throw new Error(
-          `Unsupported cube metric: ${query.metric}`,
-        );
+    if (!definition) {
+      throw new Error(`Unsupported cube metric: ${query.metric}`);
     }
+
+    return new PeriodMetricExecutor(
+      this.repository,
+      this.metrics,
+      definition,
+    ).execute(query);
   }
 }

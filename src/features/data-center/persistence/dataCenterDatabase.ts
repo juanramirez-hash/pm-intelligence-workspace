@@ -10,34 +10,45 @@ import type {
 import type {
   NormalizedSalesRow,
 } from '../importers/sales/salesTypes'
+import type {
+  NormalizedTargetRow,
+  TargetDatasetSummary,
+} from '../importers/targets/targetTypes'
 
 export const DATA_CENTER_DATABASE_NAME =
   'pm-intelligence-workspace'
 
-export const DATA_CENTER_DATABASE_VERSION = 1
+export const DATA_CENTER_DATABASE_VERSION = 2
 
 export const SALES_METADATA_KEY =
   'current-sales-dataset'
+export const TARGET_METADATA_KEY =
+  'current-target-dataset'
 
 export const SALES_CHUNK_SIZE = 5_000
 
 export interface PersistedSalesMetadata {
   id: string
-
   summary: SalesDatasetSummary
-
   lastImportedFile: string
   lastImportedAt: string
-
   totalRows: number
   totalChunks: number
-
   persistenceVersion: number
 }
 
 export interface PersistedSalesChunk {
   chunkIndex: number
   rows: NormalizedSalesRow[]
+}
+
+export interface PersistedTargetMetadata {
+  id: string
+  summary: TargetDatasetSummary
+  normalizedRows: NormalizedTargetRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+  persistenceVersion: number
 }
 
 interface DataCenterDatabaseSchema
@@ -50,6 +61,11 @@ interface DataCenterDatabaseSchema
   salesChunks: {
     key: number
     value: PersistedSalesChunk
+  }
+
+  targetMetadata: {
+    key: string
+    value: PersistedTargetMetadata
   }
 }
 
@@ -69,24 +85,16 @@ export function getDataCenterDatabase():
         DATA_CENTER_DATABASE_VERSION,
         {
           upgrade(database) {
-            if (
-              !database.objectStoreNames.contains(
-                'salesMetadata',
-              )
-            ) {
-              database.createObjectStore(
-                'salesMetadata',
-              )
+            if (!database.objectStoreNames.contains('salesMetadata')) {
+              database.createObjectStore('salesMetadata')
             }
 
-            if (
-              !database.objectStoreNames.contains(
-                'salesChunks',
-              )
-            ) {
-              database.createObjectStore(
-                'salesChunks',
-              )
+            if (!database.objectStoreNames.contains('salesChunks')) {
+              database.createObjectStore('salesChunks')
+            }
+
+            if (!database.objectStoreNames.contains('targetMetadata')) {
+              database.createObjectStore('targetMetadata')
             }
           },
         },

@@ -18,6 +18,8 @@ import type {
   BusinessIntelligenceModel,
 } from './businessIntelligenceModel'
 
+import type { BusinessBrandTargetInput } from './targets'
+
 import {
   buildBusinessDataModel,
 } from './builders'
@@ -30,14 +32,22 @@ import {
   buildBusinessMetrics,
 } from './metrics'
 
+export interface BuildBusinessIntelligenceOptions {
+  brandTargets?: readonly BusinessBrandTargetInput[]
+}
+
 export function buildBusinessIntelligence(
   rows: NormalizedSalesRow[],
+  options: BuildBusinessIntelligenceOptions = {},
 ): BusinessIntelligenceModel {
   // 1. Construye el modelo central
   // de datos.
   const data =
     buildBusinessDataModel(
       rows,
+      {
+        brandTargets: options.brandTargets,
+      },
     )
 
   // 2. Crea una única instancia

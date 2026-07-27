@@ -19,13 +19,29 @@ import type {
 } from '../entities/customerPeriod'
 
 import type {
+  BusinessCustomerBrandPeriod,
+} from '../entities/customerBrandPeriod'
+
+import type {
   BusinessProduct,
 } from '../entities/product'
+
+import type {
+  BusinessProductPeriod,
+} from '../entities/productPeriod'
 
 import type {
   BusinessDataModel,
   BusinessPeriod,
 } from '../models/businessDataModel'
+
+import type {
+  BusinessBrandTargetInput,
+} from '../targets'
+
+import {
+  buildBusinessBrandTargets,
+} from '../targets'
 
 function normalizeIdentifier(
   value: string | null,
@@ -109,6 +125,21 @@ function getCustomerPeriodId(
   customerId: string,
 ): string {
   return `${periodId}::${customerId}`
+}
+
+function getProductPeriodId(
+  periodId: string,
+  productId: string,
+): string {
+  return `${periodId}::${productId}`
+}
+
+function getCustomerBrandPeriodId(
+  periodId: string,
+  customerId: string,
+  brandId: string,
+): string {
+  return `${periodId}::${customerId}::${brandId}`
 }
 
 function createBusinessPeriod(
@@ -227,6 +258,28 @@ function createBusinessCustomerPeriod(
   }
 }
 
+function createBusinessCustomerBrandPeriod(
+  customerId: string,
+  brandId: string,
+  periodId: string,
+): BusinessCustomerBrandPeriod {
+  return {
+    id: getCustomerBrandPeriodId(
+      periodId,
+      customerId,
+      brandId,
+    ),
+    customerId,
+    brandId,
+    periodId,
+    revenue: 0,
+    grossProfit: 0,
+    quantity: 0,
+    documents: 0,
+    products: new Set<string>(),
+  }
+}
+
 function createBusinessBrand(
   brandId: string,
   brandName: string,
@@ -275,6 +328,22 @@ function createBusinessBrandPeriod(
   }
 }
 
+function createBusinessProductPeriod(
+  productId: string,
+  periodId: string,
+): BusinessProductPeriod {
+  return {
+    id: getProductPeriodId(periodId, productId),
+    productId,
+    periodId,
+    revenue: 0,
+    grossProfit: 0,
+    quantity: 0,
+    documents: 0,
+    customers: new Set<string>(),
+  }
+}
+
 function createBusinessProduct(
   productId: string,
   model: string,
@@ -316,9 +385,20 @@ function updateModelPeriodRange(
   }
 }
 
+export interface BuildBusinessDataModelOptions {
+  brandTargets?:
+    readonly BusinessBrandTargetInput[]
+}
+
 export function buildBusinessDataModel(
   rows: NormalizedSalesRow[],
+  options: BuildBusinessDataModelOptions = {},
 ): BusinessDataModel {
+  const brandTargetsResult =
+    buildBusinessBrandTargets(
+      options.brandTargets ?? [],
+    )
+
   const model: BusinessDataModel = {
     generatedAt:
       new Date().toISOString(),
@@ -345,6 +425,12 @@ export function buildBusinessDataModel(
         BusinessCustomerPeriod
       >(),
 
+    customerBrandPeriods:
+      new Map<
+        string,
+        BusinessCustomerBrandPeriod
+      >(),
+
     brands:
       new Map<
         string,
@@ -357,10 +443,19 @@ export function buildBusinessDataModel(
         BusinessBrandPeriod
       >(),
 
+    brandTargets:
+      brandTargetsResult.brandTargets,
+
     products:
       new Map<
         string,
         BusinessProduct
+      >(),
+
+    productPeriods:
+      new Map<
+        string,
+        BusinessProductPeriod
       >(),
 
     periods:
@@ -404,6 +499,15 @@ export function buildBusinessDataModel(
     >()
 
   const brandPeriodDocuments =
+    new Map<
+      string,
+      Set<string>
+    >()
+
+  const productPeriodDocuments =
+    new Map<string, Set<string>>()
+
+  const customerBrandPeriodDocuments =
     new Map<
       string,
       Set<string>
@@ -715,6 +819,64 @@ export function buildBusinessDataModel(
           )
         }
       }
+
+      const customerBrandPeriodId =
+        getCustomerBrandPeriodId(
+          periodId,
+          customerId,
+          brandId,
+        )
+
+      let customerBrandPeriod =
+        model.customerBrandPeriods.get(
+          customerBrandPeriodId,
+        )
+
+      if (!customerBrandPeriod) {
+        customerBrandPeriod =
+          createBusinessCustomerBrandPeriod(
+            customerId,
+            brandId,
+            periodId,
+          )
+
+        model.customerBrandPeriods.set(
+          customerBrandPeriodId,
+          customerBrandPeriod,
+        )
+      }
+
+      customerBrandPeriod.revenue +=
+        row.revenue
+
+      customerBrandPeriod.grossProfit +=
+        row.grossProfit
+
+      customerBrandPeriod.quantity +=
+        row.quantity
+
+      if (productId) {
+        customerBrandPeriod.products.add(
+          productId,
+        )
+      }
+
+      if (documentNumber) {
+        let documents =
+          customerBrandPeriodDocuments.get(
+            customerBrandPeriodId,
+          )
+
+        if (!documents) {
+          documents = new Set<string>()
+          customerBrandPeriodDocuments.set(
+            customerBrandPeriodId,
+            documents,
+          )
+        }
+
+        documents.add(documentNumber)
+      }
     }
 
     if (
@@ -753,6 +915,52 @@ export function buildBusinessDataModel(
         product.customers.add(
           customerId,
         )
+      }
+
+      const productPeriodId =
+        getProductPeriodId(
+          periodId,
+          productId,
+        )
+
+      let productPeriod =
+        model.productPeriods.get(
+          productPeriodId,
+        )
+
+      if (!productPeriod) {
+        productPeriod =
+          createBusinessProductPeriod(
+            productId,
+            periodId,
+          )
+        model.productPeriods.set(
+          productPeriodId,
+          productPeriod,
+        )
+      }
+
+      productPeriod.revenue += row.revenue
+      productPeriod.grossProfit += row.grossProfit
+      productPeriod.quantity += row.quantity
+
+      if (customerId) {
+        productPeriod.customers.add(customerId)
+      }
+
+      if (documentNumber) {
+        let documents =
+          productPeriodDocuments.get(
+            productPeriodId,
+          )
+        if (!documents) {
+          documents = new Set<string>()
+          productPeriodDocuments.set(
+            productPeriodId,
+            documents,
+          )
+        }
+        documents.add(documentNumber)
       }
     }
 
@@ -948,6 +1156,31 @@ export function buildBusinessDataModel(
     if (brandPeriod) {
       brandPeriod.documents =
         documents.size
+    }
+  }
+
+  for (
+    const [
+      customerBrandPeriodId,
+      documents,
+    ] of customerBrandPeriodDocuments
+  ) {
+    const customerBrandPeriod =
+      model.customerBrandPeriods.get(
+        customerBrandPeriodId,
+      )
+
+    if (customerBrandPeriod) {
+      customerBrandPeriod.documents =
+        documents.size
+    }
+  }
+
+
+  for (const [id, documents] of productPeriodDocuments) {
+    const productPeriod = model.productPeriods.get(id)
+    if (productPeriod) {
+      productPeriod.documents = documents.size
     }
   }
 

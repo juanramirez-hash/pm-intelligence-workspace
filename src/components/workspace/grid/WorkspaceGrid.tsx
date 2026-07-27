@@ -5,7 +5,7 @@ import type {
 interface WorkspaceGridProps
     extends PropsWithChildren {
 
-    columns?: 2 | 3 | 4
+    columns?: 2 | 3 | 4 | 5
 
     gap?: 4 | 6
 
@@ -20,6 +20,8 @@ const columnStyles = {
     3: 'xl:grid-cols-3',
 
     4: 'sm:grid-cols-2 xl:grid-cols-4',
+
+    5: 'sm:grid-cols-2 xl:grid-cols-5',
 
 }
 

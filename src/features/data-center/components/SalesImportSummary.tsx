@@ -85,6 +85,11 @@ export function SalesImportSummary() {
       (state) => state.salesSummary,
     )
 
+  const activeReportType =
+    useDataCenterStore(
+      (state) => state.activeReportType,
+    )
+
   const importStatus =
     useDataCenterStore(
       (state) => state.importStatus,
@@ -92,6 +97,7 @@ export function SalesImportSummary() {
 
   if (
     importStatus !== 'completed' ||
+    activeReportType !== 'sales' ||
     !salesSummary
   ) {
     return null

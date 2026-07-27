@@ -16,6 +16,12 @@ import {
   useBrandWorkspaceStore,
 } from '../store/brandWorkspaceStore'
 
+import type {
+  BrandIntelligenceItem,
+} from '../../../core/analytics/brands'
+
+const EMPTY_BRANDS: BrandIntelligenceItem[] = []
+
 export function useBrandWorkspace() {
   const workspace =
     useWorkspaceContext()
@@ -46,7 +52,7 @@ export function useBrandWorkspace() {
 
   const brands =
     workspace.brands?.brands ??
-    []
+    EMPTY_BRANDS
 
   const filteredBrands =
     useMemo(
@@ -88,6 +94,9 @@ export function useBrandWorkspace() {
 
     summaryAvailable:
       workspace.brands !== null,
+
+    executiveBrief:
+      workspace.executiveBrief,
 
     brands,
 

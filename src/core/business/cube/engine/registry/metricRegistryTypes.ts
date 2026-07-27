@@ -1,22 +1,23 @@
-import type {
-  BusinessRepository,
-} from '../../../repository';
+import type { BusinessRepository } from '../../../repository';
+import type { BusinessCubeMetrics } from '../../metrics';
+import type { CubeMetric } from '../../shared';
 
-import type {
-  CubeMetric,
-} from '../../shared';
+export type RevenuePeriod = ReturnType<
+  BusinessRepository['revenue']['getMonthly']
+>[number];
 
-export type RevenuePeriod =
-  ReturnType<
-    BusinessRepository['revenue']['getMonthly']
-  >[number];
+export type PeriodMetricSelector = (
+  period: RevenuePeriod,
+  metrics: BusinessCubeMetrics,
+) => number | null;
 
-export type PeriodMetricSelector =
-  (
-    period: RevenuePeriod,
-  ) => number;
+export type PeriodMetricTotalSelector = (
+  periods: readonly RevenuePeriod[],
+  metrics: BusinessCubeMetrics,
+) => number | null;
 
 export interface PeriodMetricDefinition {
-  metric: CubeMetric;
-  selectValue: PeriodMetricSelector;
+  readonly metric: CubeMetric;
+  readonly selectValue: PeriodMetricSelector;
+  readonly selectTotal?: PeriodMetricTotalSelector;
 }

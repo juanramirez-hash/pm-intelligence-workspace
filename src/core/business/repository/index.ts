@@ -17,3 +17,12 @@ export {
 export type {
   RevenuePeriodSummary,
 } from './revenueQueries'
+export {
+  CommercialTargetQueries,
+} from './commercialTargetQueries'
+
+export {
+  CustomerBrandQueries,
+} from './customerBrandQueries'
+
+export * from './productQueries'

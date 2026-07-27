@@ -23,8 +23,20 @@ import {
 } from './customerQueries'
 
 import {
+  CustomerBrandQueries,
+} from './customerBrandQueries'
+
+import {
   RevenueQueries,
 } from './revenueQueries'
+
+import {
+  ProductQueries,
+} from './productQueries'
+
+import {
+  CommercialTargetQueries,
+} from './commercialTargetQueries'
 
 export class BusinessRepository {
   private readonly model:
@@ -36,8 +48,17 @@ export class BusinessRepository {
   readonly customer:
     CustomerQueries
 
+  readonly customerBrand:
+    CustomerBrandQueries
+
   readonly revenue:
     RevenueQueries
+
+  readonly product:
+    ProductQueries
+
+  readonly targets:
+    CommercialTargetQueries
 
   constructor(
     model: BusinessDataModel,
@@ -54,8 +75,23 @@ export class BusinessRepository {
         model,
       )
 
+    this.customerBrand =
+      new CustomerBrandQueries(
+        model,
+      )
+
     this.revenue =
       new RevenueQueries(
+        model,
+      )
+
+    this.product =
+      new ProductQueries(
+        model,
+      )
+
+    this.targets =
+      new CommercialTargetQueries(
         model,
       )
   }
@@ -72,9 +108,7 @@ export class BusinessRepository {
 
   getProducts():
     BusinessProduct[] {
-    return [
-      ...this.model.products.values(),
-    ]
+    return this.product.getAll()
   }
 
   findCustomer(
@@ -96,9 +130,17 @@ export class BusinessRepository {
   findProduct(
     id: string,
   ): BusinessProduct | undefined {
-    return this.model.products.get(
+    return this.product.findById(
       id,
     )
+  }
+
+  getGeneratedAt(): string {
+    return this.model.generatedAt
+  }
+
+  getDataPeriodEnd(): string | null {
+    return this.model.periodEnd
   }
 
   getTotals() {

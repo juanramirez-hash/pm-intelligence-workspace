@@ -285,6 +285,21 @@ export function DataCatalog() {
         state.salesSummary,
     )
 
+  const targetSummary =
+    useDataCenterStore(
+      (state) => state.targetSummary,
+    )
+
+  const targetsLastImportedFile =
+    useDataCenterStore(
+      (state) => state.targetsLastImportedFile,
+    )
+
+  const targetsLastImportedAt =
+    useDataCenterStore(
+      (state) => state.targetsLastImportedAt,
+    )
+
   const lastImportedFile =
     useDataCenterStore(
       (state) =>
@@ -302,13 +317,19 @@ export function DataCatalog() {
       () =>
         buildDatasetRegistry({
           salesSummary,
-          lastImportedFile,
-          lastImportedAt,
+          salesLastImportedFile: lastImportedFile,
+          salesLastImportedAt: lastImportedAt,
+          targetSummary,
+          targetsLastImportedFile,
+          targetsLastImportedAt,
         }),
       [
         salesSummary,
         lastImportedFile,
         lastImportedAt,
+        targetSummary,
+        targetsLastImportedFile,
+        targetsLastImportedAt,
       ],
     )
 

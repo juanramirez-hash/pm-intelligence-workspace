@@ -164,6 +164,10 @@ describe(
         expect(
           model.periods.size,
         ).toBe(2)
+
+        expect(
+          model.customerBrandPeriods.size,
+        ).toBe(3)
       },
     )
 

@@ -2,8 +2,14 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { AppShell } from '../layouts/AppShell'
 import { ExecutiveWorkspacePage } from '../features/executive-workspace/ExecutiveWorkspacePage'
+import { BrandWorkspacePage } from '../features/brand-workspace/pages/BrandWorkspacePage'
 import { PlaceholderPage } from '../shared/ui/PlaceholderPage'
 import { DataCenterPage } from '../features/data-center/DataCenterPage'
+import { BrandIntelligencePage } from '../features/brand-intelligence/pages/BrandIntelligencePage'
+import { CustomerDirectoryPage } from '../features/customer-intelligence/pages/CustomerDirectoryPage'
+import { CustomerIntelligencePage } from '../features/customer-intelligence/pages/CustomerIntelligencePage'
+import { ProductDirectoryPage } from '../features/product-intelligence/pages/ProductDirectoryPage'
+import { ProductIntelligencePage } from '../features/product-intelligence/pages/ProductIntelligencePage'
 
 export const router = createBrowserRouter([
   {
@@ -25,30 +31,29 @@ export const router = createBrowserRouter([
       },
       {
         path: 'brands',
-        element: (
-          <PlaceholderPage
-            title="Brand Workspace"
-            description="Gestión integral de marcas y desempeño comercial."
-          />
-        ),
+        element: <BrandWorkspacePage />,
       },
+
+{
+  path: 'brands/:brandId',
+  element: <BrandIntelligencePage />,
+},
+
       {
         path: 'customers',
-        element: (
-          <PlaceholderPage
-            title="Customer Workspace"
-            description="Desarrollo, recuperación y comportamiento de clientes."
-          />
-        ),
+        element: <CustomerDirectoryPage />,
+      },
+      {
+        path: 'customers/:customerId',
+        element: <CustomerIntelligencePage />,
       },
       {
         path: 'products',
-        element: (
-          <PlaceholderPage
-            title="Product Workspace"
-            description="Desempeño, crecimiento y oportunidades por producto."
-          />
-        ),
+        element: <ProductDirectoryPage />,
+      },
+      {
+        path: 'products/:productId',
+        element: <ProductIntelligencePage />,
       },
       {
         path: 'pricing',
