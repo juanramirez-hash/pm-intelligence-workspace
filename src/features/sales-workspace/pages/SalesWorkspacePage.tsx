@@ -36,9 +36,12 @@ import {
 
 import {
   SalesBrandPerformanceTable,
+  SalesCommercialOpportunityPanel,
+  SalesDetailTable,
   SalesPerformancePanel,
   SalesRankingPanel,
   SalesReconciliationPanel,
+  SalesSegmentationFilterPanel,
   SalesTrendPanel,
   SalesWorkspaceFilterBar,
 } from '../components'
@@ -48,6 +51,7 @@ import {
 } from '../hooks'
 
 import type {
+  SalesCommercialOpportunity,
   SalesWorkspaceComparison,
 } from '../types'
 
@@ -140,6 +144,46 @@ export function SalesWorkspacePage() {
       ? current.revenue /
         current.documents
       : 0
+
+  const clearSegmentation = () => {
+    workspace.actions.clearDimension('brand')
+    workspace.actions.clearDimension('customer')
+    workspace.actions.clearDimension('product')
+    workspace.actions.clearDimension('location')
+    workspace.actions.clearDimension('salesRepresentative')
+    workspace.actions.clearDimension('search')
+  }
+
+  const openOpportunitySegment = (
+    opportunity: SalesCommercialOpportunity,
+  ) => {
+    if (!opportunity.entityId) {
+      return
+    }
+
+    switch (opportunity.entityType) {
+      case 'brand':
+        workspace.actions.setDimensionValues(
+          'brand',
+          [opportunity.entityId],
+        )
+        break
+      case 'customer':
+        workspace.actions.setDimensionValues(
+          'customer',
+          [opportunity.entityId],
+        )
+        break
+      case 'product':
+        workspace.actions.setDimensionValues(
+          'product',
+          [opportunity.entityId],
+        )
+        break
+      case 'workspace':
+        break
+    }
+  }
 
   return (
     <ExecutiveShell
@@ -341,6 +385,16 @@ export function SalesWorkspacePage() {
         }
       />
 
+      <SalesSegmentationFilterPanel
+        activeFilters={workspace.activeFilters}
+        filters={workspace.filters}
+        onClearDimension={workspace.actions.clearDimension}
+        onDimensionChange={workspace.actions.setDimensionValues}
+        onReset={clearSegmentation}
+        onSearchTermChange={workspace.actions.setSearchTerm}
+        options={workspace.filterOptions}
+      />
+
       <KPIGrid columns={4} gap="compact">
         <IntelligentKpiCard
           context={comparisonContext}
@@ -453,11 +507,18 @@ export function SalesWorkspacePage() {
             performance={workspace.performance}
           />
 
-          <SalesBrandPerformanceTable
-            items={workspace.brandPerformance}
-          />
+          {workspace.performance.available && (
+            <SalesBrandPerformanceTable
+              items={workspace.brandPerformance}
+            />
+          )}
         </div>
       </section>
+
+      <SalesCommercialOpportunityPanel
+        onSelect={openOpportunitySegment}
+        summary={workspace.commercialOpportunities}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(22rem,0.8fr)]">
         <SalesTrendPanel
@@ -490,24 +551,67 @@ export function SalesWorkspacePage() {
           <SalesRankingPanel
             icon={Building2}
             items={workspace.topBrands}
-            subtitle="Top 5 por venta del periodo."
+            onSelect={(id) =>
+              workspace.actions.setDimensionValues(
+                'brand',
+                [id],
+              )
+            }
+            selectedId={workspace.filters.brandIds?.[0] ?? null}
+            subtitle="Top 5 por venta. Selecciona una marca para profundizar."
             title="Marcas"
           />
 
           <SalesRankingPanel
             icon={Users}
             items={workspace.topCustomers}
-            subtitle="Top 5 por venta del periodo."
+            onSelect={(id) =>
+              workspace.actions.setDimensionValues(
+                'customer',
+                [id],
+              )
+            }
+            selectedId={workspace.filters.customerIds?.[0] ?? null}
+            subtitle="Top 5 por venta. Selecciona un cliente para profundizar."
             title="Clientes"
           />
 
           <SalesRankingPanel
             icon={Package}
             items={workspace.topProducts}
-            subtitle="Top 5 por venta del periodo."
+            onSelect={(id) =>
+              workspace.actions.setDimensionValues(
+                'product',
+                [id],
+              )
+            }
+            selectedId={workspace.filters.productIds?.[0] ?? null}
+            subtitle="Top 5 por venta. Selecciona un producto para profundizar."
             title="Productos"
           />
         </div>
+      </section>
+
+      <section>
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+            Detalle transaccional agregado
+          </p>
+
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+            Drill-down del segmento seleccionado
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Presenta combinaciones exactas construidas por Business Repository, sin exponer filas normalizadas ni colecciones internas al Workspace.
+          </p>
+        </div>
+
+        <SalesDetailTable
+          items={workspace.detailRows}
+          sourceRows={workspace.detailSourceRows}
+          totalRows={workspace.detailTotalRows}
+        />
       </section>
     </ExecutiveShell>
   )

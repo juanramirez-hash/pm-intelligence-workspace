@@ -134,11 +134,14 @@ export function SalesPerformancePanel({
         <div className="flex min-h-64 items-center justify-center rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 px-6 text-center">
           <div>
             <p className="text-sm font-semibold text-amber-900">
-              No hay objetivos para el periodo seleccionado.
+              {performance.unavailableReason
+                ? 'Objetivo no evaluable con este segmento.'
+                : 'No hay objetivos para el periodo seleccionado.'}
             </p>
 
             <p className="mt-2 max-w-xl text-xs leading-5 text-amber-700">
-              Importa la cuota mensual por marca y los días laborables para activar cumplimiento, ritmo diario y proyección de cierre.
+              {performance.unavailableReason ??
+                'Importa la cuota mensual por marca y los días laborables para activar cumplimiento, ritmo diario y proyección de cierre.'}
             </p>
           </div>
         </div>

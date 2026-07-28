@@ -17,3 +17,7 @@ export type {
 export type {
   BusinessProduct,
 } from '../entities/product'
+
+export type {
+  BusinessSalesSegment,
+} from '../entities/salesSegment'

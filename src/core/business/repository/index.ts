@@ -52,3 +52,17 @@ export {
 export type {
   ProductPeriodIndexes,
 } from './productPeriodIndexes'
+
+export {
+  SalesSegmentationQueries,
+} from './salesSegmentationQueries'
+
+export type {
+  SalesSegmentationDetailRow,
+  SalesSegmentationDimension,
+  SalesSegmentationFilter,
+  SalesSegmentationGroup,
+  SalesSegmentationOption,
+  SalesSegmentationOptions,
+  SalesSegmentationSummary,
+} from './salesSegmentationQueries'

@@ -25,20 +25,37 @@ export function useSalesWorkspace() {
 
   const setPeriodId =
     useSalesWorkspaceStore(
-      (state) =>
-        state.setPeriodId,
+      (state) => state.setPeriodId,
     )
 
   const setComparisonMode =
     useSalesWorkspaceStore(
-      (state) =>
-        state.setComparisonMode,
+      (state) => state.setComparisonMode,
+    )
+
+  const setSearchTerm =
+    useSalesWorkspaceStore(
+      (state) => state.setSearchTerm,
+    )
+
+  const setDimensionValues =
+    useSalesWorkspaceStore(
+      (state) => state.setDimensionValues,
+    )
+
+  const toggleDimensionValue =
+    useSalesWorkspaceStore(
+      (state) => state.toggleDimensionValue,
+    )
+
+  const clearDimension =
+    useSalesWorkspaceStore(
+      (state) => state.clearDimension,
     )
 
   const resetFilters =
     useSalesWorkspaceStore(
-      (state) =>
-        state.resetFilters,
+      (state) => state.resetFilters,
     )
 
   const viewModel =
@@ -62,6 +79,10 @@ export function useSalesWorkspace() {
     actions: {
       setPeriodId,
       setComparisonMode,
+      setSearchTerm,
+      setDimensionValues,
+      toggleDimensionValue,
+      clearDimension,
       resetFilters,
     },
   }

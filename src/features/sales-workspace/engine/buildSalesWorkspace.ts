@@ -1,4 +1,8 @@
 import {
+  buildSalesCommercialOpportunities,
+} from './buildSalesCommercialOpportunities'
+
+import {
   calculateMetricAttainment,
   calculateRevenuePace,
 } from '../../../core/business/attainment'
@@ -10,12 +14,19 @@ import type {
 import type {
   BusinessRepository,
   RevenuePeriodSummary,
+  SalesSegmentationDimension,
+  SalesSegmentationFilter,
+  SalesSegmentationGroup,
+  SalesSegmentationOption,
 } from '../../../core/business/repository'
 
 import type {
   SalesPerformanceStatus,
   SalesWorkspaceBrandPerformanceItem,
+  SalesWorkspaceActiveFilter,
   SalesWorkspaceComparison,
+  SalesWorkspaceFilterDimension,
+  SalesWorkspaceFilterOptions,
   SalesWorkspaceFilters,
   SalesWorkspacePerformance,
   SalesWorkspaceRankingItem,
@@ -244,140 +255,214 @@ function calculateParticipation(
   ) * 100
 }
 
-function buildBrandRanking(
+function buildSegmentationFilter(
+  filters: SalesWorkspaceFilters,
+  periodIds?: readonly string[],
+  omitDimension?: SalesWorkspaceFilterDimension,
+): SalesSegmentationFilter {
+  return {
+    periodIds,
+    brandIds:
+      omitDimension === 'brand'
+        ? undefined
+        : filters.brandIds,
+    customerIds:
+      omitDimension === 'customer'
+        ? undefined
+        : filters.customerIds,
+    productIds:
+      omitDimension === 'product'
+        ? undefined
+        : filters.productIds,
+    locationIds:
+      omitDimension === 'location'
+        ? undefined
+        : filters.locationIds,
+    salesRepresentativeIds:
+      omitDimension === 'salesRepresentative'
+        ? undefined
+        : filters.salesRepresentativeIds,
+    searchTerm:
+      filters.searchTerm ?? null,
+  }
+}
+
+function buildFilteredPeriod(
   repository: BusinessRepository,
+  period: RevenuePeriodSummary,
+  filters: SalesWorkspaceFilters,
+): RevenuePeriodSummary {
+  const summary =
+    repository.salesSegmentation.summarize(
+      buildSegmentationFilter(
+        filters,
+        [period.id],
+      ),
+    )
+
+  return {
+    ...period,
+    revenue: summary.revenue,
+    grossProfit: summary.grossProfit,
+    quantity: summary.quantity,
+    documents: summary.documents,
+    customerCount: summary.customerCount,
+    brandCount: summary.brandCount,
+    productCount: summary.productCount,
+  }
+}
+
+function buildSegmentationRanking(
+  repository: BusinessRepository,
+  dimension: Extract<
+    SalesSegmentationDimension,
+    'brand' | 'customer' | 'product'
+  >,
+  filters: SalesWorkspaceFilters,
   periodId: string,
   totalRevenue: number,
 ): SalesWorkspaceRankingItem[] {
   return sortRanking(
-    repository
-      .getBrands()
-      .map((brand) => {
-        const period =
-          repository.brand.findPeriod(
-            brand.id,
-            periodId,
-          )
-
-        if (!period) {
-          return null
-        }
-
-        return {
-          id: brand.id,
-          label: brand.name,
-          revenue: period.revenue,
-          grossProfit:
-            period.grossProfit,
-          quantity: period.quantity,
-          documents: period.documents,
-          participation:
-            calculateParticipation(
-              period.revenue,
-              totalRevenue,
-            ),
-        }
-      })
-      .filter(
-        (
-          item,
-        ): item is SalesWorkspaceRankingItem =>
-          item !== null &&
-          item.revenue !== 0,
-      ),
+    repository.salesSegmentation
+      .groupBy(
+        dimension,
+        buildSegmentationFilter(
+          filters,
+          [periodId],
+        ),
+      )
+      .map((group) => ({
+        id: group.id,
+        label: group.label,
+        revenue: group.revenue,
+        grossProfit: group.grossProfit,
+        quantity: group.quantity,
+        documents: group.documents,
+        participation:
+          calculateParticipation(
+            group.revenue,
+            totalRevenue,
+          ),
+      })),
   )
 }
 
-function buildCustomerRanking(
-  repository: BusinessRepository,
-  periodId: string,
-  totalRevenue: number,
-): SalesWorkspaceRankingItem[] {
-  return sortRanking(
-    repository
-      .getCustomers()
-      .map((customer) => {
-        const period =
-          repository.customer.findPeriod(
-            customer.id,
-            periodId,
-          )
-
-        if (!period) {
-          return null
-        }
-
-        return {
-          id: customer.id,
-          label:
-            customer.name ||
-            customer.id,
-          revenue: period.revenue,
-          grossProfit:
-            period.grossProfit,
-          quantity: period.quantity,
-          documents: period.documents,
-          participation:
-            calculateParticipation(
-              period.revenue,
-              totalRevenue,
-            ),
-        }
-      })
-      .filter(
-        (
-          item,
-        ): item is SalesWorkspaceRankingItem =>
-          item !== null &&
-          item.revenue !== 0,
+function mapFilterOptions(
+  groups: SalesSegmentationGroup[],
+): SalesSegmentationOption[] {
+  return groups
+    .map((group) => ({
+      id: group.id,
+      label: group.label,
+      revenue: group.revenue,
+    }))
+    .sort((left, right) =>
+      left.label.localeCompare(
+        right.label,
+        'es-MX',
       ),
+    )
+}
+
+function buildFilterOptions(
+  repository: BusinessRepository,
+  filters: SalesWorkspaceFilters,
+  periodId: string,
+): SalesWorkspaceFilterOptions {
+  const group = (
+    dimension: Exclude<
+      SalesSegmentationDimension,
+      'period'
+    >,
+    filterDimension: SalesWorkspaceFilterDimension,
+  ) =>
+    mapFilterOptions(
+      repository.salesSegmentation.groupBy(
+        dimension,
+        buildSegmentationFilter(
+          filters,
+          [periodId],
+          filterDimension,
+        ),
+      ),
+    )
+
+  return {
+    brands: group('brand', 'brand'),
+    customers: group('customer', 'customer'),
+    products: group('product', 'product'),
+    locations: group('location', 'location'),
+    salesRepresentatives: group(
+      'salesRepresentative',
+      'salesRepresentative',
+    ),
+  }
+}
+
+function findOptionLabel(
+  options: SalesSegmentationOption[],
+  id: string,
+): string {
+  return (
+    options.find(
+      (option) => option.id === id,
+    )?.label ?? id
   )
 }
 
-function buildProductRanking(
-  repository: BusinessRepository,
-  periodId: string,
-  totalRevenue: number,
-): SalesWorkspaceRankingItem[] {
-  return sortRanking(
-    repository
-      .getProducts()
-      .map((product) => {
-        const period =
-          repository.product.findPeriod(
-            product.id,
-            periodId,
-          )
+function buildActiveFilters(
+  filters: SalesWorkspaceFilters,
+  options: SalesWorkspaceFilterOptions,
+): SalesWorkspaceActiveFilter[] {
+  const result: SalesWorkspaceActiveFilter[] = []
 
-        if (!period) {
-          return null
-        }
-
-        return {
-          id: product.id,
-          label:
-            product.model ||
-            product.sku ||
-            product.id,
-          revenue: period.revenue,
-          grossProfit:
-            period.grossProfit,
-          quantity: period.quantity,
-          documents: period.documents,
-          participation:
-            calculateParticipation(
-              period.revenue,
-              totalRevenue,
-            ),
-        }
+  const append = (
+    dimension: SalesWorkspaceFilterDimension,
+    ids: readonly string[] | undefined,
+    source: SalesSegmentationOption[],
+  ) => {
+    for (const id of ids ?? []) {
+      result.push({
+        dimension,
+        id,
+        label: findOptionLabel(source, id),
       })
-      .filter(
-        (
-          item,
-        ): item is SalesWorkspaceRankingItem =>
-          item !== null &&
-          item.revenue !== 0,
-      ),
+    }
+  }
+
+  append('brand', filters.brandIds, options.brands)
+  append('customer', filters.customerIds, options.customers)
+  append('product', filters.productIds, options.products)
+  append('location', filters.locationIds, options.locations)
+  append(
+    'salesRepresentative',
+    filters.salesRepresentativeIds,
+    options.salesRepresentatives,
+  )
+
+  const searchTerm =
+    filters.searchTerm?.trim()
+
+  if (searchTerm) {
+    result.push({
+      dimension: 'search',
+      id: searchTerm,
+      label: `Búsqueda: ${searchTerm}`,
+    })
+  }
+
+  return result
+}
+
+function hasNonBrandTargetFilters(
+  filters: SalesWorkspaceFilters,
+): boolean {
+  return Boolean(
+    filters.customerIds?.length ||
+    filters.productIds?.length ||
+    filters.locationIds?.length ||
+    filters.salesRepresentativeIds?.length ||
+    filters.searchTerm?.trim(),
   )
 }
 
@@ -723,43 +808,26 @@ function mapTargetMetric(
 }
 
 function buildTargetCoverage(
-  repository: BusinessRepository,
   period: RevenuePeriodSummary,
   targets: BusinessBrandTarget[],
+  activeBrandIds: readonly string[],
 ) {
   const targetedBrandIds =
     new Set(
       targets.map(
-        (target) =>
-          target.brandId,
+        (target) => target.brandId,
       ),
     )
-
-  const activeBrandIds =
-    repository
-      .getBrands()
-      .filter((brand) =>
-        Boolean(
-          repository.brand.findPeriod(
-            brand.id,
-            period.id,
-          ),
-        ),
-      )
-      .map((brand) =>
-        brand.id,
-      )
 
   const coveredActiveBrands =
     activeBrandIds.filter(
       (brandId) =>
-        targetedBrandIds.has(
-          brandId,
-        ),
+        targetedBrandIds.has(brandId),
     ).length
 
   const activeBrands =
-    activeBrandIds.length
+    activeBrandIds.length ||
+    period.brandCount
 
   return {
     targetedBrands:
@@ -768,22 +836,19 @@ function buildTargetCoverage(
     coveredActiveBrands,
     activeBrandsWithoutTarget:
       Math.max(
-        activeBrands -
-          coveredActiveBrands,
+        activeBrands - coveredActiveBrands,
         0,
       ),
     coveragePercentage:
       activeBrands > 0
-        ? (
-            coveredActiveBrands /
-            activeBrands
-          ) * 100
+        ? (coveredActiveBrands / activeBrands) * 100
         : 0,
   }
 }
 
 function buildEmptyPerformance(
   period: RevenuePeriodSummary | null,
+  unavailableReason: string | null = null,
 ): SalesWorkspacePerformance {
   const revenue =
     period?.revenue ?? 0
@@ -799,6 +864,7 @@ function buildEmptyPerformance(
 
   return {
     available: false,
+    unavailableReason,
     revenue:
       mapTargetMetric(
         revenue,
@@ -845,6 +911,7 @@ function buildPerformance(
   repository: BusinessRepository,
   period: RevenuePeriodSummary,
   targets: BusinessBrandTarget[],
+  activeBrandIds: readonly string[],
 ): SalesWorkspacePerformance {
   if (targets.length === 0) {
     return buildEmptyPerformance(
@@ -935,6 +1002,7 @@ function buildPerformance(
 
   return {
     available: true,
+    unavailableReason: null,
     revenue:
       mapTargetMetric(
         period.revenue,
@@ -989,9 +1057,9 @@ function buildPerformance(
     },
     coverage:
       buildTargetCoverage(
-        repository,
         period,
         targets,
+        activeBrandIds,
       ),
   }
 }
@@ -1154,6 +1222,14 @@ export function buildSalesWorkspace(
   repository: BusinessRepository | null,
   filters: SalesWorkspaceFilters,
 ): SalesWorkspaceViewModel {
+  const emptyFilterOptions: SalesWorkspaceFilterOptions = {
+    brands: [],
+    customers: [],
+    products: [],
+    locations: [],
+    salesRepresentatives: [],
+  }
+
   if (!repository) {
     return {
       available: false,
@@ -1167,6 +1243,17 @@ export function buildSalesWorkspace(
       performance:
         buildEmptyPerformance(null),
       brandPerformance: [],
+      commercialOpportunities: {
+        available: false,
+        unavailableReason:
+          'No existen datos de ventas para evaluar oportunidades comerciales.',
+        totalImpact: 0,
+        totalCount: 0,
+        criticalCount: 0,
+        highCount: 0,
+        requiredDailyRevenue: null,
+        opportunities: [],
+      },
       trend: [],
       topBrands: [],
       topCustomers: [],
@@ -1178,6 +1265,12 @@ export function buildSalesWorkspace(
         unmatchedRows: 0,
         matchRate: 0,
       },
+      filterOptions: emptyFilterOptions,
+      activeFilters: [],
+      hasActiveSegmentationFilters: false,
+      detailRows: [],
+      detailTotalRows: 0,
+      detailSourceRows: 0,
     }
   }
 
@@ -1187,32 +1280,47 @@ export function buildSalesWorkspace(
   const latestPeriod =
     periods.at(-1) ?? null
 
-  const selectedPeriod =
+  const selectedBasePeriod =
     filters.periodId
       ? repository.revenue.findById(
           filters.periodId,
         ) ?? latestPeriod
       : latestPeriod
 
-  if (!selectedPeriod) {
+  if (!selectedBasePeriod) {
     return buildSalesWorkspace(
       null,
       filters,
     )
   }
 
-  const previousPeriod =
+  const previousBasePeriod =
     findComparisonPeriod(
       periods,
-      selectedPeriod,
+      selectedBasePeriod,
       filters,
     )
+
+  const selectedPeriod =
+    buildFilteredPeriod(
+      repository,
+      selectedBasePeriod,
+      filters,
+    )
+
+  const previousPeriod =
+    previousBasePeriod
+      ? buildFilteredPeriod(
+          repository,
+          previousBasePeriod,
+          filters,
+        )
+      : null
 
   const selectedIndex =
     periods.findIndex(
       (period) =>
-        period.id ===
-        selectedPeriod.id,
+        period.id === selectedBasePeriod.id,
     )
 
   const trendStart =
@@ -1221,14 +1329,106 @@ export function buildSalesWorkspace(
       selectedIndex - 11,
     )
 
+  const visibleTrendPeriods =
+    new Set(
+      periods
+        .slice(
+          trendStart,
+          selectedIndex + 1,
+        )
+        .map((period) => period.id),
+    )
+
   const reconciliation =
     repository.product
       .getReconciliationSummary()
 
-  const periodTargets =
-    repository.targets.findPeriodTargets(
-      selectedPeriod.id,
+  const filterOptions =
+    buildFilterOptions(
+      repository,
+      filters,
+      selectedBasePeriod.id,
     )
+
+  const activeFilters =
+    buildActiveFilters(
+      filters,
+      filterOptions,
+    )
+
+  const periodSegmentationFilter =
+    buildSegmentationFilter(
+      filters,
+      [selectedBasePeriod.id],
+    )
+
+  const selectedSummary =
+    repository.salesSegmentation.summarize(
+      periodSegmentationFilter,
+    )
+
+  const activeBrandGroups =
+    repository.salesSegmentation.groupBy(
+      'brand',
+      periodSegmentationFilter,
+    )
+
+  const targetScopeBlocked =
+    hasNonBrandTargetFilters(filters)
+
+  const selectedBrandIds =
+    filters.brandIds ?? []
+
+  const periodTargets =
+    repository.targets
+      .findPeriodTargets(
+        selectedBasePeriod.id,
+      )
+      .filter(
+        (target) =>
+          selectedBrandIds.length === 0 ||
+          selectedBrandIds.includes(
+            target.brandId,
+          ),
+      )
+
+  const performance =
+    targetScopeBlocked
+      ? buildEmptyPerformance(
+          selectedPeriod,
+          'Los objetivos mensuales están definidos por marca. Al filtrar por cliente, producto, ubicación, vendedor o búsqueda, el cumplimiento se desactiva para evitar comparar un segmento parcial contra una cuota completa.',
+        )
+      : buildPerformance(
+          repository,
+          selectedPeriod,
+          periodTargets,
+          activeBrandGroups.map(
+            (group) => group.id,
+          ),
+        )
+
+  const brandPerformance =
+    targetScopeBlocked
+      ? []
+      : buildBrandPerformance(
+          repository,
+          selectedPeriod,
+          periodTargets,
+        )
+
+  const commercialOpportunities =
+    buildSalesCommercialOpportunities({
+      repository,
+      filters,
+      currentPeriodId:
+        selectedBasePeriod.id,
+      comparisonPeriodId:
+        previousBasePeriod?.id ?? null,
+      currentRevenue:
+        selectedPeriod.revenue,
+      performance,
+      brandPerformance,
+    })
 
   return {
     available: true,
@@ -1246,72 +1446,73 @@ export function buildSalesWorkspace(
           month: period.month,
         })),
     selectedPeriodId:
-      selectedPeriod.id,
+      selectedBasePeriod.id,
     selectedPeriodLabel:
       formatPeriodLabel(
-        selectedPeriod.year,
-        selectedPeriod.month,
+        selectedBasePeriod.year,
+        selectedBasePeriod.month,
       ),
     current:
-      mapSnapshot(
-        selectedPeriod,
-      ),
+      mapSnapshot(selectedPeriod),
     comparison:
       buildComparison(
         selectedPeriod,
         previousPeriod,
         filters,
       ),
-    performance:
-      buildPerformance(
-        repository,
-        selectedPeriod,
-        periodTargets,
-      ),
-    brandPerformance:
-      buildBrandPerformance(
-        repository,
-        selectedPeriod,
-        periodTargets,
-      ),
+    performance,
+    brandPerformance,
+    commercialOpportunities,
     trend:
-      periods
-        .slice(
-          trendStart,
-          selectedIndex + 1,
+      repository.salesSegmentation
+        .groupBy(
+          'period',
+          buildSegmentationFilter(filters),
         )
-        .map((period) => ({
-          periodId: period.id,
-          periodLabel:
-            formatPeriodLabel(
-              period.year,
-              period.month,
-            ),
-          revenue: period.revenue,
-          grossProfit:
-            period.grossProfit,
-          grossMargin:
-            calculateGrossMargin(
-              period.revenue,
-              period.grossProfit,
-            ),
-        })),
+        .filter((group) =>
+          visibleTrendPeriods.has(group.id),
+        )
+        .map((group) => {
+          const period =
+            repository.revenue.findById(
+              group.id,
+            )
+
+          return {
+            periodId: group.id,
+            periodLabel: period
+              ? formatPeriodLabel(
+                  period.year,
+                  period.month,
+                )
+              : group.label,
+            revenue: group.revenue,
+            grossProfit: group.grossProfit,
+            grossMargin: group.grossMargin,
+          }
+        }),
     topBrands:
-      buildBrandRanking(
+      buildSegmentationRanking(
         repository,
-        selectedPeriod.id,
+        'brand',
+        filters,
+        selectedBasePeriod.id,
         selectedPeriod.revenue,
       ),
     topCustomers:
-      buildCustomerRanking(
+      buildSegmentationRanking(
         repository,
-        selectedPeriod.id,
+        'customer',
+        filters,
+        selectedBasePeriod.id,
         selectedPeriod.revenue,
       ),
     topProducts:
-      buildProductRanking(
+      buildSegmentationRanking(
         repository,
-        selectedPeriod.id,
+        'product',
+        filters,
+        selectedBasePeriod.id,
         selectedPeriod.revenue,
       ),
     reconciliation: {
@@ -1326,5 +1527,19 @@ export function buildSalesWorkspace(
       matchRate:
         reconciliation.matchRate * 100,
     },
+    filterOptions,
+    activeFilters,
+    hasActiveSegmentationFilters:
+      activeFilters.length > 0,
+    detailRows:
+      repository.salesSegmentation
+        .getDetailRows(
+          periodSegmentationFilter,
+          100,
+        ),
+    detailTotalRows:
+      selectedSummary.segmentCount,
+    detailSourceRows:
+      selectedSummary.rowCount,
   }
 }

@@ -280,3 +280,27 @@
 - Incorpora cumplimiento, esperado al corte, ritmo diario laboral y proyección de cierre.
 - Añade cobertura de objetivos y una tabla priorizada de brechas por marca.
 - Mantiene el Business Core congelado y consume únicamente BusinessRepository y Attainment.
+
+## 0.26.0 — SW-003 Sales Segmentation & Drill-down
+
+- Añade segmentación combinable por marca, cliente, producto, ubicación y vendedor.
+- Incorpora búsqueda por ID o nombre y chips de filtros activos.
+- Recalcula KPIs, comparación, tendencia y rankings sobre el segmento exacto.
+- Permite profundizar desde rankings y presenta una tabla detallada agregada.
+- Añade `SalesSegmentationQueries` y un grano analítico aditivo al Business Repository.
+- Protege la integridad de cuotas desactivando objetivos cuando el filtro no puede atribuirse por marca.
+
+## 2026-07-28 — SW-005: Commercial Opportunity Engine
+
+### Added
+
+- Motor comercial determinístico para convertir señales de ventas en prioridades accionables.
+- Brechas de cuota, recuperación y crecimiento de clientes, crecimiento de productos y protección de margen.
+- Score, prioridad, confianza, esfuerzo, impacto estimado y evidencia por oportunidad.
+- Panel ejecutivo y navegación directa al segmento de marca, cliente o producto.
+
+### Architecture
+
+- Implementación aditiva dentro de Sales Workspace.
+- Sin cambios en entidades, builders o repositorios del Business Core.
+- SW-004 permanece pendiente como bloque independiente de Variance & Contribution Analysis.

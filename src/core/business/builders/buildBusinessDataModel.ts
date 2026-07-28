@@ -35,6 +35,10 @@ import type {
 } from '../entities/productPeriod'
 
 import type {
+  BusinessSalesSegment,
+} from '../entities/salesSegment'
+
+import type {
   BusinessDataModel,
   BusinessPeriod,
 } from '../models/businessDataModel'
@@ -155,6 +159,55 @@ function getCustomerBrandPeriodId(
   brandId: string,
 ): string {
   return `${periodId}::${customerId}::${brandId}`
+}
+
+function getSalesSegmentId(
+  periodId: string,
+  brandId: string,
+  customerId: string | null,
+  productId: string | null,
+  locationId: string | null,
+  salesRepresentativeId: string | null,
+): string {
+  return [
+    periodId,
+    brandId,
+    customerId ?? 'NO_CUSTOMER',
+    productId ?? 'NO_PRODUCT',
+    locationId ?? 'NO_LOCATION',
+    salesRepresentativeId ?? 'NO_SALES_REP',
+  ].join('::')
+}
+
+function createBusinessSalesSegment(
+  periodId: string,
+  brandId: string,
+  customerId: string | null,
+  productId: string | null,
+  locationId: string | null,
+  salesRepresentativeId: string | null,
+): BusinessSalesSegment {
+  return {
+    id: getSalesSegmentId(
+      periodId,
+      brandId,
+      customerId,
+      productId,
+      locationId,
+      salesRepresentativeId,
+    ),
+    periodId,
+    brandId,
+    customerId,
+    productId,
+    locationId,
+    salesRepresentativeId,
+    revenue: 0,
+    grossProfit: 0,
+    quantity: 0,
+    rowCount: 0,
+    documentNumbers: new Set<string>(),
+  }
 }
 
 function createBusinessPeriod(
@@ -658,6 +711,12 @@ export function buildBusinessDataModel(
         BusinessProductPeriod
       >(),
 
+    salesSegments:
+      new Map<
+        string,
+        BusinessSalesSegment
+      >(),
+
     productReconciliation:
       createProductSalesReconciliationSummary(),
 
@@ -855,6 +914,49 @@ export function buildBusinessDataModel(
       normalizeIdentifier(
         row.currency,
       )
+
+    const salesSegmentId =
+      getSalesSegmentId(
+        periodId,
+        brandId,
+        customerId,
+        productId,
+        location,
+        salesRepresentative,
+      )
+
+    let salesSegment =
+      model.salesSegments?.get(
+        salesSegmentId,
+      )
+
+    if (!salesSegment) {
+      salesSegment =
+        createBusinessSalesSegment(
+          periodId,
+          brandId,
+          customerId,
+          productId,
+          location,
+          salesRepresentative,
+        )
+
+      model.salesSegments?.set(
+        salesSegmentId,
+        salesSegment,
+      )
+    }
+
+    salesSegment.revenue += row.revenue
+    salesSegment.grossProfit += row.grossProfit
+    salesSegment.quantity += row.quantity
+    salesSegment.rowCount += 1
+
+    if (documentNumber) {
+      salesSegment.documentNumbers.add(
+        documentNumber,
+      )
+    }
 
     updateModelPeriodRange(
       model,

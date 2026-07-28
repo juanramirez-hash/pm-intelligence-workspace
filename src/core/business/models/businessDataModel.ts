@@ -34,6 +34,10 @@ import type {
   ProductSalesReconciliationSummary,
 } from '../reconciliation'
 
+import type {
+  BusinessSalesSegment,
+} from '../entities/salesSegment'
+
 export interface BusinessDataTotals {
   revenue: number
   grossProfit: number
@@ -90,6 +94,10 @@ export interface BusinessDataModel {
 
   productPeriods:
     Map<string, BusinessProductPeriod>
+
+  /** Additive analytical grain used by SW-003 segmentation queries. */
+  salesSegments?:
+    Map<string, BusinessSalesSegment>
 
   /** Available when the model was built through the PMC-005 pipeline. */
   productReconciliation?:

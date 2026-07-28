@@ -20,6 +20,8 @@ interface SalesRankingPanelProps {
   subtitle: string
   items: SalesWorkspaceRankingItem[]
   icon: LucideIcon
+  selectedId?: string | null
+  onSelect?: (id: string) => void
 }
 
 export function SalesRankingPanel({
@@ -27,6 +29,8 @@ export function SalesRankingPanel({
   subtitle,
   items,
   icon: Icon,
+  selectedId = null,
+  onSelect,
 }: SalesRankingPanelProps) {
   return (
     <ExecutivePanel
@@ -45,9 +49,20 @@ export function SalesRankingPanel({
           {items.map(
             (item, index) => (
               <li
-                className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3"
+                className={[
+                  'rounded-2xl border transition',
+                  selectedId === item.id
+                    ? 'border-blue-200 bg-blue-50'
+                    : 'border-slate-100 bg-slate-50/70',
+                ].join(' ')}
                 key={item.id}
               >
+                <button
+                  className="flex w-full items-center gap-3 p-3 text-left"
+                  disabled={!onSelect}
+                  onClick={() => onSelect?.(item.id)}
+                  type="button"
+                >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-semibold text-slate-500 shadow-sm">
                   {index + 1}
                 </span>
@@ -61,6 +76,7 @@ export function SalesRankingPanel({
                     {formatSalesCurrency(item.revenue)} · {formatSalesPercentage(item.participation)}
                   </p>
                 </div>
+                </button>
               </li>
             ),
           )}

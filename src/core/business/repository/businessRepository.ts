@@ -38,6 +38,10 @@ import {
   CommercialTargetQueries,
 } from './commercialTargetQueries'
 
+import {
+  SalesSegmentationQueries,
+} from './salesSegmentationQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -59,6 +63,9 @@ export class BusinessRepository {
 
   readonly targets:
     CommercialTargetQueries
+
+  readonly salesSegmentation:
+    SalesSegmentationQueries
 
   constructor(
     model: BusinessDataModel,
@@ -92,6 +99,11 @@ export class BusinessRepository {
 
     this.targets =
       new CommercialTargetQueries(
+        model,
+      )
+
+    this.salesSegmentation =
+      new SalesSegmentationQueries(
         model,
       )
   }
