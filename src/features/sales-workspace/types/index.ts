@@ -1,5 +1,8 @@
 export type {
   SalesComparisonMode,
+  SalesContributionBreakdown,
+  SalesContributionDirection,
+  SalesContributionItem,
   SalesCommercialOpportunity,
   SalesCommercialOpportunityEntityType,
   SalesCommercialOpportunityEvidence,
@@ -7,6 +10,9 @@ export type {
   SalesCommercialOpportunitySummary,
   SalesCommercialOpportunityType,
   SalesPerformanceStatus,
+  SalesCustomerMovementItem,
+  SalesCustomerMovementStatus,
+  SalesCustomerMovementSummary,
   SalesWorkspaceActiveFilter,
   SalesWorkspaceBrandPerformanceItem,
   SalesWorkspaceComparison,
@@ -24,5 +30,9 @@ export type {
   SalesWorkspaceTargetCoverage,
   SalesWorkspaceTargetMetric,
   SalesWorkspaceTrendItem,
+  SalesMarginVarianceMetric,
+  SalesVarianceContributionAnalysis,
+  SalesVarianceDimension,
+  SalesVarianceMetric,
   SalesWorkspaceViewModel,
 } from './salesWorkspaceTypes'

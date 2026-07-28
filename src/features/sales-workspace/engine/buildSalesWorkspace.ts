@@ -3,6 +3,11 @@ import {
 } from './buildSalesCommercialOpportunities'
 
 import {
+  buildSalesVarianceContributionAnalysis,
+  createEmptySalesVarianceContributionAnalysis,
+} from './buildSalesVarianceContribution'
+
+import {
   calculateMetricAttainment,
   calculateRevenuePace,
 } from '../../../core/business/attainment'
@@ -1254,6 +1259,13 @@ export function buildSalesWorkspace(
         requiredDailyRevenue: null,
         opportunities: [],
       },
+      varianceContribution:
+        createEmptySalesVarianceContributionAnalysis(
+          filters.comparisonMode === 'previous-year'
+            ? 'Mismo mes del año anterior'
+            : 'Periodo anterior',
+          'No existen datos de ventas para explicar variaciones comerciales.',
+        ),
       trend: [],
       topBrands: [],
       topCustomers: [],
@@ -1416,6 +1428,21 @@ export function buildSalesWorkspace(
           periodTargets,
         )
 
+  const varianceContribution =
+    buildSalesVarianceContributionAnalysis({
+      repository,
+      filters,
+      currentPeriodId:
+        selectedBasePeriod.id,
+      comparisonPeriodId:
+        previousBasePeriod?.id ?? null,
+      comparisonLabel:
+        filters.comparisonMode ===
+        'previous-year'
+          ? 'Mismo mes del año anterior'
+          : 'Periodo anterior',
+    })
+
   const commercialOpportunities =
     buildSalesCommercialOpportunities({
       repository,
@@ -1463,6 +1490,7 @@ export function buildSalesWorkspace(
     performance,
     brandPerformance,
     commercialOpportunities,
+    varianceContribution,
     trend:
       repository.salesSegmentation
         .groupBy(

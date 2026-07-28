@@ -182,6 +182,114 @@ export interface SalesWorkspaceDetailRow {
 }
 
 
+
+export type SalesVarianceDimension =
+  | 'brand'
+  | 'customer'
+  | 'product'
+
+export type SalesContributionDirection =
+  | 'positive'
+  | 'negative'
+  | 'stable'
+
+export interface SalesVarianceMetric {
+  current: number
+  comparison: number
+  absoluteVariation: number
+  percentageVariation: number | null
+}
+
+export interface SalesMarginVarianceMetric {
+  current: number
+  comparison: number
+  pointVariation: number
+}
+
+export interface SalesContributionItem {
+  id: string
+  label: string
+  currentRevenue: number
+  comparisonRevenue: number
+  revenueVariation: number
+  revenueVariationPercentage: number | null
+  currentGrossProfit: number
+  comparisonGrossProfit: number
+  grossProfitVariation: number
+  currentQuantity: number
+  comparisonQuantity: number
+  quantityVariation: number
+  currentDocuments: number
+  comparisonDocuments: number
+  documentsVariation: number
+  currentParticipation: number
+  comparisonParticipation: number
+  mixVariationPoints: number
+  movementShare: number
+  direction: SalesContributionDirection
+}
+
+export interface SalesContributionBreakdown {
+  dimension: SalesVarianceDimension
+  positiveContribution: number
+  negativeContribution: number
+  stableCount: number
+  positive: SalesContributionItem[]
+  negative: SalesContributionItem[]
+}
+
+export type SalesCustomerMovementStatus =
+  | 'new'
+  | 'recovered'
+  | 'growing'
+  | 'declining'
+  | 'lost'
+  | 'stable'
+
+export interface SalesCustomerMovementItem {
+  id: string
+  label: string
+  status: SalesCustomerMovementStatus
+  currentRevenue: number
+  comparisonRevenue: number
+  historicalRevenue: number
+  revenueVariation: number
+  revenueVariationPercentage: number | null
+}
+
+export interface SalesCustomerMovementSummary {
+  newCount: number
+  recoveredCount: number
+  growingCount: number
+  decliningCount: number
+  lostCount: number
+  stableCount: number
+  newRevenue: number
+  recoveredRevenue: number
+  lostRevenue: number
+  decliningRevenue: number
+  items: SalesCustomerMovementItem[]
+}
+
+export interface SalesVarianceContributionAnalysis {
+  available: boolean
+  unavailableReason: string | null
+  comparisonPeriodId: string | null
+  comparisonLabel: string
+  revenue: SalesVarianceMetric
+  grossProfit: SalesVarianceMetric
+  quantity: SalesVarianceMetric
+  documents: SalesVarianceMetric
+  grossMargin: SalesMarginVarianceMetric
+  netRevenueVariation: number
+  positiveRevenueContribution: number
+  negativeRevenueContribution: number
+  brands: SalesContributionBreakdown
+  customers: SalesContributionBreakdown
+  products: SalesContributionBreakdown
+  customerMovements: SalesCustomerMovementSummary
+}
+
 export type SalesCommercialOpportunityType =
   | 'target-gap'
   | 'customer-recovery'
@@ -249,6 +357,7 @@ export interface SalesWorkspaceViewModel {
   performance: SalesWorkspacePerformance
   brandPerformance: SalesWorkspaceBrandPerformanceItem[]
   commercialOpportunities: SalesCommercialOpportunitySummary
+  varianceContribution: SalesVarianceContributionAnalysis
   trend: SalesWorkspaceTrendItem[]
   topBrands: SalesWorkspaceRankingItem[]
   topCustomers: SalesWorkspaceRankingItem[]

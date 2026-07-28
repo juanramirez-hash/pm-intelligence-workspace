@@ -7,3 +7,5 @@ export * from './SalesWorkspaceFilterBar'
 export * from './SalesDetailTable'
 export * from './SalesSegmentationFilterPanel'
 export * from './SalesCommercialOpportunityPanel'
+
+export * from './SalesVarianceContributionPanel'

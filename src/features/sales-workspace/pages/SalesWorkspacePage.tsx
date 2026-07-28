@@ -43,6 +43,7 @@ import {
   SalesReconciliationPanel,
   SalesSegmentationFilterPanel,
   SalesTrendPanel,
+  SalesVarianceContributionPanel,
   SalesWorkspaceFilterBar,
 } from '../components'
 
@@ -514,6 +515,10 @@ export function SalesWorkspacePage() {
           )}
         </div>
       </section>
+
+      <SalesVarianceContributionPanel
+        analysis={workspace.varianceContribution}
+      />
 
       <SalesCommercialOpportunityPanel
         onSelect={openOpportunitySegment}

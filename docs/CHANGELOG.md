@@ -304,3 +304,19 @@
 - Implementación aditiva dentro de Sales Workspace.
 - Sin cambios en entidades, builders o repositorios del Business Core.
 - SW-004 permanece pendiente como bloque independiente de Variance & Contribution Analysis.
+
+## 2026-07-28 — SW-004: Variance & Contribution Analysis
+
+### Added
+
+- Explicación determinística de la variación comercial contra el periodo comparable.
+- Contribuciones positivas y negativas por marca, cliente y producto.
+- Cambios de mezcla, participación y peso relativo del movimiento.
+- Clasificación de clientes nuevos, recuperados, crecientes, en baja, perdidos y estables.
+- Panel ejecutivo integrado antes del Commercial Opportunity Engine.
+
+### Architecture
+
+- Implementación aditiva dentro de Sales Workspace.
+- Consume exclusivamente BusinessRepository y Sales Segmentation Queries.
+- Sin cambios en entidades, builders o repositorios del Business Core.
