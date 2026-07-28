@@ -1,4 +1,5 @@
 export type WorkspaceThemeName =
+  | 'sales'
   | 'brand'
   | 'customer'
   | 'product'
@@ -15,6 +16,13 @@ export interface WorkspaceTheme {
 }
 
 export const workspaceThemes: Record<WorkspaceThemeName, WorkspaceTheme> = {
+  sales: {
+    name: 'sales',
+    hero: 'border-blue-200/80 bg-gradient-to-br from-white via-blue-50/70 to-cyan-100/60',
+    icon: 'border-blue-100 bg-white/85 text-blue-700',
+    glowPrimary: 'bg-blue-300/20',
+    glowSecondary: 'bg-cyan-200/20',
+  },
   brand: {
     name: 'brand',
     hero: 'border-violet-200/80 bg-gradient-to-br from-white via-violet-50/70 to-indigo-100/60',

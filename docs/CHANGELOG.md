@@ -266,3 +266,10 @@
 
 - Smart Brand Directory integrado en Brand Workspace.
 - Navegación contextual por marca, filtros y ordenamiento ejecutivo.
+
+## 0.26.0 — SW-001 Sales Workspace Foundation
+
+- Sales Workspace reemplaza el placeholder de `/sales`.
+- Se incorpora contexto comercial por periodo, comparación temporal, KPIs, tendencia y rankings.
+- La calidad de conciliación de Product Master se expone dentro del Workspace.
+- El módulo consume BusinessRepository sin depender de filas normalizadas.

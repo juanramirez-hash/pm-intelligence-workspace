@@ -29,7 +29,7 @@ function normalizePeriodId(value: unknown): string | null {
   }
 
   const normalized = text.trim()
-  const directMatch = normalized.match(/^(\d{4})[-\/]?(\d{1,2})$/)
+  const directMatch = normalized.match(/^(\d{4})[-/]?(\d{1,2})$/)
 
   if (directMatch) {
     const month = Number(directMatch[2])

@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '../layouts/AppShell'
 import { ExecutiveWorkspacePage } from '../features/executive-workspace/ExecutiveWorkspacePage'
 import { BrandWorkspacePage } from '../features/brand-workspace/pages/BrandWorkspacePage'
+import { SalesWorkspacePage } from '../features/sales-workspace'
 import { PlaceholderPage } from '../shared/ui/PlaceholderPage'
 import { DataCenterPage } from '../features/data-center/DataCenterPage'
 import { BrandIntelligencePage } from '../features/brand-intelligence/pages/BrandIntelligencePage'
@@ -22,12 +23,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'sales',
-        element: (
-          <PlaceholderPage
-            title="Sales Workspace"
-            description="Ventas, tendencias, comparativos y desempeño comercial."
-          />
-        ),
+        element: <SalesWorkspacePage />,
       },
       {
         path: 'brands',
