@@ -20,4 +20,6 @@ export interface BusinessCustomer {
   products: Set<string>
 
   locations: Set<string>
+
+  activePeriods: Set<string>
 }

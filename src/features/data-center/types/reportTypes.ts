@@ -6,6 +6,7 @@ export type ReportType =
   | 'projects'
   | 'pricing'
   | 'customers'
+  | 'products'
   | 'other'
 
 export const REPORT_TYPES: ReportType[] = [
@@ -16,6 +17,7 @@ export const REPORT_TYPES: ReportType[] = [
   'projects',
   'pricing',
   'customers',
+  'products',
   'other',
 ]
 import type { TargetDatasetSummary } from '../importers/targets/targetTypes'

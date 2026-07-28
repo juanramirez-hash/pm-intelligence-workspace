@@ -111,6 +111,10 @@ export class BusinessRepository {
     return this.product.getAll()
   }
 
+  getProductReconciliationSummary() {
+    return this.product.getReconciliationSummary()
+  }
+
   findCustomer(
     id: string,
   ): BusinessCustomer | undefined {

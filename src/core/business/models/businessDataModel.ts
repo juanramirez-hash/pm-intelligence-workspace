@@ -30,6 +30,10 @@ import type {
   BusinessProductPeriod,
 } from '../entities/productPeriod'
 
+import type {
+  ProductSalesReconciliationSummary,
+} from '../reconciliation'
+
 export interface BusinessDataTotals {
   revenue: number
   grossProfit: number
@@ -86,6 +90,10 @@ export interface BusinessDataModel {
 
   productPeriods:
     Map<string, BusinessProductPeriod>
+
+  /** Available when the model was built through the PMC-005 pipeline. */
+  productReconciliation?:
+    ProductSalesReconciliationSummary
 
   periods:
     Map<string, BusinessPeriod>

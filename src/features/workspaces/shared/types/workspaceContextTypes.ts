@@ -27,6 +27,10 @@ import type {
 } from '../../../../core/business/executiveBrief'
 
 import type {
+  OpportunityRadar,
+} from '../../../../core/business/opportunityRadar'
+
+import type {
   DataCenterState,
 } from '../../../data-center/store/dataCenterStore'
 
@@ -58,6 +62,9 @@ export interface WorkspaceContextModel {
 
   executiveBrief:
     ExecutiveBrief | null
+
+  opportunityRadar:
+    OpportunityRadar | null
 
   datasets:
     DatasetRegistryItem[]

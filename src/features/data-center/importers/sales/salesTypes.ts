@@ -7,7 +7,9 @@ export interface NormalizedSalesRow {
   customerId: string | null
   customerName: string | null
 
+  productCode?: string | null
   model: string | null
+  productStatus?: 'A' | 'B' | 'C' | 'D' | 'E' | null
   quantity: number
 
   documentNumber: string | null

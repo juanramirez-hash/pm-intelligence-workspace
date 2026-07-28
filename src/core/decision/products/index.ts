@@ -1,3 +1,5 @@
 export * from './productDecisionEngine'
+export * from './productDecisionRules'
 export * from './productDecisionTypes'
 export * from './productWorkspaceViewModel'
+export * from './intelligence'

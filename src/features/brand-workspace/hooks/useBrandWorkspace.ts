@@ -98,6 +98,9 @@ export function useBrandWorkspace() {
     executiveBrief:
       workspace.executiveBrief,
 
+    opportunityRadar:
+      workspace.opportunityRadar,
+
     brands,
 
     filteredBrands,

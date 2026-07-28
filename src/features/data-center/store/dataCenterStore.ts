@@ -24,6 +24,10 @@ import type {
 import type {
   NormalizedTargetRow,
 } from '../importers/targets/targetTypes'
+import type {
+  NormalizedProductMasterRow,
+  ProductMasterDatasetSummary,
+} from '../importers/products/productMasterTypes'
 
 import {
   runDataCenterImport,
@@ -60,6 +64,11 @@ export interface DataCenterState {
   targetsLastImportedFile: string | null
 
   targetsLastImportedAt: string | null
+
+  productMasterSummary: ProductMasterDatasetSummary | null
+  normalizedProductMaster: NormalizedProductMasterRow[]
+  productMasterLastImportedFile: string | null
+  productMasterLastImportedAt: string | null
 
   inventorySummary: unknown | null
 
@@ -193,6 +202,11 @@ export const useDataCenterStore =
       targetsLastImportedFile: null,
 
       targetsLastImportedAt: null,
+
+      productMasterSummary: null,
+      normalizedProductMaster: [],
+      productMasterLastImportedFile: null,
+      productMasterLastImportedAt: null,
 
       inventorySummary: null,
 
@@ -407,6 +421,21 @@ export const useDataCenterStore =
                     })
                   },
                 )
+
+              break
+            }
+
+            case 'products': {
+              const importedAt = new Date().toISOString()
+
+              set({
+                productMasterSummary: result.summary,
+                normalizedProductMaster: result.normalizedRows,
+                productMasterLastImportedFile: metadata.fileName,
+                productMasterLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+              })
 
               break
             }
@@ -637,6 +666,11 @@ export const useDataCenterStore =
               targetsLastImportedFile: null,
 
               targetsLastImportedAt: null,
+
+              productMasterSummary: null,
+              normalizedProductMaster: [],
+              productMasterLastImportedFile: null,
+              productMasterLastImportedAt: null,
 
               inventorySummary:
                 null,

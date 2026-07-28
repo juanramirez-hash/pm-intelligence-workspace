@@ -22,13 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-# Archivos locales
-*.zip
-estructura.txt
 
-# Referencias exportadas
+# Local backup and reference artifacts
+proyecto v1.zip
 docs/reference/
-
-# Build
-dist/
-node_modules/

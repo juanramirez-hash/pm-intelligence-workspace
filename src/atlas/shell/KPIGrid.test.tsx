@@ -19,6 +19,22 @@ describe('KPIGrid', () => {
     expect(markup).toContain('Margin')
   })
 
+  it('supports a five-column executive layout', () => {
+    const markup = renderToStaticMarkup(
+      <KPIGrid columns={5} gap="compact">
+        <article>Revenue</article>
+        <article>Margin</article>
+        <article>Customers</article>
+        <article>Products</article>
+        <article>Documents</article>
+      </KPIGrid>,
+    )
+
+    expect(markup).toContain('data-columns="5"')
+    expect(markup).toContain('data-gap="compact"')
+    expect(markup).toContain('Documents')
+  })
+
   it('supports automatic columns and start alignment', () => {
     const markup = renderToStaticMarkup(
       <KPIGrid columns="auto" align="start">

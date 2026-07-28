@@ -1,7 +1,7 @@
 {
   "name": "pm-intelligence-workspace",
   "private": true,
-  "version": "0.19.0-UX002.5-P1",
+  "version": "0.25.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

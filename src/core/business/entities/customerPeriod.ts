@@ -11,4 +11,5 @@ export interface BusinessCustomerPeriod {
 
   brands: Set<string>
   products: Set<string>
+  locations: Set<string>
 }

@@ -19,6 +19,7 @@ import type {
 } from './businessIntelligenceModel'
 
 import type { BusinessBrandTargetInput } from './targets'
+import type { NormalizedProductMasterRow } from '../../features/data-center/importers/products/productMasterTypes'
 
 import {
   buildBusinessDataModel,
@@ -34,6 +35,7 @@ import {
 
 export interface BuildBusinessIntelligenceOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
+  productMaster?: readonly NormalizedProductMasterRow[]
 }
 
 export function buildBusinessIntelligence(
@@ -47,6 +49,7 @@ export function buildBusinessIntelligence(
       rows,
       {
         brandTargets: options.brandTargets,
+        productMaster: options.productMaster,
       },
     )
 

@@ -12,6 +12,7 @@ export type KPIGridColumns =
   | 2
   | 3
   | 4
+  | 5
   | 6
   | 'auto'
 
@@ -36,6 +37,7 @@ const columnClasses: Record<KPIGridColumns, string> = {
   2: 'grid-cols-1 md:grid-cols-2',
   3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
   4: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4',
+  5: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5',
   6: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6',
   auto: 'grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))]',
 }

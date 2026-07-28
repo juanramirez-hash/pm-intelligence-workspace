@@ -339,5 +339,70 @@ describe(
         ).toHaveLength(2)
       },
     )
+    it(
+      'indexa clientes por periodo',
+      () => {
+        const repository =
+          createRepository()
+
+        const periods =
+          repository.customer
+            .findPeriodsByPeriodId(
+              '2026-02',
+            )
+
+        expect(
+          periods.map(
+            period =>
+              period.customerId,
+          ),
+        ).toEqual([
+          '100001',
+          '100003',
+        ])
+      },
+    )
+
+    it(
+      'registra periodos activos y ubicaciones por cliente',
+      () => {
+        const repository =
+          createRepository()
+
+        const customer =
+          repository.customer
+            .findById('100001')
+
+        const january =
+          repository.customer
+            .findPeriod(
+              '100001',
+              '2026-01',
+            )
+
+        expect(
+          customer?.activePeriods,
+        ).toEqual(
+          new Set([
+            '2026-01',
+            '2026-02',
+          ]),
+        )
+
+        expect(
+          repository.customer
+            .getActivePeriodCount(
+              '100001',
+            ),
+        ).toBe(2)
+
+        expect(
+          january?.locations,
+        ).toEqual(
+          new Set(['CDMX']),
+        )
+      },
+    )
+
   },
 )

@@ -10,10 +10,18 @@ import type {
   BusinessCustomerBrandPeriod,
 } from '../../business/entities/customerBrandPeriod'
 
+import {
+  buildCustomerHealthScore,
+  buildCustomerOpportunities,
+  buildCustomerRecommendedActions,
+  buildCustomerRisks,
+  resolveCustomerRisk,
+} from './customerDecisionRules'
+
 import type {
+  CustomerDecisionExplanation,
   CustomerDecisionModel,
   CustomerPeriodMetrics,
-  CustomerRiskLevel,
 } from './customerDecisionTypes'
 
 function emptyMetrics(
@@ -26,6 +34,8 @@ function emptyMetrics(
     quantity: 0,
     documents: 0,
     products: 0,
+    brands: 0,
+    locations: 0,
   }
 }
 
@@ -47,6 +57,14 @@ function toMetrics(
     quantity: item.quantity,
     documents: item.documents,
     products: item.products.size,
+    brands:
+      'brands' in item
+        ? item.brands.size
+        : 1,
+    locations:
+      'locations' in item
+        ? item.locations.size
+        : 0,
   }
 }
 
@@ -103,42 +121,65 @@ function monthsBetween(
   )
 }
 
-function resolveRisk(
-  inactiveMonths: number,
-): {
-  level: CustomerRiskLevel
-  label: string
-  probability: number
-} {
-  if (inactiveMonths >= 3) {
-    return {
-      level: 'critical',
-      label: 'Riesgo crítico',
-      probability: 35,
+function getVariation(
+  currentValue: number,
+  previousValue: number,
+): number | null {
+  if (previousValue === 0) {
+    return currentValue === 0
+      ? 0
+      : null
+  }
+
+  return (
+    currentValue - previousValue
+  ) / previousValue
+}
+
+function getProductRetention(
+  currentProducts: ReadonlySet<string>,
+  previousProducts: ReadonlySet<string>,
+): number | null {
+  if (previousProducts.size === 0) {
+    return null
+  }
+
+  let retainedProducts = 0
+
+  for (const productId of previousProducts) {
+    if (currentProducts.has(productId)) {
+      retainedProducts += 1
     }
   }
 
-  if (inactiveMonths >= 2) {
-    return {
-      level: 'high',
-      label: 'Riesgo alto',
-      probability: 55,
-    }
-  }
+  return retainedProducts /
+    previousProducts.size
+}
 
-  if (inactiveMonths === 1) {
-    return {
-      level: 'medium',
-      label: 'Atención',
-      probability: 72,
-    }
-  }
+function getDecisionConfidence(
+  timelinePeriods: number,
+  hasPreviousPeriod: boolean,
+  historicalProducts: number,
+): number {
+  const timelineScore = Math.min(
+    55,
+    timelinePeriods * 9,
+  )
 
-  return {
-    level: 'low',
-    label: 'Activo',
-    probability: 88,
-  }
+  const comparisonScore =
+    hasPreviousPeriod ? 25 : 5
+
+  const portfolioScore = Math.min(
+    20,
+    historicalProducts * 4,
+  )
+
+  return Math.min(
+    100,
+    timelineScore +
+      comparisonScore +
+      portfolioScore,
+  )
 }
 
 export class CustomerDecisionEngine {
@@ -223,6 +264,18 @@ export class CustomerDecisionEngine {
         ),
     )
 
+    const current = toMetrics(
+      currentSource,
+      currentPeriodId,
+    )
+
+    const previous = priorPeriodId
+      ? toMetrics(
+          previousSource,
+          priorPeriodId,
+        )
+      : null
+
     const totalRevenue = timeline.reduce(
       (total, item) =>
         total + item.revenue,
@@ -249,9 +302,6 @@ export class CustomerDecisionEngine {
             currentPeriodId,
           )
         : 0
-
-    const risk =
-      resolveRisk(inactiveMonths)
 
     const recentActiveRevenue =
       timeline
@@ -318,19 +368,122 @@ export class CustomerDecisionEngine {
           )?.name ?? normalizedBrandId
         : 'Todas las marcas'
 
+    const currentProducts =
+      currentSource?.products ??
+      new Set<string>()
+
+    const previousProducts =
+      previousSource?.products ??
+      new Set<string>()
+
+    const revenueVariation = getVariation(
+      current.revenue,
+      previous?.revenue ?? 0,
+    )
+
+    const documentVariation = getVariation(
+      current.documents,
+      previous?.documents ?? 0,
+    )
+
+    const productRetention =
+      getProductRetention(
+        currentProducts,
+        previousProducts,
+      )
+
+    const activePeriods = timeline.filter(
+      (item) => item.revenue > 0,
+    ).length
+
+    const activePeriodRate =
+      timeline.length > 0
+        ? activePeriods / timeline.length
+        : 0
+
+    const recoveryPotential =
+      averageRecentRevenue * 0.65
+
+    const signals = {
+      customerName: customer.name,
+      selectedBrandName,
+      inactiveMonths,
+      currentRevenue: current.revenue,
+      previousRevenue:
+        previous?.revenue ?? 0,
+      revenueVariation,
+      currentDocuments:
+        current.documents,
+      previousDocuments:
+        previous?.documents ?? 0,
+      documentVariation,
+      currentProducts:
+        current.products,
+      previousProducts:
+        previous?.products ?? 0,
+      productRetention,
+      currentBrands:
+        current.brands,
+      historicalBrands:
+        normalizedBrandId
+          ? 1
+          : customer.brands.size,
+      activePeriodRate,
+      timelinePeriods:
+        timeline.length,
+      activePeriods,
+      recoveryPotential,
+      inactiveProducts:
+        inactiveProductIds.length,
+    }
+
+    const healthScore =
+      buildCustomerHealthScore(
+        signals,
+      )
+
+    const risks = buildCustomerRisks(
+      signals,
+    )
+
+    const opportunities =
+      buildCustomerOpportunities(
+        signals,
+      )
+
+    const recommendedActions =
+      buildCustomerRecommendedActions(
+        risks,
+        opportunities,
+      )
+
+    const risk = resolveCustomerRisk(
+      risks,
+      inactiveMonths,
+    )
+
+    const explanations:
+      CustomerDecisionExplanation[] = [
+      ...risks,
+      ...opportunities,
+    ].map((insight) => ({
+      ruleId: insight.ruleId,
+      rationale: insight.rationale,
+      evidence: insight.evidence,
+    }))
+
+    const primaryAction =
+      recommendedActions[0]
+
     const diagnosis =
-      inactiveMonths >= 2
-        ? `${customer.name} no registra recompra de ${selectedBrandName} durante ${inactiveMonths} meses.`
-        : inactiveMonths === 1
-          ? `${customer.name} no registra compra en el periodo actual para ${selectedBrandName}.`
-          : `${customer.name} mantiene actividad vigente en ${selectedBrandName}.`
+      risks[0]?.description ??
+      opportunities[0]?.description ??
+      `${customer.name} mantiene una relación comercial estable en ${selectedBrandName}.`
 
     const recommendedAction =
-      inactiveMonths >= 2
-        ? 'Contactar al cliente, revisar su última mezcla de productos y construir una propuesta de recuperación específica.'
-        : inactiveProductIds.length > 0
-          ? 'Revisar productos abandonados y preparar una acción de recompra o venta cruzada.'
-          : 'Mantener seguimiento comercial y ampliar la penetración de productos dentro de la cuenta.'
+      primaryAction
+        ? `${primaryAction.title}. ${primaryAction.description}`
+        : 'Mantener seguimiento comercial.'
 
     return {
       id: `${customer.id}::${normalizedBrandId ?? 'ALL'}::${currentPeriodId}`,
@@ -347,16 +500,8 @@ export class CustomerDecisionEngine {
       currentPeriodId,
       previousPeriodId:
         priorPeriodId,
-      current: toMetrics(
-        currentSource,
-        currentPeriodId,
-      ),
-      previous: priorPeriodId
-        ? toMetrics(
-            previousSource,
-            priorPeriodId,
-          )
-        : null,
+      current,
+      previous,
       totalRevenue,
       totalGrossProfit,
       grossMargin:
@@ -364,14 +509,28 @@ export class CustomerDecisionEngine {
           ? totalGrossProfit /
             totalRevenue
           : null,
+      revenueVariation,
+      documentVariation,
+      productRetention,
+      activePeriodRate,
       lastActivePeriodId,
       inactiveMonths,
       riskLevel: risk.level,
       riskLabel: risk.label,
       recoveryProbability:
         risk.probability,
-      recoveryPotential:
-        averageRecentRevenue * 0.65,
+      recoveryPotential,
+      healthScore,
+      risks,
+      opportunities,
+      recommendedActions,
+      explanations,
+      decisionConfidence:
+        getDecisionConfidence(
+          timeline.length,
+          Boolean(previousSource),
+          historicalProductIds.size,
+        ),
       activeProductIds: [
         ...recentProductIds,
       ],

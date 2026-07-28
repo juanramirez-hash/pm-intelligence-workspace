@@ -24,20 +24,12 @@ import {
 } from '../hooks/useBrandWorkspace'
 
 import {
-  WorkspaceSection,
-} from '../../../components/workspace/section'
-
-import {
   ExecutiveBreadcrumbs,
   ExecutiveShell,
   KPIGrid,
   ShellActions,
   ShellActionsGroup,
 } from '../../../atlas/shell'
-
-import {
-  BrandTable,
-} from '../components'
 
 import {
   ExecutiveHero,
@@ -55,6 +47,14 @@ import {
 import {
   ExecutiveBriefCard,
 } from '../../../atlas/widgets/executiveBrief'
+
+import {
+  OpportunityRadarCard,
+} from '../../../atlas/widgets/opportunity'
+
+import {
+  SmartBrandDirectory,
+} from '../../../atlas/widgets/brandDirectory'
 
 import {
   useNavigate,
@@ -301,6 +301,17 @@ export function BrandWorkspacePage() {
         />
       )}
 
+      {workspace.opportunityRadar && (
+        <OpportunityRadarCard
+          className="mb-6"
+          currency="MXN"
+          locale="es-MX"
+          maximumVisible={6}
+          radar={workspace.opportunityRadar}
+          showMatrix
+        />
+      )}
+
       <KPIGrid columns={4} gap="compact">
         {defineKpiRegistry([
           {
@@ -460,37 +471,29 @@ export function BrandWorkspacePage() {
           </section>
         )}
         {summary && (
-  <WorkspaceSection
-    className="mt-6"
-    icon={Building2}
-    subtitle="Desempeño comercial y financiero de todas las marcas"
-    title="Directorio de marcas"
-    tone="violet"
-  >
-    <BrandTable
-      brands={
-        workspace.filteredBrands
-      }
- onSelectBrand={(
-  brandId,
-) => {
-  workspace.actions
-    .setSelectedBrandId(
-      brandId,
-    )
+          <div className="mt-6">
+            <SmartBrandDirectory
+              brands={workspace.filteredBrands}
+              filters={workspace.filters}
+              onAttentionChange={workspace.actions.setRequiresAttention}
+              onLifecycleChange={workspace.actions.setLifecycleFilter}
+              onResetFilters={workspace.actions.resetFilters}
+              onSearchChange={workspace.actions.setSearch}
+              onSelectBrand={(brandId) => {
+                workspace.actions.setSelectedBrandId(brandId)
+                navigate(`/brands/${encodeURIComponent(brandId)}`)
+              }}
+              onSortDirectionChange={workspace.actions.setSortDirection}
+              onSortFieldChange={workspace.actions.setSortField}
+              onTrendChange={workspace.actions.setTrendFilter}
+              selectedBrandId={workspace.selectedBrandId}
+              sortDirection={workspace.sortDirection}
+              sortField={workspace.sortField}
+              totalBrands={summary.totalBrands}
+            />
+          </div>
+        )}
 
-  navigate(
-    `/brands/${encodeURIComponent(
-      brandId,
-    )}`,
-  )
-}}
-      selectedBrandId={
-        workspace.selectedBrandId
-      }
-    />
-  </WorkspaceSection>
-)}
     </ExecutiveShell>
   )
 }

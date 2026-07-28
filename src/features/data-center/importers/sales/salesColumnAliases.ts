@@ -35,10 +35,40 @@ export const salesColumnAliases = {
     'Nombre cliente',
   ],
 
+  productCode: [
+    'Product Code',
+    'ERP Product Code',
+    'ERP Code',
+    'Item Code',
+    'Item: Name',
+    'Item Name',
+    'SKU',
+    'Código de producto',
+    'Codigo de producto',
+    'Código ERP',
+    'Codigo ERP',
+    'Código artículo',
+    'Codigo articulo',
+  ],
+
   model: [
     'Modelo',
     'Model',
     'SKU',
+  ],
+
+  productStatus: [
+    'Estatus ABCDE',
+    'Status ABCDE',
+    'Clasificación ABCDE',
+    'Clasificacion ABCDE',
+    'CLASIFICACION VALOR',
+    'CLASIFICACIÓN VALOR',
+    'Clasificacion Valor',
+    'Clasificación Valor',
+    'ABC Status',
+    'Estatus',
+    'ABC',
   ],
 
   quantity: [

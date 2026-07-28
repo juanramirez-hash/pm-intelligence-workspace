@@ -54,6 +54,7 @@ export interface CustomerWorkspaceViewModel {
     active: readonly string[]
     inactive: readonly string[]
   }
+  decision: CustomerDecisionModel
 }
 
 export function buildCustomerWorkspaceViewModel(
@@ -191,5 +192,6 @@ export function buildCustomerWorkspaceViewModel(
       inactive:
         decision.inactiveProductIds,
     },
+    decision,
   }
 }

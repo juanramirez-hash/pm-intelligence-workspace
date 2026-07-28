@@ -14,6 +14,7 @@ export * from './metrics'
 export * from './models'
 export * from './narrative'
 export * from './repository'
+export * from './reconciliation'
 export * from './snapshots'
 export * from './targets'
 

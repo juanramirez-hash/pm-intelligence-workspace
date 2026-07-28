@@ -1,3 +1,9 @@
+# 0.21.0-C001.1
+
+- Customer Core Migration sobre `customerPeriods` y `BusinessRepository`.
+- Índices temporales por cliente y periodo.
+- Cobertura de periodos activos y ubicaciones por periodo.
+
 # Changelog
 
 ## 0.18.0-UX002.4-P3
@@ -237,3 +243,26 @@
 - Executive Brief Core determinístico para Brand Workspace.
 - Reglas, explicabilidad, confianza y pruebas unitarias.
 - Sin cambios de UI en esta parte.
+
+## 0.19.0-UX002.5-P2
+
+- Añade los widgets Atlas reutilizables para Opportunity Radar.
+- Incorpora matriz impacto/urgencia y explicabilidad visual.
+- Mantiene la integración con Brand Workspace fuera de esta parte.
+
+## 0.19.0-UX002.5-P3
+
+- Integración de Opportunity Radar en Brand Workspace.
+- Conexión de Opportunity Engine con Workspace Context.
+- Visualización priorizada entre Executive Brief y KPI Cards.
+
+## 0.19.1-UX002.5-P3.1
+
+- Corrige el recorte de tooltips en los bordes de Opportunity Matrix.
+- Orienta cada tooltip hacia el espacio disponible y añade soporte de teclado.
+- Mantiene intactos Opportunity Engine, scores y reglas de negocio.
+
+## 0.20.0-UX002.6
+
+- Smart Brand Directory integrado en Brand Workspace.
+- Navegación contextual por marca, filtros y ordenamiento ejecutivo.

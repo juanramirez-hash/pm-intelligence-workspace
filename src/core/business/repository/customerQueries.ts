@@ -10,6 +10,10 @@ import type {
   BusinessDataModel,
 } from '../models'
 
+import {
+  buildCustomerPeriodIndexes,
+} from './customerPeriodIndexes'
+
 function normalizeLimit(
   limit: number,
 ): number {
@@ -47,55 +51,27 @@ export class CustomerQueries {
       BusinessCustomerPeriod[]
     >
 
+  private readonly periodsByPeriodId:
+    Map<
+      string,
+      BusinessCustomerPeriod[]
+    >
+
   constructor(
     model: BusinessDataModel,
   ) {
     this.model = model
 
+    const indexes =
+      buildCustomerPeriodIndexes(
+        model,
+      )
+
     this.periodsByCustomerId =
-      new Map<
-        string,
-        BusinessCustomerPeriod[]
-      >()
+      indexes.byCustomerId
 
-    for (
-      const customerPeriod of
-        model.customerPeriods.values()
-    ) {
-      let customerPeriods =
-        this.periodsByCustomerId.get(
-          customerPeriod.customerId,
-        )
-
-      if (!customerPeriods) {
-        customerPeriods = []
-
-        this.periodsByCustomerId.set(
-          customerPeriod.customerId,
-          customerPeriods,
-        )
-      }
-
-      customerPeriods.push(
-        customerPeriod,
-      )
-    }
-
-    for (
-      const customerPeriods of
-        this.periodsByCustomerId.values()
-    ) {
-      customerPeriods.sort(
-        (
-          customerPeriodA,
-          customerPeriodB,
-        ) =>
-          customerPeriodA.periodId
-            .localeCompare(
-              customerPeriodB.periodId,
-            ),
-      )
-    }
+    this.periodsByPeriodId =
+      indexes.byPeriodId
   }
 
   getAll():
@@ -242,4 +218,36 @@ export class CustomerQueries {
       customerId,
     )
   }
+  findPeriodsByPeriodId(
+    periodId: string,
+  ): BusinessCustomerPeriod[] {
+    const normalizedPeriodId =
+      normalizePeriodId(
+        periodId,
+      )
+
+    if (!normalizedPeriodId) {
+      return []
+    }
+
+    const customerPeriods =
+      this.periodsByPeriodId.get(
+        normalizedPeriodId,
+      )
+
+    return customerPeriods
+      ? [...customerPeriods]
+      : []
+  }
+
+  getActivePeriodCount(
+    customerId: string,
+  ): number {
+    const customer =
+      this.findById(customerId)
+
+    return customer
+      ?.activePeriods.size ?? 0
+  }
+
 }

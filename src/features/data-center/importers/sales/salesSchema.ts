@@ -17,8 +17,10 @@ export const RECOMMENDED_SALES_FIELDS: SalesField[] = [
 
 export const OPTIONAL_SALES_FIELDS: SalesField[] = [
   'customerName',
+  'productCode',
   'salesRep',
   'currency',
+  'productStatus',
 ]
 
 export const ALL_SALES_FIELDS: SalesField[] = [

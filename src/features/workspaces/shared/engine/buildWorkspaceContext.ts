@@ -10,6 +10,10 @@ import {
   ExecutiveBriefEngine,
 } from '../../../../core/business/executiveBrief'
 
+import {
+  OpportunityEngine,
+} from '../../../../core/business/opportunityRadar'
+
 import type {
   DataCenterState,
 } from '../../../data-center/store/dataCenterStore'
@@ -24,6 +28,10 @@ type WorkspaceContextState =
     | 'salesSummary'
     | 'normalizedSales'
     | 'normalizedTargets'
+    | 'normalizedProductMaster'
+    | 'productMasterSummary'
+    | 'productMasterLastImportedAt'
+    | 'productMasterLastImportedFile'
     | 'targetSummary'
     | 'targetsLastImportedAt'
     | 'targetsLastImportedFile'
@@ -64,6 +72,9 @@ export function buildWorkspaceContext(
       targetSummary: state.targetSummary,
       targetsLastImportedAt: state.targetsLastImportedAt,
       targetsLastImportedFile: state.targetsLastImportedFile,
+      productMasterSummary: state.productMasterSummary,
+      productMasterLastImportedAt: state.productMasterLastImportedAt,
+      productMasterLastImportedFile: state.productMasterLastImportedFile,
     })
 
   const business =
@@ -72,6 +83,7 @@ export function buildWorkspaceContext(
           state.normalizedSales,
           {
             brandTargets: state.normalizedTargets,
+            productMaster: state.normalizedProductMaster,
           },
         )
       : null
@@ -82,6 +94,14 @@ export function buildWorkspaceContext(
   const executiveBrief =
     business?.brands
       ? new ExecutiveBriefEngine()
+          .buildForBrandWorkspace(
+            business.brands,
+          )
+      : null
+
+  const opportunityRadar =
+    business?.brands
+      ? new OpportunityEngine()
           .buildForBrandWorkspace(
             business.brands,
           )
@@ -133,6 +153,8 @@ export function buildWorkspaceContext(
       business?.insights ?? [],
 
     executiveBrief,
+
+    opportunityRadar,
 
     datasets,
 

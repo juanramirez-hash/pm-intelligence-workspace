@@ -26,3 +26,29 @@ export {
 } from './customerBrandQueries'
 
 export * from './productQueries'
+
+export {
+  buildProductIndexes,
+  buildBrandAndModelKey,
+  normalizeProductIndexValue,
+} from './productIndexes'
+
+export type {
+  ProductIndexes,
+} from './productIndexes'
+
+export {
+  buildCustomerPeriodIndexes,
+} from './customerPeriodIndexes'
+
+export type {
+  CustomerPeriodIndexes,
+} from './customerPeriodIndexes'
+
+export {
+  buildProductPeriodIndexes,
+} from './productPeriodIndexes'
+
+export type {
+  ProductPeriodIndexes,
+} from './productPeriodIndexes'

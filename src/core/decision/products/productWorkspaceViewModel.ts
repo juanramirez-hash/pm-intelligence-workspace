@@ -7,12 +7,21 @@ import type { ProductDecisionModel } from './productDecisionTypes'
 
 export interface ProductWorkspaceViewModel {
   id: string
+  decision: ProductDecisionModel
   header: {
     productId: string
     productName: string
     brandId: string
     brandName: string
     currentPeriodId: string
+  }
+  comparison: {
+    basePeriodId: string | null
+    revenueVariation: number | null
+    grossMarginVariation: number | null
+    customerDelta: number | null
+    quantityVariation: number | null
+    healthVariation: number | null
   }
   cards: readonly {
     id: string
@@ -56,12 +65,21 @@ export function buildProductWorkspaceViewModel(
 ): ProductWorkspaceViewModel {
   return {
     id: decision.id,
+    decision,
     header: {
       productId: decision.productId,
       productName: decision.productName,
       brandId: decision.brandId,
       brandName: decision.brandName,
       currentPeriodId: decision.currentPeriodId,
+    },
+    comparison: {
+      basePeriodId: decision.previous?.periodId ?? null,
+      revenueVariation: decision.revenueVariation,
+      grossMarginVariation: decision.grossMarginVariation,
+      customerDelta: decision.customerDelta,
+      quantityVariation: decision.quantityVariation,
+      healthVariation: decision.healthVariation,
     },
     cards: [
       {
@@ -70,9 +88,9 @@ export function buildProductWorkspaceViewModel(
         helper: `Histórico ${formatBusinessCurrency(decision.totalRevenue)}`, tone: 'blue',
       },
       {
-        id: 'gross-profit', label: 'GP histórico',
-        value: formatBusinessCurrency(decision.totalGrossProfit),
-        helper: `Margen ${formatBusinessPercent(decision.grossMargin)}`, tone: 'emerald',
+        id: 'gross-profit', label: 'GP del periodo',
+        value: formatBusinessCurrency(decision.current.grossProfit),
+        helper: `Margen ${formatBusinessPercent(decision.current.revenue > 0 ? decision.current.grossProfit / decision.current.revenue : null)}`, tone: 'emerald',
       },
       {
         id: 'customers', label: 'Clientes activos',

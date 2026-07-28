@@ -3,6 +3,10 @@ import type {
 } from '../../../features/data-center/importers/sales/salesTypes'
 
 import type {
+  NormalizedProductMasterRow,
+} from '../../../features/data-center/importers/products/productMasterTypes'
+
+import type {
   BusinessBrand,
 } from '../entities/brand'
 
@@ -42,6 +46,17 @@ import type {
 import {
   buildBusinessBrandTargets,
 } from '../targets'
+
+import {
+  buildProductSalesReconciliationIndex,
+  createProductSalesReconciliationSummary,
+  reconcileSalesProduct,
+  registerProductSalesReconciliationResult,
+} from '../reconciliation'
+
+import type {
+  ProductSalesReconciliationStatus,
+} from '../reconciliation'
 
 function normalizeIdentifier(
   value: string | null,
@@ -228,6 +243,9 @@ function createBusinessCustomer(
 
     locations:
       new Set<string>(),
+
+    activePeriods:
+      new Set<string>(),
   }
 }
 
@@ -254,6 +272,9 @@ function createBusinessCustomerPeriod(
       new Set<string>(),
 
     products:
+      new Set<string>(),
+
+    locations:
       new Set<string>(),
   }
 }
@@ -341,27 +362,206 @@ function createBusinessProductPeriod(
     quantity: 0,
     documents: 0,
     customers: new Set<string>(),
+    brands: new Set<string>(),
+    locations: new Set<string>(),
   }
 }
 
-function createBusinessProduct(
-  productId: string,
-  model: string,
-  brand: string,
+function createBusinessProductFromMaster(
+  source: NormalizedProductMasterRow,
 ): BusinessProduct {
   return {
-    id: productId,
-
-    model,
-    brand,
-
+    id: source.code,
+    code: source.code,
+    model: source.model,
+    sku: source.code,
+    erpInternalId: source.erpInternalId,
+    brandId:
+      normalizeIdentifier(source.brand) ??
+      source.brand,
+    brand: source.brand,
+    identitySource: 'product_master',
+    vendorCode: source.vendorCode,
+    vendorName:
+      source.vendorName ??
+      source.preferredVendor,
+    description: source.description,
+    classification:
+      source.classification ??
+      source.productClass,
+    commercialStatus: source.commercialStatus,
+    trend: source.trend,
+    category:
+      source.category ??
+      source.productClass,
+    subcategory1:
+      source.subcategory1 ??
+      source.secondaryCategory1,
+    subcategory2:
+      source.subcategory2 ??
+      source.secondaryCategory2,
+    createdAt:
+      source.createdAt ??
+      null,
+    updatedAt:
+      source.updatedAt ??
+      null,
+    averageCostUsd: source.averageCostUsd,
+    totalValue: source.totalValue,
+    currency: source.currency,
+    inventoryValueMxn: source.inventoryValueMxn,
+    inventoryValueUsd: source.inventoryValueUsd,
+    lastPurchaseDate: source.lastPurchaseDate,
+    lastCatalogSaleDate: source.lastSaleDate,
+    unitsSoldLast90Days: source.unitsSoldLast90Days,
+    preferredVendor: source.preferredVendor,
+    productClass: source.productClass,
+    secondaryCategory1: source.secondaryCategory1,
+    secondaryCategory2: source.secondaryCategory2,
+    quantityPricingSchedule: source.quantityPricingSchedule,
+    formulaText: source.formulaText,
+    onHand: source.onHand,
+    onOrder: source.onOrder,
+    catalogStatus: source.catalogStatus,
+    inactiveForPurchases: source.inactiveForPurchases,
+    showOnPortal: source.showOnPortal,
+    supersededBy: source.supersededBy,
+    blockPurchaseRequests: source.blockPurchaseRequests,
+    directSubstitute: source.directSubstitute,
+    benchmarkS: source.benchmarkS,
+    benchmarkT: source.benchmarkT,
+    benchmarkO: source.benchmarkO,
+    firstSale: null,
+    lastSale: null,
     revenue: 0,
     grossProfit: 0,
     quantity: 0,
-
-    customers:
-      new Set<string>(),
+    documents: 0,
+    activePeriods: new Set<string>(),
+    brands: new Set<string>(),
+    customers: new Set<string>(),
+    locations: new Set<string>(),
   }
+}
+
+function createFallbackBusinessProduct(
+  productId: string,
+  model: string,
+  brand: string,
+  sourceCode: string | null,
+  ambiguous = false,
+): BusinessProduct {
+  const fallbackCode =
+    ambiguous
+      ? productId
+      : sourceCode ?? productId
+
+  return {
+    id: productId,
+    code: fallbackCode,
+    model,
+    sku: fallbackCode,
+    erpInternalId: null,
+    brandId:
+      normalizeIdentifier(brand) ??
+      brand,
+    brand,
+    identitySource: ambiguous ? 'ambiguous_match' : 'sales_fallback',
+    vendorCode: null,
+    vendorName: null,
+    description: null,
+    classification: null,
+    commercialStatus: null,
+    trend: null,
+    category: null,
+    subcategory1: null,
+    subcategory2: null,
+    createdAt: null,
+    updatedAt: null,
+    averageCostUsd: null,
+    totalValue: null,
+    currency: null,
+    inventoryValueMxn: null,
+    inventoryValueUsd: null,
+    lastPurchaseDate: null,
+    lastCatalogSaleDate: null,
+    unitsSoldLast90Days: null,
+    preferredVendor: null,
+    productClass: null,
+    secondaryCategory1: null,
+    secondaryCategory2: null,
+    quantityPricingSchedule: null,
+    formulaText: null,
+    onHand: null,
+    onOrder: null,
+    catalogStatus: null,
+    inactiveForPurchases: null,
+    showOnPortal: null,
+    supersededBy: null,
+    blockPurchaseRequests: null,
+    directSubstitute: null,
+    benchmarkS: null,
+    benchmarkT: null,
+    benchmarkO: null,
+    firstSale: null,
+    lastSale: null,
+    revenue: 0,
+    grossProfit: 0,
+    quantity: 0,
+    documents: 0,
+    activePeriods: new Set<string>(),
+    brands: new Set<string>(),
+    customers: new Set<string>(),
+    locations: new Set<string>(),
+  }
+}
+
+function getFallbackProductId(
+  products: Map<string, BusinessProduct>,
+  brandId: string,
+  productModel: string | null,
+  productCode: string | null,
+  status: ProductSalesReconciliationStatus,
+): string | null {
+  const baseId =
+    normalizeIdentifier(productCode) ??
+    normalizeIdentifier(productModel)
+
+  if (!baseId) {
+    return null
+  }
+
+  if (status === 'ambiguous') {
+    return `AMBIGUOUS::${brandId}::${baseId}`
+  }
+
+  const existingProduct = products.get(baseId)
+
+  if (!existingProduct) {
+    return baseId
+  }
+
+  const existingBrandId =
+    normalizeIdentifier(
+      existingProduct.brandId ??
+      existingProduct.brand,
+    )
+
+  const existingModel =
+    normalizeIdentifier(existingProduct.model)
+
+  const normalizedProductModel =
+    normalizeIdentifier(productModel)
+
+  if (
+    existingProduct.identitySource !== 'product_master' &&
+    existingBrandId === brandId &&
+    existingModel === normalizedProductModel
+  ) {
+    return baseId
+  }
+
+  return `SALES::${brandId}::${baseId}`
 }
 
 function updateModelPeriodRange(
@@ -386,8 +586,8 @@ function updateModelPeriodRange(
 }
 
 export interface BuildBusinessDataModelOptions {
-  brandTargets?:
-    readonly BusinessBrandTargetInput[]
+  brandTargets?: readonly BusinessBrandTargetInput[]
+  productMaster?: readonly NormalizedProductMasterRow[]
 }
 
 export function buildBusinessDataModel(
@@ -458,6 +658,9 @@ export function buildBusinessDataModel(
         BusinessProductPeriod
       >(),
 
+    productReconciliation:
+      createProductSalesReconciliationSummary(),
+
     periods:
       new Map<
         string,
@@ -478,6 +681,32 @@ export function buildBusinessDataModel(
 
     processedRows: 0,
     ignoredRows: 0,
+  }
+
+  const productMaster =
+    options.productMaster ?? []
+
+  const productReconciliationIndex =
+    buildProductSalesReconciliationIndex(
+      productMaster,
+    )
+
+  for (const source of productMaster) {
+    const code = normalizeIdentifier(source.code)
+
+    if (!code) {
+      continue
+    }
+
+    if (!model.products.has(code)) {
+      model.products.set(
+        code,
+        createBusinessProductFromMaster({
+          ...source,
+          code,
+        }),
+      )
+    }
   }
 
   const periodDocuments =
@@ -503,6 +732,9 @@ export function buildBusinessDataModel(
       string,
       Set<string>
     >()
+
+  const productDocuments =
+    new Map<string, Set<string>>()
 
   const productPeriodDocuments =
     new Map<string, Set<string>>()
@@ -566,13 +798,43 @@ export function buildBusinessDataModel(
         row.customerName,
       )
 
-    const productId =
-      normalizeIdentifier(
-        row.model,
-      )
-
     const productModel =
       normalizeText(row.model)
+
+    const productReconciliation =
+      reconcileSalesProduct(
+        row,
+        productReconciliationIndex,
+      )
+
+    if (model.productReconciliation) {
+      registerProductSalesReconciliationResult(
+        model.productReconciliation,
+        productReconciliation,
+      )
+    }
+
+    const matchedProduct =
+      productReconciliation.product
+
+    const sourceProductCode =
+      productReconciliation.normalizedProductCode
+
+    const resolvedProductModel =
+      matchedProduct?.model ??
+      productModel ??
+      sourceProductCode
+
+    const productId =
+      matchedProduct
+        ? normalizeIdentifier(matchedProduct.code)
+        : getFallbackProductId(
+            model.products,
+            brandId,
+            resolvedProductModel,
+            sourceProductCode,
+            productReconciliation.status,
+          )
 
     const documentNumber =
       normalizeIdentifier(
@@ -723,6 +985,10 @@ export function buildBusinessDataModel(
       customer.quantity +=
         row.quantity
 
+      customer.activePeriods.add(
+        periodId,
+      )
+
       customer.brands.add(
         brandId,
       )
@@ -795,6 +1061,12 @@ export function buildBusinessDataModel(
         if (productId) {
           customerPeriod.products.add(
             productId,
+          )
+        }
+
+        if (location) {
+          customerPeriod.locations.add(
+            location,
           )
         }
 
@@ -881,7 +1153,7 @@ export function buildBusinessDataModel(
 
     if (
       productId &&
-      productModel
+      resolvedProductModel
     ) {
       let product =
         model.products.get(
@@ -889,17 +1161,24 @@ export function buildBusinessDataModel(
         )
 
       if (!product) {
-        product =
-          createBusinessProduct(
-            productId,
-            productModel,
-            brandName,
-          )
+        product = matchedProduct
+          ? createBusinessProductFromMaster({
+              ...matchedProduct,
+              code: productId,
+            })
+          : createFallbackBusinessProduct(
+              productId,
+              resolvedProductModel,
+              brandName,
+              sourceProductCode,
+              productReconciliation.status === 'ambiguous',
+            )
 
-        model.products.set(
-          productId,
-          product,
-        )
+        model.products.set(productId, product)
+      }
+
+      if (row.productStatus) {
+        product.commercialStatus = row.productStatus
       }
 
       product.revenue +=
@@ -910,6 +1189,42 @@ export function buildBusinessDataModel(
 
       product.quantity +=
         row.quantity
+
+      if (
+        !product.firstSale ||
+        rowDate < product.firstSale
+      ) {
+        product.firstSale = rowDate
+      }
+
+      if (
+        !product.lastSale ||
+        rowDate > product.lastSale
+      ) {
+        product.lastSale = rowDate
+      }
+
+      product.activePeriods.add(periodId)
+      product.brands.add(brandId)
+
+      if (location) {
+        product.locations.add(location)
+      }
+
+      if (documentNumber) {
+        let documents =
+          productDocuments.get(productId)
+
+        if (!documents) {
+          documents = new Set<string>()
+          productDocuments.set(
+            productId,
+            documents,
+          )
+        }
+
+        documents.add(documentNumber)
+      }
 
       if (customerId) {
         product.customers.add(
@@ -943,6 +1258,11 @@ export function buildBusinessDataModel(
       productPeriod.revenue += row.revenue
       productPeriod.grossProfit += row.grossProfit
       productPeriod.quantity += row.quantity
+      productPeriod.brands.add(brandId)
+
+      if (location) {
+        productPeriod.locations.add(location)
+      }
 
       if (customerId) {
         productPeriod.customers.add(customerId)
@@ -1176,6 +1496,13 @@ export function buildBusinessDataModel(
     }
   }
 
+
+  for (const [id, documents] of productDocuments) {
+    const product = model.products.get(id)
+    if (product) {
+      product.documents = documents.size
+    }
+  }
 
   for (const [id, documents] of productPeriodDocuments) {
     const productPeriod = model.productPeriods.get(id)

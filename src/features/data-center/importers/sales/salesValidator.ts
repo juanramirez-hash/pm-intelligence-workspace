@@ -18,13 +18,16 @@ export interface SalesValidationResult extends ValidationResult {
   unknownColumns: string[]
 }
 
-function normalizeHeader(value: string): string {
+export function normalizeSalesHeader(value: string): string {
   return value
+    .replace(/\u00a0/g, ' ')
     .trim()
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function findMatchingColumn(
@@ -32,12 +35,12 @@ function findMatchingColumn(
   aliases: readonly string[],
 ): string | undefined {
   const normalizedHeaders = new Map(
-    headers.map((header) => [normalizeHeader(header), header]),
+    headers.map((header) => [normalizeSalesHeader(header), header]),
   )
 
   for (const alias of aliases) {
     const matchedColumn = normalizedHeaders.get(
-      normalizeHeader(alias),
+      normalizeSalesHeader(alias),
     )
 
     if (matchedColumn) {

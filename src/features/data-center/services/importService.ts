@@ -8,8 +8,11 @@ import type { NormalizedSalesRow } from '../importers/sales/salesTypes'
 import type { SalesBusinessModel } from '../importers/sales/salesBusinessModel'
 import type { TargetBusinessModel } from '../importers/targets/targetBusinessModel'
 import type { NormalizedTargetRow, TargetDatasetSummary } from '../importers/targets/targetTypes'
+import type { NormalizedProductMasterRow, ProductMasterDatasetSummary } from '../importers/products/productMasterTypes'
+import type { ProductMasterBusinessModel } from '../importers/products/productMasterBusinessModel'
 import { salesImportPlugin } from '../importers/sales/salesPlugin'
 import { targetImportPlugin } from '../importers/targets/targetPlugin'
+import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
 
 import { runImportEngine } from '../engine/importEngine'
 import { importPluginRegistry } from '../engine/importPluginRegistry'
@@ -27,9 +30,16 @@ export type TargetImportResult = ImportEngineResult<
   TargetBusinessModel
 > & { reportType: 'quota' }
 
+export type ProductMasterImportResult = ImportEngineResult<
+  ProductMasterDatasetSummary,
+  NormalizedProductMasterRow,
+  ProductMasterBusinessModel
+> & { reportType: 'products' }
+
 export type DataCenterImportResult =
   | SalesImportResult
   | TargetImportResult
+  | ProductMasterImportResult
 
 function extractSpreadsheetHeaders(
   rows: SpreadsheetRow[],
@@ -116,6 +126,13 @@ export function runDataCenterImport(
         rows,
         headers,
       ) as TargetImportResult
+
+    case 'products':
+      return runImportEngine(
+        productMasterImportPlugin,
+        rows,
+        headers,
+      ) as ProductMasterImportResult
 
     default:
       throw new Error(

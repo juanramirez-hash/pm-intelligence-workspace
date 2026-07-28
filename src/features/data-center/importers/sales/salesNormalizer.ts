@@ -5,7 +5,10 @@ import {
   parseNumber,
   parseString,
 } from '../../utils/valueParsers'
-import type { SalesColumnMap } from './salesValidator'
+import {
+  normalizeSalesHeader,
+  type SalesColumnMap,
+} from './salesValidator'
 import type { NormalizedSalesRow } from './salesTypes'
 
 export type RawSalesRow =
@@ -151,6 +154,54 @@ function extractCustomerId(
   return parseIdentifier(customerName)
 }
 
+
+
+function getProductStatusSourceValue(
+  row: RawSalesRow,
+  columnMap: SalesColumnMap,
+): unknown {
+  const mappedValue = getMappedValue(
+    row,
+    columnMap,
+    'productStatus',
+  )
+
+  if (!isEmptyValue(mappedValue)) {
+    return mappedValue
+  }
+
+  /*
+   * Respaldo para archivos de origen que contienen saltos de línea,
+   * espacios no separables, signos o variaciones invisibles en el
+   * encabezado "CLASIFICACION VALOR".
+   */
+  for (const [sourceColumn, value] of Object.entries(row)) {
+    const normalizedHeader = normalizeSalesHeader(sourceColumn)
+
+    if (
+      normalizedHeader === 'clasificacion valor' ||
+      normalizedHeader === 'clasificacion abcde' ||
+      normalizedHeader === 'estatus abcde' ||
+      normalizedHeader === 'abc status'
+    ) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function parseProductStatus(value: unknown): 'A' | 'B' | 'C' | 'D' | 'E' | null {
+  const normalized = parseString(value)?.trim().toLocaleUpperCase('es-MX')
+  if (!normalized) return null
+
+  const match = normalized.match(/(?:^|\b)([ABCDE])(?:\b|$)/)
+  const status = match?.[1]
+  return status === 'A' || status === 'B' || status === 'C' || status === 'D' || status === 'E'
+    ? status
+    : null
+}
+
 export function normalizeSalesRow(
   row: RawSalesRow,
   columnMap: SalesColumnMap,
@@ -237,11 +288,26 @@ export function normalizeSalesRow(
       rawCustomerName,
     ),
 
+    productCode: parseIdentifier(
+      getMappedValue(
+        row,
+        columnMap,
+        'productCode',
+      ),
+    ),
+
     model: parseIdentifier(
       getMappedValue(
         row,
         columnMap,
         'model',
+      ),
+    ),
+
+    productStatus: parseProductStatus(
+      getProductStatusSourceValue(
+        row,
+        columnMap,
       ),
     ),
 
