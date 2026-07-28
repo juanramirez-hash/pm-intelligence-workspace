@@ -1,11 +1,17 @@
 export type {
   SalesComparisonMode,
+  SalesPerformanceStatus,
+  SalesWorkspaceBrandPerformanceItem,
   SalesWorkspaceComparison,
   SalesWorkspaceFilters,
+  SalesWorkspacePace,
+  SalesWorkspacePerformance,
   SalesWorkspacePeriodOption,
   SalesWorkspaceRankingItem,
   SalesWorkspaceReconciliation,
   SalesWorkspaceSnapshot,
+  SalesWorkspaceTargetCoverage,
+  SalesWorkspaceTargetMetric,
   SalesWorkspaceTrendItem,
   SalesWorkspaceViewModel,
 } from './salesWorkspaceTypes'

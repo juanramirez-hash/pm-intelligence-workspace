@@ -35,6 +35,8 @@ import {
 } from '../../../atlas/widgets/kpi'
 
 import {
+  SalesBrandPerformanceTable,
+  SalesPerformancePanel,
   SalesRankingPanel,
   SalesReconciliationPanel,
   SalesTrendPanel,
@@ -430,6 +432,32 @@ export function SalesWorkspacePage() {
           )}
         />
       </KPIGrid>
+
+      <section>
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+            Sales Performance Analytics
+          </p>
+
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+            Objetivo, ritmo laboral y proyección de cierre
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Consolida las cuotas mensuales por marca y mide el avance contra los días laborables transcurridos al corte de ventas.
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          <SalesPerformancePanel
+            performance={workspace.performance}
+          />
+
+          <SalesBrandPerformanceTable
+            items={workspace.brandPerformance}
+          />
+        </div>
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(22rem,0.8fr)]">
         <SalesTrendPanel

@@ -2,6 +2,13 @@ export type SalesComparisonMode =
   | 'previous-period'
   | 'previous-year'
 
+export type SalesPerformanceStatus =
+  | 'not-evaluable'
+  | 'behind-plan'
+  | 'on-plan'
+  | 'ahead-of-plan'
+  | 'achieved'
+
 export interface SalesWorkspaceFilters {
   periodId: string | null
   comparisonMode: SalesComparisonMode
@@ -64,6 +71,61 @@ export interface SalesWorkspaceReconciliation {
   matchRate: number
 }
 
+export interface SalesWorkspaceTargetMetric {
+  actual: number
+  target: number | null
+  variance: number | null
+  attainment: number | null
+}
+
+export interface SalesWorkspacePace {
+  status: SalesPerformanceStatus
+  dataCutoff: string | null
+  workingDays: number | null
+  elapsedWorkingDays: number | null
+  remainingWorkingDays: number | null
+  currentDailyRevenue: number | null
+  requiredDailyRevenue: number | null
+  expectedToDate: number | null
+  varianceToPlan: number | null
+  attainmentToPlan: number | null
+  projectedPeriodEnd: number | null
+  projectedAttainment: number | null
+}
+
+export interface SalesWorkspaceTargetCoverage {
+  targetedBrands: number
+  activeBrands: number
+  coveredActiveBrands: number
+  activeBrandsWithoutTarget: number
+  coveragePercentage: number
+}
+
+export interface SalesWorkspacePerformance {
+  available: boolean
+  revenue: SalesWorkspaceTargetMetric
+  grossProfit: SalesWorkspaceTargetMetric
+  grossMargin: SalesWorkspaceTargetMetric
+  pace: SalesWorkspacePace
+  coverage: SalesWorkspaceTargetCoverage
+}
+
+export interface SalesWorkspaceBrandPerformanceItem {
+  brandId: string
+  brandName: string
+  actualRevenue: number
+  targetRevenue: number | null
+  attainment: number | null
+  expectedToDate: number | null
+  varianceToPlan: number | null
+  projectedRevenue: number | null
+  projectedAttainment: number | null
+  currentGrossMargin: number
+  targetGrossMargin: number | null
+  marginVariancePoints: number | null
+  status: SalesPerformanceStatus
+}
+
 export interface SalesWorkspaceViewModel {
   available: boolean
   periodOptions: SalesWorkspacePeriodOption[]
@@ -71,6 +133,8 @@ export interface SalesWorkspaceViewModel {
   selectedPeriodLabel: string
   current: SalesWorkspaceSnapshot | null
   comparison: SalesWorkspaceComparison
+  performance: SalesWorkspacePerformance
+  brandPerformance: SalesWorkspaceBrandPerformanceItem[]
   trend: SalesWorkspaceTrendItem[]
   topBrands: SalesWorkspaceRankingItem[]
   topCustomers: SalesWorkspaceRankingItem[]

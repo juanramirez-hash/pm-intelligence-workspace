@@ -273,3 +273,10 @@
 - Se incorpora contexto comercial por periodo, comparación temporal, KPIs, tendencia y rankings.
 - La calidad de conciliación de Product Master se expone dentro del Workspace.
 - El módulo consume BusinessRepository sin depender de filas normalizadas.
+
+## 0.26.0 — SW-002 Sales Performance Analytics
+
+- Consolida objetivos mensuales de venta, Gross Profit y margen dentro de Sales Workspace.
+- Incorpora cumplimiento, esperado al corte, ritmo diario laboral y proyección de cierre.
+- Añade cobertura de objetivos y una tabla priorizada de brechas por marca.
+- Mantiene el Business Core congelado y consume únicamente BusinessRepository y Attainment.

@@ -1,15 +1,6 @@
-export {
-  SalesRankingPanel,
-} from './SalesRankingPanel'
-
-export {
-  SalesReconciliationPanel,
-} from './SalesReconciliationPanel'
-
-export {
-  SalesTrendPanel,
-} from './SalesTrendPanel'
-
-export {
-  SalesWorkspaceFilterBar,
-} from './SalesWorkspaceFilterBar'
+export * from './SalesBrandPerformanceTable'
+export * from './SalesPerformancePanel'
+export * from './SalesRankingPanel'
+export * from './SalesReconciliationPanel'
+export * from './SalesTrendPanel'
+export * from './SalesWorkspaceFilterBar'
