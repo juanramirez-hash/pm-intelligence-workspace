@@ -3,6 +3,10 @@ import {
 } from './buildSalesCommercialOpportunities'
 
 import {
+  buildSalesExecutiveSummary,
+} from './buildSalesExecutiveSummary'
+
+import {
   buildSalesVarianceContributionAnalysis,
   createEmptySalesVarianceContributionAnalysis,
 } from './buildSalesVarianceContribution'
@@ -1266,6 +1270,43 @@ export function buildSalesWorkspace(
             : 'Periodo anterior',
           'No existen datos de ventas para explicar variaciones comerciales.',
         ),
+      executiveSummary:
+        buildSalesExecutiveSummary({
+          available: false,
+          selectedPeriodLabel:
+            'Sin periodo disponible',
+          current: null,
+          comparison:
+            buildEmptyComparison(filters),
+          performance:
+            buildEmptyPerformance(null),
+          varianceContribution:
+            createEmptySalesVarianceContributionAnalysis(
+              filters.comparisonMode === 'previous-year'
+                ? 'Mismo mes del año anterior'
+                : 'Periodo anterior',
+              'No existen datos de ventas para explicar variaciones comerciales.',
+            ),
+          commercialOpportunities: {
+            available: false,
+            unavailableReason:
+              'No existen datos de ventas para evaluar oportunidades comerciales.',
+            totalImpact: 0,
+            totalCount: 0,
+            criticalCount: 0,
+            highCount: 0,
+            requiredDailyRevenue: null,
+            opportunities: [],
+          },
+          reconciliation: {
+            totalRows: 0,
+            matchedRows: 0,
+            ambiguousRows: 0,
+            unmatchedRows: 0,
+            matchRate: 0,
+          },
+          activeFilters: [],
+        }),
       trend: [],
       topBrands: [],
       topCustomers: [],
@@ -1457,6 +1498,112 @@ export function buildSalesWorkspace(
       brandPerformance,
     })
 
+  const selectedPeriodLabel =
+    formatPeriodLabel(
+      selectedBasePeriod.year,
+      selectedBasePeriod.month,
+    )
+
+  const current =
+    mapSnapshot(selectedPeriod)
+
+  const comparison =
+    buildComparison(
+      selectedPeriod,
+      previousPeriod,
+      filters,
+    )
+
+  const reconciliationView = {
+    totalRows:
+      reconciliation.totalRows,
+    matchedRows:
+      reconciliation.matchedRows,
+    ambiguousRows:
+      reconciliation.ambiguousRows,
+    unmatchedRows:
+      reconciliation.unmatchedRows,
+    matchRate:
+      reconciliation.matchRate * 100,
+  }
+
+  const trend =
+    repository.salesSegmentation
+      .groupBy(
+        'period',
+        buildSegmentationFilter(filters),
+      )
+      .filter((group) =>
+        visibleTrendPeriods.has(group.id),
+      )
+      .map((group) => {
+        const period =
+          repository.revenue.findById(
+            group.id,
+          )
+
+        return {
+          periodId: group.id,
+          periodLabel: period
+            ? formatPeriodLabel(
+                period.year,
+                period.month,
+              )
+            : group.label,
+          revenue: group.revenue,
+          grossProfit: group.grossProfit,
+          grossMargin: group.grossMargin,
+        }
+      })
+
+  const topBrands =
+    buildSegmentationRanking(
+      repository,
+      'brand',
+      filters,
+      selectedBasePeriod.id,
+      selectedPeriod.revenue,
+    )
+
+  const topCustomers =
+    buildSegmentationRanking(
+      repository,
+      'customer',
+      filters,
+      selectedBasePeriod.id,
+      selectedPeriod.revenue,
+    )
+
+  const topProducts =
+    buildSegmentationRanking(
+      repository,
+      'product',
+      filters,
+      selectedBasePeriod.id,
+      selectedPeriod.revenue,
+    )
+
+  const detailRows =
+    repository.salesSegmentation
+      .getDetailRows(
+        periodSegmentationFilter,
+        100,
+      )
+
+  const executiveSummary =
+    buildSalesExecutiveSummary({
+      available: true,
+      selectedPeriodLabel,
+      current,
+      comparison,
+      performance,
+      varianceContribution,
+      commercialOpportunities,
+      reconciliation:
+        reconciliationView,
+      activeFilters,
+    })
+
   return {
     available: true,
     periodOptions:
@@ -1474,100 +1621,29 @@ export function buildSalesWorkspace(
         })),
     selectedPeriodId:
       selectedBasePeriod.id,
-    selectedPeriodLabel:
-      formatPeriodLabel(
-        selectedBasePeriod.year,
-        selectedBasePeriod.month,
-      ),
-    current:
-      mapSnapshot(selectedPeriod),
-    comparison:
-      buildComparison(
-        selectedPeriod,
-        previousPeriod,
-        filters,
-      ),
+    selectedPeriodLabel,
+    current,
+    comparison,
     performance,
     brandPerformance,
     commercialOpportunities,
     varianceContribution,
-    trend:
-      repository.salesSegmentation
-        .groupBy(
-          'period',
-          buildSegmentationFilter(filters),
-        )
-        .filter((group) =>
-          visibleTrendPeriods.has(group.id),
-        )
-        .map((group) => {
-          const period =
-            repository.revenue.findById(
-              group.id,
-            )
-
-          return {
-            periodId: group.id,
-            periodLabel: period
-              ? formatPeriodLabel(
-                  period.year,
-                  period.month,
-                )
-              : group.label,
-            revenue: group.revenue,
-            grossProfit: group.grossProfit,
-            grossMargin: group.grossMargin,
-          }
-        }),
-    topBrands:
-      buildSegmentationRanking(
-        repository,
-        'brand',
-        filters,
-        selectedBasePeriod.id,
-        selectedPeriod.revenue,
-      ),
-    topCustomers:
-      buildSegmentationRanking(
-        repository,
-        'customer',
-        filters,
-        selectedBasePeriod.id,
-        selectedPeriod.revenue,
-      ),
-    topProducts:
-      buildSegmentationRanking(
-        repository,
-        'product',
-        filters,
-        selectedBasePeriod.id,
-        selectedPeriod.revenue,
-      ),
-    reconciliation: {
-      totalRows:
-        reconciliation.totalRows,
-      matchedRows:
-        reconciliation.matchedRows,
-      ambiguousRows:
-        reconciliation.ambiguousRows,
-      unmatchedRows:
-        reconciliation.unmatchedRows,
-      matchRate:
-        reconciliation.matchRate * 100,
-    },
+    executiveSummary,
+    trend,
+    topBrands,
+    topCustomers,
+    topProducts,
+    reconciliation:
+      reconciliationView,
     filterOptions,
     activeFilters,
     hasActiveSegmentationFilters:
       activeFilters.length > 0,
-    detailRows:
-      repository.salesSegmentation
-        .getDetailRows(
-          periodSegmentationFilter,
-          100,
-        ),
+    detailRows,
     detailTotalRows:
       selectedSummary.segmentCount,
     detailSourceRows:
       selectedSummary.rowCount,
   }
+
 }

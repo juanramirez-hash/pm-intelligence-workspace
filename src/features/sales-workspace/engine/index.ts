@@ -10,3 +10,7 @@ export {
   buildSalesVarianceContributionAnalysis,
   createEmptySalesVarianceContributionAnalysis,
 } from './buildSalesVarianceContribution'
+
+export {
+  buildSalesExecutiveSummary,
+} from './buildSalesExecutiveSummary'

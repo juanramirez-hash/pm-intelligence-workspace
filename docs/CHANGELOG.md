@@ -320,3 +320,23 @@
 - Implementación aditiva dentro de Sales Workspace.
 - Consume exclusivamente BusinessRepository y Sales Segmentation Queries.
 - Sin cambios en entidades, builders o repositorios del Business Core.
+
+## 2026-07-28 — SW-006: Executive Export & Closure
+
+### Added
+
+- Resumen ejecutivo determinístico con lectura del periodo, perspectiva de cierre y hallazgos prioritarios.
+- Exportación Excel bajo demanda con hojas de resumen, KPIs, desempeño por marca, oportunidades, contribuciones, detalle y conciliación.
+- Vista de impresión optimizada para generar PDF desde el navegador.
+- Acciones ejecutivas de impresión y exportación dentro de Sales Workspace.
+
+### Performance
+
+- Carga diferida por ruta para los principales Workspaces y Data Center.
+- `xlsx` se carga dinámicamente únicamente al solicitar una exportación.
+- Se elimina la dependencia estática de Data Center desde el router principal.
+
+### Closure
+
+- Completa los bloques SW-001 a SW-006 de Sales Workspace v0.26.0.
+- Mantiene el Business Core congelado y sin cambios de contrato.

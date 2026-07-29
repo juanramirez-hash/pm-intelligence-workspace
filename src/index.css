@@ -58,3 +58,75 @@ a {
   outline: 2px solid #7c3aed;
   outline-offset: 2px;
 }
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  :root,
+  html,
+  body,
+  #root,
+  [data-app-shell="true"] {
+    min-height: auto;
+    background: #ffffff !important;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  [data-print-hidden="true"] {
+    display: none !important;
+  }
+
+  [data-app-shell-content="true"] {
+    min-height: auto !important;
+    padding-left: 0 !important;
+  }
+
+  [data-app-main="true"] {
+    padding: 0 !important;
+  }
+
+  [data-atlas-component="executive-shell"] {
+    min-height: auto !important;
+  }
+
+  [data-atlas-component="executive-shell"] > div {
+    max-width: none !important;
+    gap: 14px !important;
+    padding: 0 !important;
+  }
+
+  [data-atlas-component="executive-hero"],
+  [data-atlas-component="intelligent-kpi-card"],
+  [data-atlas-component="executive-panel"],
+  [data-atlas-component="sales-executive-summary-panel"] {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  section,
+  article,
+  table,
+  tr {
+    break-inside: avoid;
+  }
+
+  table {
+    font-size: 8pt !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

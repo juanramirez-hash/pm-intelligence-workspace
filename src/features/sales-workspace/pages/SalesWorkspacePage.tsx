@@ -1,13 +1,20 @@
 import {
+  useState,
+} from 'react'
+
+import {
   BadgeDollarSign,
   BarChart3,
   Boxes,
   Building2,
   CheckCircle2,
   Database,
+  Download,
   FileText,
   Home,
+  LoaderCircle,
   Package,
+  Printer,
   ReceiptText,
   RotateCcw,
   ShoppingCart,
@@ -38,6 +45,7 @@ import {
   SalesBrandPerformanceTable,
   SalesCommercialOpportunityPanel,
   SalesDetailTable,
+  SalesExecutiveSummaryPanel,
   SalesPerformancePanel,
   SalesRankingPanel,
   SalesReconciliationPanel,
@@ -46,6 +54,10 @@ import {
   SalesVarianceContributionPanel,
   SalesWorkspaceFilterBar,
 } from '../components'
+
+import {
+  exportSalesWorkspaceWorkbook,
+} from '../export'
 
 import {
   useSalesWorkspace,
@@ -117,6 +129,12 @@ function getScoreTone(
 }
 
 export function SalesWorkspacePage() {
+  const [isExporting, setIsExporting] =
+    useState(false)
+
+  const [exportStatus, setExportStatus] =
+    useState<string | null>(null)
+
   const navigate =
     useNavigate()
 
@@ -145,6 +163,36 @@ export function SalesWorkspacePage() {
       ? current.revenue /
         current.documents
       : 0
+
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleExport = async () => {
+    if (!workspace.available || isExporting) {
+      return
+    }
+
+    setIsExporting(true)
+    setExportStatus(null)
+
+    try {
+      const fileName =
+        await exportSalesWorkspaceWorkbook(
+          workspace,
+        )
+
+      setExportStatus(
+        `Exportación generada: ${fileName}`,
+      )
+    } catch {
+      setExportStatus(
+        'No fue posible generar el archivo ejecutivo.',
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   const clearSegmentation = () => {
     workspace.actions.clearDimension('brand')
@@ -189,7 +237,8 @@ export function SalesWorkspacePage() {
   return (
     <ExecutiveShell
       beforeContent={
-        <ExecutiveBreadcrumbs
+        <div data-print-hidden="true">
+          <ExecutiveBreadcrumbs
           items={[
             {
               label: 'Inicio',
@@ -200,13 +249,15 @@ export function SalesWorkspacePage() {
               label: 'Sales Workspace',
             },
           ]}
-        />
+          />
+        </div>
       }
       header={
         <ExecutiveHero
           actions={
-            <ShellActions ariaLabel="Acciones de Sales Workspace">
-              <ShellActionsGroup label="Gestión del workspace">
+            <div data-print-hidden="true">
+              <ShellActions ariaLabel="Acciones de Sales Workspace">
+                <ShellActionsGroup label="Gestión del workspace">
                 <button
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white"
                   onClick={
@@ -228,8 +279,41 @@ export function SalesWorkspacePage() {
                   <Database size={16} />
                   Importar datos
                 </button>
-              </ShellActionsGroup>
-            </ShellActions>
+                </ShellActionsGroup>
+
+                <ShellActionsGroup label="Salida ejecutiva">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white"
+                    onClick={handlePrint}
+                    type="button"
+                  >
+                    <Printer size={16} />
+                    Imprimir / PDF
+                  </button>
+
+                  <button
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!workspace.available || isExporting}
+                    onClick={() => {
+                      void handleExport()
+                    }}
+                    type="button"
+                  >
+                    {isExporting ? (
+                      <LoaderCircle
+                        className="animate-spin"
+                        size={16}
+                      />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                    {isExporting
+                      ? 'Exportando...'
+                      : 'Exportar Excel'}
+                  </button>
+                </ShellActionsGroup>
+              </ShellActions>
+            </div>
           }
           description="Concentra el desempeño comercial mensual, sus variaciones y los principales impulsores por marca, cliente y producto."
           eyebrow="Sales Intelligence"
@@ -362,39 +446,53 @@ export function SalesWorkspacePage() {
       }
       width="wide"
     >
-      <SalesWorkspaceFilterBar
-        comparisonMode={
-          workspace.filters.comparisonMode
-        }
-        effectivePeriodLabel={
-          workspace.selectedPeriodLabel
-        }
-        filterPeriodId={
-          workspace.filters.periodId
-        }
-        onComparisonModeChange={
-          workspace.actions.setComparisonMode
-        }
-        onPeriodChange={
-          workspace.actions.setPeriodId
-        }
-        onReset={
-          workspace.actions.resetFilters
-        }
-        periodOptions={
-          workspace.periodOptions
-        }
-      />
+      <div
+        className="space-y-6"
+        data-print-hidden="true"
+      >
+        <SalesWorkspaceFilterBar
+          comparisonMode={
+            workspace.filters.comparisonMode
+          }
+          effectivePeriodLabel={
+            workspace.selectedPeriodLabel
+          }
+          filterPeriodId={
+            workspace.filters.periodId
+          }
+          onComparisonModeChange={
+            workspace.actions.setComparisonMode
+          }
+          onPeriodChange={
+            workspace.actions.setPeriodId
+          }
+          onReset={
+            workspace.actions.resetFilters
+          }
+          periodOptions={
+            workspace.periodOptions
+          }
+        />
 
-      <SalesSegmentationFilterPanel
-        activeFilters={workspace.activeFilters}
-        filters={workspace.filters}
-        onClearDimension={workspace.actions.clearDimension}
-        onDimensionChange={workspace.actions.setDimensionValues}
-        onReset={clearSegmentation}
-        onSearchTermChange={workspace.actions.setSearchTerm}
-        options={workspace.filterOptions}
-      />
+        <SalesSegmentationFilterPanel
+          activeFilters={workspace.activeFilters}
+          filters={workspace.filters}
+          onClearDimension={workspace.actions.clearDimension}
+          onDimensionChange={workspace.actions.setDimensionValues}
+          onReset={clearSegmentation}
+          onSearchTermChange={workspace.actions.setSearchTerm}
+          options={workspace.filterOptions}
+        />
+
+        {exportStatus && (
+          <p
+            aria-live="polite"
+            className="text-right text-xs font-medium text-slate-500"
+          >
+            {exportStatus}
+          </p>
+        )}
+      </div>
 
       <KPIGrid columns={4} gap="compact">
         <IntelligentKpiCard
@@ -487,6 +585,10 @@ export function SalesWorkspacePage() {
           )}
         />
       </KPIGrid>
+
+      <SalesExecutiveSummaryPanel
+        summary={workspace.executiveSummary}
+      />
 
       <section>
         <div className="mb-4">

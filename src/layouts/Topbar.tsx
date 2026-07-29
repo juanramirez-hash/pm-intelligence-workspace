@@ -28,7 +28,7 @@ export function Topbar() {
     workspaceTitles[location.pathname] ?? 'PM Intelligence'
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur sm:px-8 lg:px-10">
+    <header data-print-hidden="true" className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur sm:px-8 lg:px-10">
       <div className="flex items-center gap-4">
         <button
           type="button"

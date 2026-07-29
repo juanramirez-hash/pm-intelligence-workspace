@@ -347,6 +347,30 @@ export interface SalesCommercialOpportunitySummary {
   opportunities: SalesCommercialOpportunity[]
 }
 
+
+export type SalesExecutiveFindingTone =
+  | 'positive'
+  | 'attention'
+  | 'critical'
+  | 'neutral'
+
+export interface SalesExecutiveFinding {
+  id: string
+  label: string
+  value: string
+  detail: string
+  tone: SalesExecutiveFindingTone
+}
+
+export interface SalesExecutiveSummary {
+  available: boolean
+  title: string
+  overview: string
+  outlook: string
+  filterContext: string
+  findings: SalesExecutiveFinding[]
+}
+
 export interface SalesWorkspaceViewModel {
   available: boolean
   periodOptions: SalesWorkspacePeriodOption[]
@@ -358,6 +382,7 @@ export interface SalesWorkspaceViewModel {
   brandPerformance: SalesWorkspaceBrandPerformanceItem[]
   commercialOpportunities: SalesCommercialOpportunitySummary
   varianceContribution: SalesVarianceContributionAnalysis
+  executiveSummary: SalesExecutiveSummary
   trend: SalesWorkspaceTrendItem[]
   topBrands: SalesWorkspaceRankingItem[]
   topCustomers: SalesWorkspaceRankingItem[]

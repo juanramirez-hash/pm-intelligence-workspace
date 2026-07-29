@@ -9,3 +9,5 @@ export * from './SalesSegmentationFilterPanel'
 export * from './SalesCommercialOpportunityPanel'
 
 export * from './SalesVarianceContributionPanel'
+
+export * from './SalesExecutiveSummaryPanel'

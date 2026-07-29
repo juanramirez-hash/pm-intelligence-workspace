@@ -64,7 +64,7 @@ const workspaceNavigation = [
 
 export function Sidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-slate-950 lg:flex lg:flex-col">
+    <aside data-print-hidden="true" className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-slate-950 lg:flex lg:flex-col">
       <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6">
         <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500 text-white">
           <Boxes size={21} strokeWidth={2.2} />

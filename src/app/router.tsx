@@ -1,16 +1,122 @@
-import { createBrowserRouter } from 'react-router-dom'
+import {
+  createBrowserRouter,
+} from 'react-router-dom'
 
-import { AppShell } from '../layouts/AppShell'
-import { ExecutiveWorkspacePage } from '../features/executive-workspace/ExecutiveWorkspacePage'
-import { BrandWorkspacePage } from '../features/brand-workspace/pages/BrandWorkspacePage'
-import { SalesWorkspacePage } from '../features/sales-workspace'
-import { PlaceholderPage } from '../shared/ui/PlaceholderPage'
-import { DataCenterPage } from '../features/data-center/DataCenterPage'
-import { BrandIntelligencePage } from '../features/brand-intelligence/pages/BrandIntelligencePage'
-import { CustomerDirectoryPage } from '../features/customer-intelligence/pages/CustomerDirectoryPage'
-import { CustomerIntelligencePage } from '../features/customer-intelligence/pages/CustomerIntelligencePage'
-import { ProductDirectoryPage } from '../features/product-intelligence/pages/ProductDirectoryPage'
-import { ProductIntelligencePage } from '../features/product-intelligence/pages/ProductIntelligencePage'
+import {
+  AppShell,
+} from '../layouts/AppShell'
+
+import {
+  PlaceholderPage,
+} from '../shared/ui/PlaceholderPage'
+
+const loadExecutiveWorkspace = async () => {
+  const module =
+    await import(
+      '../features/executive-workspace/ExecutiveWorkspacePage'
+    )
+
+  return {
+    Component:
+      module.ExecutiveWorkspacePage,
+  }
+}
+
+const loadSalesWorkspace = async () => {
+  const module =
+    await import(
+      '../features/sales-workspace/pages/SalesWorkspacePage'
+    )
+
+  return {
+    Component:
+      module.SalesWorkspacePage,
+  }
+}
+
+const loadBrandWorkspace = async () => {
+  const module =
+    await import(
+      '../features/brand-workspace/pages/BrandWorkspacePage'
+    )
+
+  return {
+    Component:
+      module.BrandWorkspacePage,
+  }
+}
+
+const loadBrandIntelligence = async () => {
+  const module =
+    await import(
+      '../features/brand-intelligence/pages/BrandIntelligencePage'
+    )
+
+  return {
+    Component:
+      module.BrandIntelligencePage,
+  }
+}
+
+const loadCustomerDirectory = async () => {
+  const module =
+    await import(
+      '../features/customer-intelligence/pages/CustomerDirectoryPage'
+    )
+
+  return {
+    Component:
+      module.CustomerDirectoryPage,
+  }
+}
+
+const loadCustomerIntelligence = async () => {
+  const module =
+    await import(
+      '../features/customer-intelligence/pages/CustomerIntelligencePage'
+    )
+
+  return {
+    Component:
+      module.CustomerIntelligencePage,
+  }
+}
+
+const loadProductDirectory = async () => {
+  const module =
+    await import(
+      '../features/product-intelligence/pages/ProductDirectoryPage'
+    )
+
+  return {
+    Component:
+      module.ProductDirectoryPage,
+  }
+}
+
+const loadProductIntelligence = async () => {
+  const module =
+    await import(
+      '../features/product-intelligence/pages/ProductIntelligencePage'
+    )
+
+  return {
+    Component:
+      module.ProductIntelligencePage,
+  }
+}
+
+const loadDataCenter = async () => {
+  const module =
+    await import(
+      '../features/data-center/DataCenterPage'
+    )
+
+  return {
+    Component:
+      module.DataCenterPage,
+  }
+}
 
 export const router = createBrowserRouter([
   {
@@ -19,37 +125,35 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <ExecutiveWorkspacePage />,
+        lazy: loadExecutiveWorkspace,
       },
       {
         path: 'sales',
-        element: <SalesWorkspacePage />,
+        lazy: loadSalesWorkspace,
       },
       {
         path: 'brands',
-        element: <BrandWorkspacePage />,
+        lazy: loadBrandWorkspace,
       },
-
-{
-  path: 'brands/:brandId',
-  element: <BrandIntelligencePage />,
-},
-
+      {
+        path: 'brands/:brandId',
+        lazy: loadBrandIntelligence,
+      },
       {
         path: 'customers',
-        element: <CustomerDirectoryPage />,
+        lazy: loadCustomerDirectory,
       },
       {
         path: 'customers/:customerId',
-        element: <CustomerIntelligencePage />,
+        lazy: loadCustomerIntelligence,
       },
       {
         path: 'products',
-        element: <ProductDirectoryPage />,
+        lazy: loadProductDirectory,
       },
       {
         path: 'products/:productId',
-        element: <ProductIntelligencePage />,
+        lazy: loadProductIntelligence,
       },
       {
         path: 'pricing',
@@ -89,7 +193,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'data-center',
-        element: <DataCenterPage />,
+        lazy: loadDataCenter,
       },
       {
         path: 'settings',
