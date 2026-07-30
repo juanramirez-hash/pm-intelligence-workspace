@@ -12,6 +12,10 @@ import type {
   NormalizedProductMasterRow,
   ProductMasterDatasetSummary,
 } from '../importers/products/productMasterTypes'
+import type {
+  InventoryDatasetSummary,
+  NormalizedInventoryRow,
+} from '../importers/inventory/inventoryTypes'
 
 export interface PersistedSalesDataset {
   summary: SalesDatasetSummary
@@ -30,6 +34,13 @@ export interface PersistedTargetDataset {
 export interface PersistedProductMasterDataset {
   summary: ProductMasterDatasetSummary
   normalizedRows: NormalizedProductMasterRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedInventoryDataset {
+  summary: InventoryDatasetSummary
+  normalizedRows: NormalizedInventoryRow[]
   lastImportedFile: string
   lastImportedAt: string
 }
@@ -55,6 +66,13 @@ export interface DataRepository {
 
   loadProductMasterDataset: () =>
     Promise<PersistedProductMasterDataset | null>
+
+  saveInventoryDataset: (
+    dataset: PersistedInventoryDataset,
+  ) => Promise<void>
+
+  loadInventoryDataset: () =>
+    Promise<PersistedInventoryDataset | null>
 
   clearAllData: () => Promise<void>
 }

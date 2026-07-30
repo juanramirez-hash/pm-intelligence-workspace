@@ -5,6 +5,9 @@ import type {
 import type {
   ProductMasterDatasetSummary,
 } from '../../features/data-center/importers/products/productMasterTypes'
+import type {
+  InventoryDatasetSummary,
+} from '../../features/data-center/importers/inventory/inventoryTypes'
 
 import {
   DATASET_DEFINITIONS,
@@ -24,6 +27,9 @@ export interface BuildDatasetRegistryInput {
   productMasterSummary: ProductMasterDatasetSummary | null
   productMasterLastImportedFile: string | null
   productMasterLastImportedAt: string | null
+  inventorySummary: InventoryDatasetSummary | null
+  inventoryLastImportedFile: string | null
+  inventoryLastImportedAt: string | null
 }
 
 function createEmptyRegistryItem(
@@ -57,6 +63,9 @@ export function buildDatasetRegistry({
   productMasterSummary,
   productMasterLastImportedFile,
   productMasterLastImportedAt,
+  inventorySummary,
+  inventoryLastImportedFile,
+  inventoryLastImportedAt,
 }: BuildDatasetRegistryInput): DatasetRegistryItem[] {
   const registry = DATASET_DEFINITIONS.map(createEmptyRegistryItem)
 
@@ -92,6 +101,25 @@ export function buildDatasetRegistry({
       periodEnd: targetSummary.periodEnd,
       lastImportedFile: targetsLastImportedFile,
       lastImportedAt: targetsLastImportedAt,
+      version: 1,
+    }
+  }
+
+  const inventoryIndex = registry.findIndex(
+    (dataset) => dataset.type === 'inventory',
+  )
+
+  if (inventorySummary && inventoryIndex >= 0) {
+    registry[inventoryIndex] = {
+      ...registry[inventoryIndex],
+      status: 'active',
+      storage: 'indexeddb',
+      totalRows: inventorySummary.processedRows,
+      ignoredRows: inventorySummary.ignoredRows,
+      periodStart: inventorySummary.periodStart,
+      periodEnd: inventorySummary.periodEnd,
+      lastImportedFile: inventoryLastImportedFile,
+      lastImportedAt: inventoryLastImportedAt,
       version: 1,
     }
   }

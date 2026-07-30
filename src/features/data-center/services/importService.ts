@@ -8,11 +8,14 @@ import type { NormalizedSalesRow } from '../importers/sales/salesTypes'
 import type { SalesBusinessModel } from '../importers/sales/salesBusinessModel'
 import type { TargetBusinessModel } from '../importers/targets/targetBusinessModel'
 import type { ProductMasterBusinessModel } from '../importers/products/productMasterBusinessModel'
+import type { InventoryBusinessModel } from '../importers/inventory/inventoryBusinessModel'
 import type { NormalizedTargetRow, TargetDatasetSummary } from '../importers/targets/targetTypes'
 import type { NormalizedProductMasterRow, ProductMasterDatasetSummary } from '../importers/products/productMasterTypes'
+import type { NormalizedInventoryRow, InventoryDatasetSummary } from '../importers/inventory/inventoryTypes'
 import { salesImportPlugin } from '../importers/sales/salesPlugin'
 import { targetImportPlugin } from '../importers/targets/targetPlugin'
 import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
+import { inventoryImportPlugin } from '../importers/inventory/inventoryPlugin'
 
 import { runImportEngine } from '../engine/importEngine'
 import { importPluginRegistry } from '../engine/importPluginRegistry'
@@ -36,10 +39,17 @@ export type ProductMasterImportResult = ImportEngineResult<
   ProductMasterBusinessModel
 > & { reportType: 'products' }
 
+export type InventoryImportResult = ImportEngineResult<
+  InventoryDatasetSummary,
+  NormalizedInventoryRow,
+  InventoryBusinessModel
+> & { reportType: 'inventory' }
+
 export type DataCenterImportResult =
   | SalesImportResult
   | TargetImportResult
   | ProductMasterImportResult
+  | InventoryImportResult
 
 function extractSpreadsheetHeaders(
   rows: SpreadsheetRow[],
@@ -133,6 +143,13 @@ export function runDataCenterImport(
         rows,
         headers,
       ) as ProductMasterImportResult
+
+    case 'inventory':
+      return runImportEngine(
+        inventoryImportPlugin,
+        rows,
+        headers,
+      ) as InventoryImportResult
 
     default:
       throw new Error(

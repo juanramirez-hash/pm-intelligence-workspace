@@ -2,6 +2,7 @@ import type {
   DataRepository,
   PersistedSalesDataset,
   PersistedProductMasterDataset,
+  PersistedInventoryDataset,
 } from './dataRepository'
 
 import {
@@ -10,10 +11,12 @@ import {
   SALES_METADATA_KEY,
   TARGET_METADATA_KEY,
   PRODUCT_METADATA_KEY,
+  INVENTORY_METADATA_KEY,
   type PersistedSalesChunk,
   type PersistedSalesMetadata,
   type PersistedTargetMetadata,
   type PersistedProductMasterMetadata,
+  type PersistedInventoryMetadata,
 } from '../persistence/dataCenterDatabase'
 
 function createSalesChunks(
@@ -154,10 +157,40 @@ export const indexedDbDataRepository:
     }
   },
 
+  async saveInventoryDataset(dataset: PersistedInventoryDataset) {
+    const database = await getDataCenterDatabase()
+    const metadata: PersistedInventoryMetadata = {
+      id: INVENTORY_METADATA_KEY,
+      summary: dataset.summary,
+      normalizedRows: dataset.normalizedRows,
+      lastImportedFile: dataset.lastImportedFile,
+      lastImportedAt: dataset.lastImportedAt,
+      persistenceVersion: 1,
+    }
+
+    await database.put('inventoryMetadata', metadata, INVENTORY_METADATA_KEY)
+  },
+
+  async loadInventoryDataset() {
+    const database = await getDataCenterDatabase()
+    const metadata = await database.get('inventoryMetadata', INVENTORY_METADATA_KEY)
+
+    if (!metadata) {
+      return null
+    }
+
+    return {
+      summary: metadata.summary,
+      normalizedRows: metadata.normalizedRows,
+      lastImportedFile: metadata.lastImportedFile,
+      lastImportedAt: metadata.lastImportedAt,
+    }
+  },
+
   async clearAllData() {
     const database = await getDataCenterDatabase()
     const transaction = database.transaction(
-      ['salesMetadata', 'salesChunks', 'targetMetadata', 'productMetadata'],
+      ['salesMetadata', 'salesChunks', 'targetMetadata', 'productMetadata', 'inventoryMetadata'],
       'readwrite',
     )
 
@@ -166,6 +199,7 @@ export const indexedDbDataRepository:
       transaction.objectStore('salesChunks').clear(),
       transaction.objectStore('targetMetadata').clear(),
       transaction.objectStore('productMetadata').clear(),
+      transaction.objectStore('inventoryMetadata').clear(),
     ])
 
     await transaction.done

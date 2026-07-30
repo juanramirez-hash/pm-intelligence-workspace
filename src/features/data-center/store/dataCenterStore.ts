@@ -28,6 +28,10 @@ import type {
   NormalizedProductMasterRow,
   ProductMasterDatasetSummary,
 } from '../importers/products/productMasterTypes'
+import type {
+  InventoryDatasetSummary,
+  NormalizedInventoryRow,
+} from '../importers/inventory/inventoryTypes'
 
 import {
   runDataCenterImport,
@@ -77,7 +81,13 @@ export interface DataCenterState {
   productMasterLastImportedAt:
     string | null
 
-  inventorySummary: unknown | null
+  inventorySummary: InventoryDatasetSummary | null
+
+  normalizedInventory: NormalizedInventoryRow[]
+
+  inventoryLastImportedFile: string | null
+
+  inventoryLastImportedAt: string | null
 
   forecastSummary: unknown | null
 
@@ -139,7 +149,11 @@ export interface DataCenterState {
   ) => void
 
   setInventorySummary: (
-    summary: unknown | null,
+    summary: InventoryDatasetSummary | null,
+  ) => void
+
+  setNormalizedInventory: (
+    rows: NormalizedInventoryRow[],
   ) => void
 
   setForecastSummary: (
@@ -228,6 +242,12 @@ export const useDataCenterStore =
 
       inventorySummary: null,
 
+      normalizedInventory: [],
+
+      inventoryLastImportedFile: null,
+
+      inventoryLastImportedAt: null,
+
       forecastSummary: null,
 
       quotaSummary: null,
@@ -302,6 +322,9 @@ export const useDataCenterStore =
         set({
           inventorySummary: summary,
         }),
+
+      setNormalizedInventory: (rows) =>
+        set({ normalizedInventory: rows }),
 
       setForecastSummary: (
         summary,
@@ -492,6 +515,45 @@ export const useDataCenterStore =
               break
             }
 
+            case 'inventory': {
+              const importedAt = new Date().toISOString()
+
+              set({
+                inventorySummary: result.summary,
+                normalizedInventory: result.normalizedRows,
+                inventoryLastImportedFile: metadata.fileName,
+                inventoryLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .saveInventoryDataset({
+                  summary: result.summary,
+                  normalizedRows: result.normalizedRows,
+                  lastImportedFile: metadata.fileName,
+                  lastImportedAt: importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: getErrorMessage(
+                      persistenceError,
+                      'No fue posible guardar el inventario.',
+                    ),
+                  })
+                })
+
+              break
+            }
+
             case 'products': {
               const importedAt = new Date().toISOString()
 
@@ -580,14 +642,18 @@ export const useDataCenterStore =
               persistedSales,
               persistedTargets,
               persistedProductMaster,
+              persistedInventory,
             ] = await Promise.all([
               indexedDbDataRepository.loadSalesDataset(),
               indexedDbDataRepository.loadTargetDataset(),
               indexedDbDataRepository.loadProductMasterDataset(),
+              indexedDbDataRepository.loadInventoryDataset(),
             ])
 
             set({
-              activeReportType: persistedProductMaster
+              activeReportType: persistedInventory
+                ? 'inventory'
+                : persistedProductMaster
                 ? 'products'
                 : persistedTargets
                   ? 'quota'
@@ -597,7 +663,8 @@ export const useDataCenterStore =
               importStatus:
                 persistedSales ||
                 persistedTargets ||
-                persistedProductMaster
+                persistedProductMaster ||
+                persistedInventory
                   ? 'completed'
                   : 'idle',
               fileMetadata: null,
@@ -614,6 +681,10 @@ export const useDataCenterStore =
               normalizedProductMaster: persistedProductMaster?.normalizedRows ?? [],
               productMasterLastImportedFile: persistedProductMaster?.lastImportedFile ?? null,
               productMasterLastImportedAt: persistedProductMaster?.lastImportedAt ?? null,
+              inventorySummary: persistedInventory?.summary ?? null,
+              normalizedInventory: persistedInventory?.normalizedRows ?? [],
+              inventoryLastImportedFile: persistedInventory?.lastImportedFile ?? null,
+              inventoryLastImportedAt: persistedInventory?.lastImportedAt ?? null,
               isHydrating: false,
               isHydrated: true,
               persistenceError: null,
@@ -742,6 +813,12 @@ export const useDataCenterStore =
 
               inventorySummary:
                 null,
+
+              normalizedInventory: [],
+
+              inventoryLastImportedFile: null,
+
+              inventoryLastImportedAt: null,
 
               forecastSummary:
                 null,

@@ -32,6 +32,9 @@ type WorkspaceContextState =
     | 'productMasterSummary'
     | 'productMasterLastImportedAt'
     | 'productMasterLastImportedFile'
+    | 'inventorySummary'
+    | 'inventoryLastImportedAt'
+    | 'inventoryLastImportedFile'
     | 'targetSummary'
     | 'targetsLastImportedAt'
     | 'targetsLastImportedFile'
@@ -75,6 +78,9 @@ export function buildWorkspaceContext(
       productMasterSummary: state.productMasterSummary,
       productMasterLastImportedAt: state.productMasterLastImportedAt,
       productMasterLastImportedFile: state.productMasterLastImportedFile,
+      inventorySummary: state.inventorySummary,
+      inventoryLastImportedAt: state.inventoryLastImportedAt,
+      inventoryLastImportedFile: state.inventoryLastImportedFile,
     })
 
   const business =

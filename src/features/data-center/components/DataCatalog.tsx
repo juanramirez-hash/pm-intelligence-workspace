@@ -312,6 +312,18 @@ export function DataCatalog() {
         state.lastImportedAt,
     )
 
+  const inventorySummary = useDataCenterStore(
+    (state) => state.inventorySummary,
+  )
+
+  const inventoryLastImportedFile = useDataCenterStore(
+    (state) => state.inventoryLastImportedFile,
+  )
+
+  const inventoryLastImportedAt = useDataCenterStore(
+    (state) => state.inventoryLastImportedAt,
+  )
+
   const productMasterSummary =
     useDataCenterStore(
       (state) => state.productMasterSummary,
@@ -340,6 +352,9 @@ export function DataCatalog() {
           productMasterSummary,
           productMasterLastImportedFile,
           productMasterLastImportedAt,
+          inventorySummary,
+          inventoryLastImportedFile,
+          inventoryLastImportedAt,
         }),
       [
         salesSummary,
@@ -351,6 +366,9 @@ export function DataCatalog() {
         productMasterSummary,
         productMasterLastImportedFile,
         productMasterLastImportedAt,
+        inventorySummary,
+        inventoryLastImportedFile,
+        inventoryLastImportedAt,
       ],
     )
 

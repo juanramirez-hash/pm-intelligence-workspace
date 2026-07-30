@@ -18,11 +18,15 @@ import type {
   NormalizedProductMasterRow,
   ProductMasterDatasetSummary,
 } from '../importers/products/productMasterTypes'
+import type {
+  InventoryDatasetSummary,
+  NormalizedInventoryRow,
+} from '../importers/inventory/inventoryTypes'
 
 export const DATA_CENTER_DATABASE_NAME =
   'pm-intelligence-workspace'
 
-export const DATA_CENTER_DATABASE_VERSION = 3
+export const DATA_CENTER_DATABASE_VERSION = 4
 
 export const SALES_METADATA_KEY =
   'current-sales-dataset'
@@ -30,6 +34,8 @@ export const TARGET_METADATA_KEY =
   'current-target-dataset'
 export const PRODUCT_METADATA_KEY =
   'current-product-master-dataset'
+export const INVENTORY_METADATA_KEY =
+  'current-inventory-dataset'
 
 export const SALES_CHUNK_SIZE = 5_000
 
@@ -66,6 +72,15 @@ export interface PersistedProductMasterMetadata {
   persistenceVersion: number
 }
 
+export interface PersistedInventoryMetadata {
+  id: string
+  summary: InventoryDatasetSummary
+  normalizedRows: NormalizedInventoryRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+  persistenceVersion: number
+}
+
 interface DataCenterDatabaseSchema
   extends DBSchema {
   salesMetadata: {
@@ -86,6 +101,11 @@ interface DataCenterDatabaseSchema
   productMetadata: {
     key: string
     value: PersistedProductMasterMetadata
+  }
+
+  inventoryMetadata: {
+    key: string
+    value: PersistedInventoryMetadata
   }
 }
 
@@ -119,6 +139,10 @@ export function getDataCenterDatabase():
 
             if (!database.objectStoreNames.contains('productMetadata')) {
               database.createObjectStore('productMetadata')
+            }
+
+            if (!database.objectStoreNames.contains('inventoryMetadata')) {
+              database.createObjectStore('inventoryMetadata')
             }
           },
         },

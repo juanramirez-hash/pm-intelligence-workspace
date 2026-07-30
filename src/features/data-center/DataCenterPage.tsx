@@ -41,6 +41,10 @@ import {
 } from './components/ProductMasterImportSummary'
 
 import {
+  InventoryImportSummary,
+} from './components/InventoryImportSummary'
+
+import {
   SpreadsheetFileInformation,
 } from './components/SpreadsheetFileInformation'
 
@@ -380,6 +384,8 @@ export function DataCenterPage() {
               <TargetImportSummary />
 
               <ProductMasterImportSummary />
+
+              <InventoryImportSummary />
             </>
           )}
         </>

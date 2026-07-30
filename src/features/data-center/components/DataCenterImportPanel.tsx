@@ -137,7 +137,9 @@ export function DataCenterImportPanel({
                       ? 'Objetivos'
                       : activeReportType === 'products'
                         ? 'Product Master'
-                        : activeReportType}
+                        : activeReportType === 'inventory'
+                          ? 'Inventario'
+                          : activeReportType}
                 </div>
               )}
             </div>
