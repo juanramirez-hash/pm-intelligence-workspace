@@ -13,6 +13,9 @@ export interface RawProductMasterRow {
  */
 export interface NormalizedProductMasterRow {
   erpInternalId: string | null
+  /** Unique ERP Name: canonical product identity. */
+  name: string
+  /** Legacy/alternate code retained for compatibility and secondary lookup. */
   code: string
   model: string
   brand: string
@@ -69,6 +72,7 @@ export interface ProductMasterDatasetSummary {
   productsWithInventory: number
   productsOnOrder: number
   uniqueBrands: number
+  duplicateNames: number
   duplicateCodes: number
   duplicateErpInternalIds: number
   ambiguousBrandModels: number

@@ -10,6 +10,9 @@ export interface ProductIndexes {
   byId:
     Map<string, BusinessProduct>
 
+  byName:
+    Map<string, BusinessProduct>
+
   byCode:
     Map<string, BusinessProduct>
 
@@ -107,6 +110,9 @@ export function buildProductIndexes(
   const byId =
     new Map<string, BusinessProduct>()
 
+  const byName =
+    new Map<string, BusinessProduct>()
+
   const byCode =
     new Map<string, BusinessProduct>()
 
@@ -149,6 +155,11 @@ export function buildProductIndexes(
   for (const product of model.products.values()) {
     const normalizedId =
       normalizeProductIndexValue(product.id)
+
+    const normalizedName =
+      normalizeProductIndexValue(
+        product.name ?? product.id,
+      )
 
     const normalizedCode =
       normalizeProductIndexValue(product.code)
@@ -205,6 +216,10 @@ export function buildProductIndexes(
 
     if (normalizedId) {
       byId.set(normalizedId, product)
+    }
+
+    if (normalizedName) {
+      byName.set(normalizedName, product)
     }
 
     if (normalizedCode) {
@@ -308,6 +323,7 @@ export function buildProductIndexes(
 
   return {
     byId,
+    byName,
     byCode,
     byErpInternalId,
     byBrandId,

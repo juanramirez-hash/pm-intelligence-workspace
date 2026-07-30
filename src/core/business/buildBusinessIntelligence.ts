@@ -15,11 +15,14 @@ import type {
 } from '../../features/data-center/importers/sales/salesTypes'
 
 import type {
+  NormalizedProductMasterRow,
+} from '../../features/data-center/importers/products/productMasterTypes'
+
+import type {
   BusinessIntelligenceModel,
 } from './businessIntelligenceModel'
 
 import type { BusinessBrandTargetInput } from './targets'
-import type { NormalizedProductMasterRow } from '../../features/data-center/importers/products/productMasterTypes'
 
 import {
   buildBusinessDataModel,

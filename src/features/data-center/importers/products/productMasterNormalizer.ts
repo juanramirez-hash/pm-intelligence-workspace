@@ -63,11 +63,12 @@ export function normalizeProductMasterRows(
   let ignoredRows = 0
 
   for (const row of rows) {
-    const code = identifier(getValue(row, validation, 'code'))
+    const name = identifier(getValue(row, validation, 'name'))
+    const explicitCode = identifier(getValue(row, validation, 'code'))
     const model = text(getValue(row, validation, 'model'))
     const brand = text(getValue(row, validation, 'brand'))
 
-    if (!code || !model || !brand) {
+    if (!name || !model || !brand) {
       ignoredRows += 1
       continue
     }
@@ -86,7 +87,8 @@ export function normalizeProductMasterRows(
 
     normalizedRows.push({
       erpInternalId: identifier(getValue(row, validation, 'erpInternalId')),
-      code,
+      name,
+      code: explicitCode ?? name,
       model,
       brand,
       vendorCode: text(getValue(row, validation, 'vendorCode')),

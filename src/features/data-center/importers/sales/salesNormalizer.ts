@@ -288,6 +288,14 @@ export function normalizeSalesRow(
       rawCustomerName,
     ),
 
+    productName: parseIdentifier(
+      getMappedValue(
+        row,
+        columnMap,
+        'productName',
+      ),
+    ),
+
     productCode: parseIdentifier(
       getMappedValue(
         row,

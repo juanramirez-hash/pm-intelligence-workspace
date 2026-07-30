@@ -25,7 +25,8 @@ function createProduct(
 ): NormalizedProductMasterRow {
   return {
     erpInternalId: '1001',
-    code: 'CI-IPC-A',
+    name: 'CI-IPC-A',
+    code: 'LEGACY-CI-IPC-A',
     model: 'IPC-A',
     brand: 'UNV',
     vendorCode: null,
@@ -71,6 +72,7 @@ function createSale(
     grossProfit: 25,
     customerId: '100001',
     customerName: 'Cliente Uno',
+    productName: null,
     productCode: null,
     model: 'IPC-A',
     quantity: 1,
@@ -82,12 +84,12 @@ function createSale(
   }
 }
 
-describe('PMC-005 buildBusinessDataModel reconciliation', () => {
-  it('consolida ventas por código ERP antes que por marca y modelo', () => {
+describe('IQ-002 buildBusinessDataModel reconciliation', () => {
+  it('consolida ventas por Name antes que por otros atributos', () => {
     const model = buildBusinessDataModel(
       [
         createSale({
-          productCode: 'CI-IPC-A',
+          productName: 'CI-IPC-A',
           brand: 'Marca escrita diferente',
           model: 'Modelo escrito diferente',
         }),
@@ -103,7 +105,9 @@ describe('PMC-005 buildBusinessDataModel reconciliation', () => {
     expect(model.productReconciliation).toMatchObject({
       totalRows: 1,
       matchedRows: 1,
-      matchedByErpCode: 1,
+      matchedByName: 1,
+      matchedByNameWithWarnings: 1,
+      matchedByErpCode: 0,
       matchedByBrandAndModel: 0,
       ambiguousRows: 0,
       unmatchedRows: 0,
@@ -111,7 +115,7 @@ describe('PMC-005 buildBusinessDataModel reconciliation', () => {
     })
   })
 
-  it('registra coincidencias por marca y modelo y productos sin catálogo', () => {
+  it('registra fallback por marca y modelo y productos sin catalogo', () => {
     const model = buildBusinessDataModel(
       [
         createSale(),
@@ -139,34 +143,34 @@ describe('PMC-005 buildBusinessDataModel reconciliation', () => {
     })
   })
 
-  it('separa ventas ambiguas de los productos maestros candidatos', () => {
+  it('separa ventas con Name ambiguo de los productos maestros candidatos', () => {
     const model = buildBusinessDataModel(
-      [createSale()],
+      [createSale({ productName: 'CI-IPC-A' })],
       {
         productMaster: [
           createProduct(),
           createProduct({
             erpInternalId: '1002',
-            code: 'CI-IPC-A-ALT',
+            code: 'OTRO-CODIGO',
+            model: 'IPC-B',
           }),
         ],
       },
     )
 
     expect(model.products.get('CI-IPC-A')?.revenue).toBe(0)
-    expect(model.products.get('CI-IPC-A-ALT')?.revenue).toBe(0)
 
     const ambiguous = [...model.products.values()].find(
       (product) => product.identitySource === 'ambiguous_match',
     )
 
-    expect(ambiguous?.id).toBe('AMBIGUOUS::UNV::IPC-A')
+    expect(ambiguous?.id).toBe('AMBIGUOUS::UNV::CI-IPC-A')
     expect(ambiguous?.revenue).toBe(100)
     expect(model.productReconciliation).toMatchObject({
       totalRows: 1,
       matchedRows: 0,
       ambiguousRows: 1,
-      ambiguousByBrandAndModel: 1,
+      ambiguousByName: 1,
       unmatchedRows: 0,
       matchRate: 0,
     })
@@ -198,7 +202,7 @@ describe('PMC-005 buildBusinessDataModel reconciliation', () => {
   it('expone el resumen mediante BusinessRepository', () => {
     const repository = new BusinessRepository(
       buildBusinessDataModel(
-        [createSale()],
+        [createSale({ productName: 'CI-IPC-A' })],
         { productMaster: [createProduct()] },
       ),
     )
@@ -207,7 +211,7 @@ describe('PMC-005 buildBusinessDataModel reconciliation', () => {
       repository.getProductReconciliationSummary(),
     ).toMatchObject({
       matchedRows: 1,
-      matchedByBrandAndModel: 1,
+      matchedByName: 1,
       matchRate: 1,
     })
   })

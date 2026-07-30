@@ -1,6 +1,7 @@
 import type {
   DataRepository,
   PersistedSalesDataset,
+  PersistedProductMasterDataset,
 } from './dataRepository'
 
 import {
@@ -8,9 +9,11 @@ import {
   SALES_CHUNK_SIZE,
   SALES_METADATA_KEY,
   TARGET_METADATA_KEY,
+  PRODUCT_METADATA_KEY,
   type PersistedSalesChunk,
   type PersistedSalesMetadata,
   type PersistedTargetMetadata,
+  type PersistedProductMasterMetadata,
 } from '../persistence/dataCenterDatabase'
 
 function createSalesChunks(
@@ -121,10 +124,40 @@ export const indexedDbDataRepository:
     }
   },
 
+  async saveProductMasterDataset(dataset: PersistedProductMasterDataset) {
+    const database = await getDataCenterDatabase()
+    const metadata: PersistedProductMasterMetadata = {
+      id: PRODUCT_METADATA_KEY,
+      summary: dataset.summary,
+      normalizedRows: dataset.normalizedRows,
+      lastImportedFile: dataset.lastImportedFile,
+      lastImportedAt: dataset.lastImportedAt,
+      persistenceVersion: 1,
+    }
+
+    await database.put('productMetadata', metadata, PRODUCT_METADATA_KEY)
+  },
+
+  async loadProductMasterDataset() {
+    const database = await getDataCenterDatabase()
+    const metadata = await database.get('productMetadata', PRODUCT_METADATA_KEY)
+
+    if (!metadata) {
+      return null
+    }
+
+    return {
+      summary: metadata.summary,
+      normalizedRows: metadata.normalizedRows,
+      lastImportedFile: metadata.lastImportedFile,
+      lastImportedAt: metadata.lastImportedAt,
+    }
+  },
+
   async clearAllData() {
     const database = await getDataCenterDatabase()
     const transaction = database.transaction(
-      ['salesMetadata', 'salesChunks', 'targetMetadata'],
+      ['salesMetadata', 'salesChunks', 'targetMetadata', 'productMetadata'],
       'readwrite',
     )
 
@@ -132,6 +165,7 @@ export const indexedDbDataRepository:
       transaction.objectStore('salesMetadata').clear(),
       transaction.objectStore('salesChunks').clear(),
       transaction.objectStore('targetMetadata').clear(),
+      transaction.objectStore('productMetadata').clear(),
     ])
 
     await transaction.done

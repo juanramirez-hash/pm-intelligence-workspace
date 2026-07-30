@@ -35,13 +35,26 @@ export const salesColumnAliases = {
     'Nombre cliente',
   ],
 
+  /**
+   * NetSuite/ERP Name is the unique product identity confirmed for IQ-002.
+   * Keep this field separate from generic product codes so the reconciliation
+   * report can distinguish primary Name matches from legacy fallbacks.
+   */
+  productName: [
+    'Name',
+    'Name (Grouped)',
+    'Product Name',
+    'Item: Name',
+    'Item Name',
+    'Nombre de producto',
+    'Nombre producto',
+  ],
+
   productCode: [
     'Product Code',
     'ERP Product Code',
     'ERP Code',
     'Item Code',
-    'Item: Name',
-    'Item Name',
     'SKU',
     'Código de producto',
     'Codigo de producto',

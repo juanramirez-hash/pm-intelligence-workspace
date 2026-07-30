@@ -2,7 +2,9 @@ import type {
   SalesDatasetSummary,
   TargetDatasetSummary,
 } from '../../features/data-center/types/reportTypes'
-import type { ProductMasterDatasetSummary } from '../../features/data-center/importers/products/productMasterTypes'
+import type {
+  ProductMasterDatasetSummary,
+} from '../../features/data-center/importers/products/productMasterTypes'
 
 import {
   DATASET_DEFINITIONS,
@@ -19,9 +21,9 @@ export interface BuildDatasetRegistryInput {
   targetSummary: TargetDatasetSummary | null
   targetsLastImportedFile: string | null
   targetsLastImportedAt: string | null
-  productMasterSummary?: ProductMasterDatasetSummary | null
-  productMasterLastImportedFile?: string | null
-  productMasterLastImportedAt?: string | null
+  productMasterSummary: ProductMasterDatasetSummary | null
+  productMasterLastImportedFile: string | null
+  productMasterLastImportedAt: string | null
 }
 
 function createEmptyRegistryItem(
@@ -94,7 +96,9 @@ export function buildDatasetRegistry({
     }
   }
 
-  const productIndex = registry.findIndex((dataset) => dataset.type === 'products')
+  const productIndex = registry.findIndex(
+    (dataset) => dataset.type === 'products',
+  )
 
   if (productMasterSummary && productIndex >= 0) {
     registry[productIndex] = {
@@ -103,8 +107,10 @@ export function buildDatasetRegistry({
       storage: 'indexeddb',
       totalRows: productMasterSummary.processedRows,
       ignoredRows: productMasterSummary.ignoredRows,
-      lastImportedFile: productMasterLastImportedFile ?? null,
-      lastImportedAt: productMasterLastImportedAt ?? null,
+      periodStart: null,
+      periodEnd: null,
+      lastImportedFile: productMasterLastImportedFile,
+      lastImportedAt: productMasterLastImportedAt,
       version: 1,
     }
   }

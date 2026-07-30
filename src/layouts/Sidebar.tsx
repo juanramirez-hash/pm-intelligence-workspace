@@ -9,6 +9,7 @@ import {
   Package,
   PackageSearch,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Users,
 } from 'lucide-react'
@@ -128,6 +129,21 @@ export function Sidebar() {
         >
           <Database size={19} strokeWidth={1.9} />
           <span>Data Center</span>
+        </NavLink>
+
+        <NavLink
+          to="/data-quality/products"
+          className={({ isActive }) =>
+            [
+              'mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
+              isActive
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-950/20'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white',
+            ].join(' ')
+          }
+        >
+          <ShieldCheck size={19} strokeWidth={1.9} />
+          <span>Calidad de producto</span>
         </NavLink>
       </nav>
 

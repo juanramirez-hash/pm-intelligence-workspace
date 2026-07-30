@@ -133,7 +133,11 @@ export function DataCenterImportPanel({
                   Reporte detectado:{' '}
                   {activeReportType === 'sales'
                     ? 'Ventas'
-                    : activeReportType}
+                    : activeReportType === 'quota'
+                      ? 'Objetivos'
+                      : activeReportType === 'products'
+                        ? 'Product Master'
+                        : activeReportType}
                 </div>
               )}
             </div>

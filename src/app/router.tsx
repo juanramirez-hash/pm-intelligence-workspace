@@ -106,6 +106,18 @@ const loadProductIntelligence = async () => {
   }
 }
 
+const loadProductIdentityQuality = async () => {
+  const module =
+    await import(
+      '../features/product-identity-quality/pages/ProductIdentityQualityPage'
+    )
+
+  return {
+    Component:
+      module.ProductIdentityQualityPage,
+  }
+}
+
 const loadDataCenter = async () => {
   const module =
     await import(
@@ -194,6 +206,10 @@ export const router = createBrowserRouter([
       {
         path: 'data-center',
         lazy: loadDataCenter,
+      },
+      {
+        path: 'data-quality/products',
+        lazy: loadProductIdentityQuality,
       },
       {
         path: 'settings',

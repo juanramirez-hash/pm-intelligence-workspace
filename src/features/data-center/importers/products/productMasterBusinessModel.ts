@@ -1,80 +1,110 @@
-import type { NormalizedProductMasterRow, ProductMasterDatasetSummary } from './productMasterTypes'
+import type {
+  NormalizedProductMasterRow,
+  ProductMasterDatasetSummary,
+} from './productMasterTypes'
 
 export interface ProductMasterBusinessModel {
-  productsByCode: Map<string, NormalizedProductMasterRow>
-  productsByErpInternalId: Map<string, NormalizedProductMasterRow>
-  productsByBrandModel: Map<string, NormalizedProductMasterRow[]>
-  duplicateCodes: Set<string>
-  duplicateErpInternalIds: Set<string>
-  ambiguousBrandModels: Set<string>
-  processedRows: number
-  ignoredRows: number
+  products: NormalizedProductMasterRow[]
+  summary: ProductMasterDatasetSummary
 }
 
-function normalizeIdentifier(value: string): string {
-  return value.trim().toLocaleUpperCase('es-MX').replace(/\s+/g, ' ')
+function normalize(value: string | null | undefined): string {
+  return (value ?? '')
+    .trim()
+    .toLocaleUpperCase('es-MX')
+    .replace(/\s+/g, ' ')
 }
 
-function brandModelKey(brand: string, model: string): string {
-  return `${normalizeIdentifier(brand)}::${normalizeIdentifier(model)}`
+function countDuplicateGroups(values: string[]): number {
+  const counts = new Map<string, number>()
+
+  for (const value of values) {
+    if (!value) {
+      continue
+    }
+
+    counts.set(value, (counts.get(value) ?? 0) + 1)
+  }
+
+  return [...counts.values()].filter((count) => count > 1).length
+}
+
+function isInactive(product: NormalizedProductMasterRow): boolean {
+  if (product.inactiveForPurchases === true) {
+    return true
+  }
+
+  const status = normalize(product.catalogStatus)
+
+  return [
+    'INACTIVO',
+    'INACTIVE',
+    'DESCONTINUADO',
+    'DISCONTINUED',
+  ].includes(status)
 }
 
 export function buildProductMasterBusinessModel(
-  rows: NormalizedProductMasterRow[],
-  ignoredRows = 0,
+  products: NormalizedProductMasterRow[],
+  ignoredRows: number,
 ): ProductMasterBusinessModel {
-  const model: ProductMasterBusinessModel = {
-    productsByCode: new Map(),
-    productsByErpInternalId: new Map(),
-    productsByBrandModel: new Map(),
-    duplicateCodes: new Set(),
-    duplicateErpInternalIds: new Set(),
-    ambiguousBrandModels: new Set(),
-    processedRows: rows.length,
-    ignoredRows,
-  }
+  const uniqueBrands = new Set<string>()
+  let activeProducts = 0
+  let inactiveProducts = 0
+  let productsWithInventory = 0
+  let productsOnOrder = 0
 
-  for (const row of rows) {
-    const existingCode = model.productsByCode.get(row.code)
-    if (existingCode) model.duplicateCodes.add(row.code)
-    else model.productsByCode.set(row.code, row)
+  for (const product of products) {
+    uniqueBrands.add(normalize(product.brand))
 
-    if (row.erpInternalId) {
-      const existingInternalId = model.productsByErpInternalId.get(row.erpInternalId)
-      if (existingInternalId) model.duplicateErpInternalIds.add(row.erpInternalId)
-      else model.productsByErpInternalId.set(row.erpInternalId, row)
+    if (isInactive(product)) {
+      inactiveProducts += 1
+    } else {
+      activeProducts += 1
     }
 
-    const key = brandModelKey(row.brand, row.model)
-    const candidates = model.productsByBrandModel.get(key) ?? []
-    candidates.push(row)
-    model.productsByBrandModel.set(key, candidates)
-    if (candidates.length > 1) model.ambiguousBrandModels.add(key)
+    if ((product.onHand ?? 0) > 0) {
+      productsWithInventory += 1
+    }
+
+    if ((product.onOrder ?? 0) > 0) {
+      productsOnOrder += 1
+    }
   }
 
-  return model
-}
+  const duplicateNames = countDuplicateGroups(
+    products.map((product) => normalize(product.name ?? product.code)),
+  )
 
-export function summarizeProductMaster(
-  model: ProductMasterBusinessModel,
-): ProductMasterDatasetSummary {
-  const products = [...model.productsByCode.values()]
-  const inactive = products.filter((product) =>
-    product.catalogStatus?.toLocaleUpperCase('es-MX').includes('INACT') ||
-    product.inactiveForPurchases === true,
-  ).length
+  const duplicateCodes = countDuplicateGroups(
+    products.map((product) => normalize(product.code)),
+  )
+
+  const duplicateErpInternalIds = countDuplicateGroups(
+    products.map((product) => normalize(product.erpInternalId)),
+  )
+
+  const ambiguousBrandModels = countDuplicateGroups(
+    products.map((product) =>
+      `${normalize(product.brand)}::${normalize(product.model)}`,
+    ),
+  )
 
   return {
-    totalProducts: products.length,
-    activeProducts: products.length - inactive,
-    inactiveProducts: inactive,
-    productsWithInventory: products.filter((product) => (product.onHand ?? 0) > 0).length,
-    productsOnOrder: products.filter((product) => (product.onOrder ?? 0) > 0).length,
-    uniqueBrands: new Set(products.map((product) => normalizeIdentifier(product.brand))).size,
-    duplicateCodes: model.duplicateCodes.size,
-    duplicateErpInternalIds: model.duplicateErpInternalIds.size,
-    ambiguousBrandModels: model.ambiguousBrandModels.size,
-    processedRows: model.processedRows,
-    ignoredRows: model.ignoredRows,
+    products,
+    summary: {
+      totalProducts: products.length,
+      activeProducts,
+      inactiveProducts,
+      productsWithInventory,
+      productsOnOrder,
+      uniqueBrands: uniqueBrands.size,
+      duplicateNames,
+      duplicateCodes,
+      duplicateErpInternalIds,
+      ambiguousBrandModels,
+      processedRows: products.length,
+      ignoredRows,
+    },
   }
 }

@@ -31,6 +31,7 @@ function createProductMaster(
 ): NormalizedProductMasterRow {
   return {
     erpInternalId: code,
+    name: code,
     code,
     model,
     brand,

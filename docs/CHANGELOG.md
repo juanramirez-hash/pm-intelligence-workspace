@@ -1,3 +1,19 @@
+# 0.27.0-IQ-002
+
+- `Name` adoptado como identidad primaria y unica del producto.
+- `Marca` y `Modelo` usados para validacion y fallback controlado.
+- Nuevo indice por Name, deteccion de duplicados y advertencias de atributos.
+- Quality Gate ampliado con cobertura primaria por Name.
+- Migracion compatible con Product Master persistido en IQ-001.
+
+# 0.27.0-IQ-001
+
+- Product Master registrado como dataset persistente del Data Center.
+- Product Identity Quality Gate con cobertura por filas y valor de venta.
+- Excepciones agrupadas y priorizadas por impacto comercial.
+- Nueva ruta `/data-quality/products` y exportacion CSV.
+- Integracion del Product Master persistido con BusinessRepository.
+
 # 0.21.0-C001.1
 
 - Customer Core Migration sobre `customerPeriods` y `BusinessRepository`.

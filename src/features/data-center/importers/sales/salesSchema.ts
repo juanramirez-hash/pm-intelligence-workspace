@@ -9,6 +9,7 @@ export const REQUIRED_SALES_FIELDS: SalesField[] = [
 export const RECOMMENDED_SALES_FIELDS: SalesField[] = [
   'grossProfit',
   'customerId',
+  'productName',
   'model',
   'quantity',
   'documentNumber',

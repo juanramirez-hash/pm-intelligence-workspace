@@ -312,6 +312,21 @@ export function DataCatalog() {
         state.lastImportedAt,
     )
 
+  const productMasterSummary =
+    useDataCenterStore(
+      (state) => state.productMasterSummary,
+    )
+
+  const productMasterLastImportedFile =
+    useDataCenterStore(
+      (state) => state.productMasterLastImportedFile,
+    )
+
+  const productMasterLastImportedAt =
+    useDataCenterStore(
+      (state) => state.productMasterLastImportedAt,
+    )
+
   const datasets =
     useMemo(
       () =>
@@ -322,6 +337,9 @@ export function DataCatalog() {
           targetSummary,
           targetsLastImportedFile,
           targetsLastImportedAt,
+          productMasterSummary,
+          productMasterLastImportedFile,
+          productMasterLastImportedAt,
         }),
       [
         salesSummary,
@@ -330,6 +348,9 @@ export function DataCatalog() {
         targetSummary,
         targetsLastImportedFile,
         targetsLastImportedAt,
+        productMasterSummary,
+        productMasterLastImportedFile,
+        productMasterLastImportedAt,
       ],
     )
 

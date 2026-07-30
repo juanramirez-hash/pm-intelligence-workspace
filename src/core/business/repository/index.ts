@@ -66,3 +66,7 @@ export type {
   SalesSegmentationOptions,
   SalesSegmentationSummary,
 } from './salesSegmentationQueries'
+
+export {
+  ProductIdentityQualityQueries,
+} from './productIdentityQualityQueries'

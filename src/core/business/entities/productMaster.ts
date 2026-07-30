@@ -8,10 +8,13 @@ export type ProductCommercialStatus = 'A' | 'B' | 'C' | 'D' | 'E'
  * specialised period/snapshot entities in later PMC sprints.
  */
 export interface BusinessProductMaster {
-  /** Stable business identifier. It will resolve to the ERP product code. */
+  /** Stable business identifier. It resolves to the unique ERP Name. */
   id: string
 
-  /** ERP product code (catalogue `Name`). */
+  /** Unique ERP Name. Canonical product identity. */
+  name: string
+
+  /** Alternate/legacy product code retained for compatibility. */
   code: string
 
   /** Internal numeric/string identifier assigned by the ERP. */

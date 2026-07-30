@@ -1,71 +1,132 @@
-import type { ImportPlugin } from '../../engine/importPlugin'
-import type { ReportDetectionResult } from '../../types/reportDetectionTypes'
-import { buildProductMasterBusinessModel, summarizeProductMaster, type ProductMasterBusinessModel } from './productMasterBusinessModel'
-import { normalizeProductMasterRows } from './productMasterNormalizer'
-import type { NormalizedProductMasterRow, ProductMasterDatasetSummary, RawProductMasterRow } from './productMasterTypes'
-import { normalizeProductMasterHeader, validateProductMasterHeaders, type ProductMasterValidationResult } from './productMasterValidator'
+import type {
+  ImportPlugin,
+} from '../../engine/importPlugin'
 
-function extractHeaders(rows: RawProductMasterRow[]): string[] {
+import type {
+  SpreadsheetRow,
+} from '../../parsers/spreadsheetParser'
+
+import type {
+  ReportDetectionResult,
+} from '../../types/reportDetectionTypes'
+
+import {
+  buildProductMasterBusinessModel,
+  type ProductMasterBusinessModel,
+} from './productMasterBusinessModel'
+
+import {
+  normalizeProductMasterRows,
+} from './productMasterNormalizer'
+
+import {
+  OPTIONAL_PRODUCT_MASTER_FIELDS,
+  RECOMMENDED_PRODUCT_MASTER_FIELDS,
+  REQUIRED_PRODUCT_MASTER_FIELDS,
+} from './productMasterSchema'
+
+import type {
+  NormalizedProductMasterRow,
+  ProductMasterDatasetSummary,
+} from './productMasterTypes'
+
+import {
+  validateProductMasterHeaders,
+  type ProductMasterValidationResult,
+} from './productMasterValidator'
+
+const PRODUCT_MASTER_REPORT_TYPE = 'products' as const
+
+function extractHeaders(rows: SpreadsheetRow[]): string[] {
   const headers = new Set<string>()
+
   for (const row of rows) {
     for (const key of Object.keys(row)) {
-      const clean = key.trim()
-      if (clean) headers.add(clean)
+      const cleanKey = key.trim()
+
+      if (cleanKey) {
+        headers.add(cleanKey)
+      }
     }
   }
+
   return [...headers]
 }
 
-function detect(headers: string[]): ReportDetectionResult {
-  const validation = validateProductMasterHeaders(headers)
-  const normalized = new Set(headers.map(normalizeProductMasterHeader))
-  const signatureColumns = [
-    'internal id',
-    'vendor name code',
-    'on hand',
-    'on order',
-    'clasificacion valor',
-  ]
-  const signatureMatches = signatureColumns.filter((column) => normalized.has(column)).length
-  const requiredMatches = 3 - validation.missingRequiredFields.length
-  const confidence = Math.min(100, Math.round((requiredMatches / 3) * 70 + (signatureMatches / signatureColumns.length) * 30))
+function calculateConfidence(
+  validation: ProductMasterValidationResult,
+): number {
+  const required = REQUIRED_PRODUCT_MASTER_FIELDS.filter(
+    (field) => Boolean(validation.columnMap[field]),
+  ).length
 
-  return {
-    reportType: 'products',
-    valid: validation.valid,
-    confidence,
-    matchedRequiredFields: Object.keys(validation.columnMap),
-    matchedRecommendedFields: [],
-    matchedOptionalFields: [],
-    missingRequiredFields: validation.missingRequiredFields,
-  }
+  const recommended = RECOMMENDED_PRODUCT_MASTER_FIELDS.filter(
+    (field) => Boolean(validation.columnMap[field]),
+  ).length
+
+  const optional = OPTIONAL_PRODUCT_MASTER_FIELDS.filter(
+    (field) => Boolean(validation.columnMap[field]),
+  ).length
+
+  return Math.round(
+    (required / REQUIRED_PRODUCT_MASTER_FIELDS.length) * 65 +
+    (recommended / RECOMMENDED_PRODUCT_MASTER_FIELDS.length) * 25 +
+    (optional / OPTIONAL_PRODUCT_MASTER_FIELDS.length) * 10,
+  )
 }
 
-export const productMasterImportPlugin: ImportPlugin<
-  RawProductMasterRow,
-  NormalizedProductMasterRow,
-  ProductMasterBusinessModel,
-  ProductMasterDatasetSummary,
-  ProductMasterValidationResult
-> = {
-  reportType: 'products',
-  detect,
-  extractHeaders,
-  validate: validateProductMasterHeaders,
-  normalize: normalizeProductMasterRows,
-  buildBusinessModel: buildProductMasterBusinessModel,
-  process: summarizeProductMaster,
-  createEmptySummary: (ignoredRows) => ({
+function createEmptySummary(
+  ignoredRows: number,
+): ProductMasterDatasetSummary {
+  return {
     totalProducts: 0,
     activeProducts: 0,
     inactiveProducts: 0,
     productsWithInventory: 0,
     productsOnOrder: 0,
     uniqueBrands: 0,
+    duplicateNames: 0,
     duplicateCodes: 0,
     duplicateErpInternalIds: 0,
     ambiguousBrandModels: 0,
     processedRows: 0,
     ignoredRows,
-  }),
+  }
+}
+
+export const productMasterImportPlugin: ImportPlugin<
+  SpreadsheetRow,
+  NormalizedProductMasterRow,
+  ProductMasterBusinessModel,
+  ProductMasterDatasetSummary,
+  ProductMasterValidationResult
+> = {
+  reportType: PRODUCT_MASTER_REPORT_TYPE,
+
+  detect(headers): ReportDetectionResult {
+    const validation = validateProductMasterHeaders(headers)
+
+    return {
+      reportType: PRODUCT_MASTER_REPORT_TYPE,
+      valid: validation.valid,
+      confidence: calculateConfidence(validation),
+      matchedRequiredFields: REQUIRED_PRODUCT_MASTER_FIELDS.filter(
+        (field) => Boolean(validation.columnMap[field]),
+      ),
+      missingRequiredFields: validation.missingRequiredFields,
+      matchedRecommendedFields: RECOMMENDED_PRODUCT_MASTER_FIELDS.filter(
+        (field) => Boolean(validation.columnMap[field]),
+      ),
+      matchedOptionalFields: OPTIONAL_PRODUCT_MASTER_FIELDS.filter(
+        (field) => Boolean(validation.columnMap[field]),
+      ),
+    }
+  },
+
+  extractHeaders,
+  validate: validateProductMasterHeaders,
+  normalize: normalizeProductMasterRows,
+  buildBusinessModel: buildProductMasterBusinessModel,
+  process: (businessModel) => businessModel.summary,
+  createEmptySummary,
 }

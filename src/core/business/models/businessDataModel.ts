@@ -38,6 +38,10 @@ import type {
   BusinessSalesSegment,
 } from '../entities/salesSegment'
 
+import type {
+  ProductIdentityQualityReport,
+} from '../quality'
+
 export interface BusinessDataTotals {
   revenue: number
   grossProfit: number
@@ -102,6 +106,11 @@ export interface BusinessDataModel {
   /** Available when the model was built through the PMC-005 pipeline. */
   productReconciliation?:
     ProductSalesReconciliationSummary
+
+
+  /** Product identity quality gate produced by IQ-001. */
+  productIdentityQuality?:
+    ProductIdentityQualityReport
 
   periods:
     Map<string, BusinessPeriod>

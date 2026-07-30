@@ -42,6 +42,10 @@ import {
   SalesSegmentationQueries,
 } from './salesSegmentationQueries'
 
+import {
+  ProductIdentityQualityQueries,
+} from './productIdentityQualityQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -66,6 +70,10 @@ export class BusinessRepository {
 
   readonly salesSegmentation:
     SalesSegmentationQueries
+
+
+  readonly productIdentityQuality:
+    ProductIdentityQualityQueries
 
   constructor(
     model: BusinessDataModel,
@@ -106,6 +114,12 @@ export class BusinessRepository {
       new SalesSegmentationQueries(
         model,
       )
+
+
+    this.productIdentityQuality =
+      new ProductIdentityQualityQueries(
+        model,
+      )
   }
 
   getCustomers():
@@ -125,6 +139,10 @@ export class BusinessRepository {
 
   getProductReconciliationSummary() {
     return this.product.getReconciliationSummary()
+  }
+
+  getProductIdentityQualityReport() {
+    return this.productIdentityQuality.getReport()
   }
 
   findCustomer(

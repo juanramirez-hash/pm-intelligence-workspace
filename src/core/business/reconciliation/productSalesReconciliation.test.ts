@@ -18,7 +18,8 @@ function createProduct(
 ): NormalizedProductMasterRow {
   return {
     erpInternalId: '1001',
-    code: 'CI-IPC-A',
+    name: 'CI-IPC-A',
+    code: 'LEGACY-CI-IPC-A',
     model: 'IPC-A',
     brand: 'UNV',
     vendorCode: null,
@@ -54,15 +55,62 @@ function createProduct(
   }
 }
 
-describe('PMC-005 Product Sales Reconciliation', () => {
-  it('prioriza una coincidencia única por código ERP', () => {
+describe('IQ-002 Name-Based Product Reconciliation', () => {
+  it('prioriza Name y valida Marca y Modelo como atributos', () => {
     const index = buildProductSalesReconciliationIndex([
       createProduct(),
     ])
 
     const result = reconcileSalesProduct(
       {
-        productCode: ' ci-ipc-a ',
+        productName: ' ci-ipc-a ',
+        productCode: null,
+        brand: 'Otra marca',
+        model: 'Otro modelo',
+      },
+      index,
+    )
+
+    expect(result.status).toBe('matched')
+    expect(result.strategy).toBe('name')
+    expect(result.reason).toBe(
+      'matched_by_name_with_attribute_warning',
+    )
+    expect(result.product?.name).toBe('CI-IPC-A')
+    expect(result.attributeWarnings).toEqual([
+      'brand_mismatch',
+      'model_mismatch',
+    ])
+  })
+
+  it('concilia por Name sin advertencias cuando los atributos coinciden', () => {
+    const index = buildProductSalesReconciliationIndex([
+      createProduct(),
+    ])
+
+    const result = reconcileSalesProduct(
+      {
+        productName: 'CI-IPC-A',
+        productCode: null,
+        brand: 'UNV',
+        model: 'IPC-A',
+      },
+      index,
+    )
+
+    expect(result.reason).toBe('matched_by_name')
+    expect(result.attributeWarnings).toEqual([])
+  })
+
+  it('mantiene codigo alterno como fallback secundario', () => {
+    const index = buildProductSalesReconciliationIndex([
+      createProduct(),
+    ])
+
+    const result = reconcileSalesProduct(
+      {
+        productName: null,
+        productCode: 'legacy-ci-ipc-a',
         brand: 'Otra marca',
         model: 'Otro modelo',
       },
@@ -71,16 +119,17 @@ describe('PMC-005 Product Sales Reconciliation', () => {
 
     expect(result.status).toBe('matched')
     expect(result.strategy).toBe('erp_code')
-    expect(result.product?.code).toBe('CI-IPC-A')
+    expect(result.product?.name).toBe('CI-IPC-A')
   })
 
-  it('usa marca y modelo cuando el código no existe', () => {
+  it('usa marca y modelo cuando Name y codigo no encuentran producto', () => {
     const index = buildProductSalesReconciliationIndex([
       createProduct(),
     ])
 
     const result = reconcileSalesProduct(
       {
+        productName: 'NAME-ANTERIOR',
         productCode: 'CODIGO-ANTERIOR',
         brand: ' unv ',
         model: ' ipc-a ',
@@ -90,20 +139,22 @@ describe('PMC-005 Product Sales Reconciliation', () => {
 
     expect(result.status).toBe('matched')
     expect(result.strategy).toBe('brand_model')
-    expect(result.product?.code).toBe('CI-IPC-A')
+    expect(result.product?.name).toBe('CI-IPC-A')
   })
 
-  it('detecta una combinación ambigua de marca y modelo', () => {
+  it('detecta Names duplicados como ambiguos', () => {
     const index = buildProductSalesReconciliationIndex([
       createProduct(),
       createProduct({
         erpInternalId: '1002',
-        code: 'CI-IPC-A-ALT',
+        code: 'OTRO-CODIGO',
+        model: 'IPC-B',
       }),
     ])
 
     const result = reconcileSalesProduct(
       {
+        productName: 'CI-IPC-A',
         productCode: null,
         brand: 'UNV',
         model: 'IPC-A',
@@ -112,35 +163,34 @@ describe('PMC-005 Product Sales Reconciliation', () => {
     )
 
     expect(result.status).toBe('ambiguous')
-    expect(result.strategy).toBe('brand_model')
-    expect(result.candidateCodes).toEqual([
+    expect(result.strategy).toBe('name')
+    expect(result.reason).toBe('ambiguous_name')
+    expect(result.candidateNames).toEqual([
       'CI-IPC-A',
-      'CI-IPC-A-ALT',
+      'CI-IPC-A',
     ])
   })
 
-  it('detecta códigos ERP duplicados como ambiguos', () => {
-    const index = buildProductSalesReconciliationIndex([
-      createProduct(),
-      createProduct({
-        erpInternalId: '1002',
-        model: 'IPC-B',
-      }),
-    ])
+
+  it('reconoce por Name una identidad historica ausente del catalogo vigente', () => {
+    const index = buildProductSalesReconciliationIndex([])
 
     const result = reconcileSalesProduct(
       {
-        productCode: 'CI-IPC-A',
+        productName: 'PRODUCTO-DESCONTINUADO',
+        productCode: null,
         brand: 'UNV',
-        model: 'IPC-A',
+        model: 'MODELO-ANTERIOR',
       },
       index,
     )
 
-    expect(result.status).toBe('ambiguous')
-    expect(result.strategy).toBe('erp_code')
-    expect(result.reason).toBe('ambiguous_erp_code')
+    expect(result.status).toBe('matched')
+    expect(result.strategy).toBe('name')
+    expect(result.reason).toBe('historical_unlisted')
+    expect(result.product).toBeNull()
   })
+
 
   it('clasifica productos no encontrados y filas sin identidad', () => {
     const index = buildProductSalesReconciliationIndex([])
@@ -148,17 +198,19 @@ describe('PMC-005 Product Sales Reconciliation', () => {
     expect(
       reconcileSalesProduct(
         {
+          productName: 'NO-EXISTE',
           productCode: null,
           brand: 'UNV',
           model: 'NO-EXISTE',
         },
         index,
       ).reason,
-    ).toBe('product_not_found')
+    ).toBe('historical_unlisted')
 
     expect(
       reconcileSalesProduct(
         {
+          productName: null,
           productCode: null,
           brand: 'UNV',
           model: null,

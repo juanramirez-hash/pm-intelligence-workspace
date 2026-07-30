@@ -54,11 +54,12 @@ function createRepository(): BusinessRepository {
 }
 
 describe('PMC-003 Product Repository', () => {
-  it('consulta por ID y código normalizados', () => {
-    const product =
-      createRepository().product.findByCode(' ipc-a ')
+  it('consulta por Name, ID y codigo normalizados', () => {
+    const repository = createRepository().product
 
-    expect(product?.id).toBe('IPC-A')
+    expect(repository.findByName(' ipc-a ')?.id).toBe('IPC-A')
+    expect(repository.findById(' ipc-a ')?.id).toBe('IPC-A')
+    expect(repository.findByCode(' ipc-a ')?.id).toBe('IPC-A')
   })
 
   it('consulta productos por marca', () => {

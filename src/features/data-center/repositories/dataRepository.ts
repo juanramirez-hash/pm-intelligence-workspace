@@ -8,6 +8,10 @@ import type {
   NormalizedTargetRow,
   TargetDatasetSummary,
 } from '../importers/targets/targetTypes'
+import type {
+  NormalizedProductMasterRow,
+  ProductMasterDatasetSummary,
+} from '../importers/products/productMasterTypes'
 
 export interface PersistedSalesDataset {
   summary: SalesDatasetSummary
@@ -19,6 +23,13 @@ export interface PersistedSalesDataset {
 export interface PersistedTargetDataset {
   summary: TargetDatasetSummary
   normalizedRows: NormalizedTargetRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedProductMasterDataset {
+  summary: ProductMasterDatasetSummary
+  normalizedRows: NormalizedProductMasterRow[]
   lastImportedFile: string
   lastImportedAt: string
 }
@@ -37,6 +48,13 @@ export interface DataRepository {
 
   loadTargetDataset: () =>
     Promise<PersistedTargetDataset | null>
+
+  saveProductMasterDataset: (
+    dataset: PersistedProductMasterDataset,
+  ) => Promise<void>
+
+  loadProductMasterDataset: () =>
+    Promise<PersistedProductMasterDataset | null>
 
   clearAllData: () => Promise<void>
 }

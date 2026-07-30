@@ -1,4 +1,8 @@
 import {
+  Link,
+} from 'react-router-dom'
+
+import {
   CircleAlert,
   CircleCheckBig,
   DatabaseZap,
@@ -102,6 +106,15 @@ export function SalesReconciliationPanel({
           </article>
         </div>
       )}
+
+      <div className="mt-4 flex justify-end">
+        <Link
+          to="/data-quality/products"
+          className="text-xs font-semibold text-blue-700 transition hover:text-blue-900"
+        >
+          Abrir Product Identity Quality Gate
+        </Link>
+      </div>
     </ExecutivePanel>
   )
 }

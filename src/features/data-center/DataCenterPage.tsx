@@ -37,6 +37,10 @@ import {
 } from './components/TargetImportSummary'
 
 import {
+  ProductMasterImportSummary,
+} from './components/ProductMasterImportSummary'
+
+import {
   SpreadsheetFileInformation,
 } from './components/SpreadsheetFileInformation'
 
@@ -374,6 +378,8 @@ export function DataCenterPage() {
               <SalesImportSummary />
 
               <TargetImportSummary />
+
+              <ProductMasterImportSummary />
             </>
           )}
         </>

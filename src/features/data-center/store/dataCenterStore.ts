@@ -65,10 +65,17 @@ export interface DataCenterState {
 
   targetsLastImportedAt: string | null
 
-  productMasterSummary: ProductMasterDatasetSummary | null
-  normalizedProductMaster: NormalizedProductMasterRow[]
-  productMasterLastImportedFile: string | null
-  productMasterLastImportedAt: string | null
+  productMasterSummary:
+    ProductMasterDatasetSummary | null
+
+  normalizedProductMaster:
+    NormalizedProductMasterRow[]
+
+  productMasterLastImportedFile:
+    string | null
+
+  productMasterLastImportedAt:
+    string | null
 
   inventorySummary: unknown | null
 
@@ -121,6 +128,14 @@ export interface DataCenterState {
 
   setNormalizedTargets: (
     rows: NormalizedTargetRow[],
+  ) => void
+
+  setProductMasterSummary: (
+    summary: ProductMasterDatasetSummary | null,
+  ) => void
+
+  setNormalizedProductMaster: (
+    rows: NormalizedProductMasterRow[],
   ) => void
 
   setInventorySummary: (
@@ -204,8 +219,11 @@ export const useDataCenterStore =
       targetsLastImportedAt: null,
 
       productMasterSummary: null,
+
       normalizedProductMaster: [],
+
       productMasterLastImportedFile: null,
+
       productMasterLastImportedAt: null,
 
       inventorySummary: null,
@@ -266,6 +284,16 @@ export const useDataCenterStore =
       setNormalizedTargets: (rows) =>
         set({
           normalizedTargets: rows,
+        }),
+
+      setProductMasterSummary: (summary) =>
+        set({
+          productMasterSummary: summary,
+        }),
+
+      setNormalizedProductMaster: (rows) =>
+        set({
+          normalizedProductMaster: rows,
         }),
 
       setInventorySummary: (
@@ -425,21 +453,6 @@ export const useDataCenterStore =
               break
             }
 
-            case 'products': {
-              const importedAt = new Date().toISOString()
-
-              set({
-                productMasterSummary: result.summary,
-                normalizedProductMaster: result.normalizedRows,
-                productMasterLastImportedFile: metadata.fileName,
-                productMasterLastImportedAt: importedAt,
-                importStatus: 'completed',
-                importErrors: [],
-              })
-
-              break
-            }
-
             case 'quota': {
               const importedAt = new Date().toISOString()
 
@@ -472,6 +485,45 @@ export const useDataCenterStore =
                     persistenceError: getErrorMessage(
                       persistenceError,
                       'No fue posible guardar los objetivos comerciales.',
+                    ),
+                  })
+                })
+
+              break
+            }
+
+            case 'products': {
+              const importedAt = new Date().toISOString()
+
+              set({
+                productMasterSummary: result.summary,
+                normalizedProductMaster: result.normalizedRows,
+                productMasterLastImportedFile: metadata.fileName,
+                productMasterLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .saveProductMasterDataset({
+                  summary: result.summary,
+                  normalizedRows: result.normalizedRows,
+                  lastImportedFile: metadata.fileName,
+                  lastImportedAt: importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: getErrorMessage(
+                      persistenceError,
+                      'No fue posible guardar el Product Master.',
                     ),
                   })
                 })
@@ -524,19 +576,28 @@ export const useDataCenterStore =
           })
 
           try {
-            const [persistedSales, persistedTargets] = await Promise.all([
+            const [
+              persistedSales,
+              persistedTargets,
+              persistedProductMaster,
+            ] = await Promise.all([
               indexedDbDataRepository.loadSalesDataset(),
               indexedDbDataRepository.loadTargetDataset(),
+              indexedDbDataRepository.loadProductMasterDataset(),
             ])
 
             set({
-              activeReportType: persistedTargets
-                ? 'quota'
-                : persistedSales
-                  ? 'sales'
-                  : null,
+              activeReportType: persistedProductMaster
+                ? 'products'
+                : persistedTargets
+                  ? 'quota'
+                  : persistedSales
+                    ? 'sales'
+                    : null,
               importStatus:
-                persistedSales || persistedTargets
+                persistedSales ||
+                persistedTargets ||
+                persistedProductMaster
                   ? 'completed'
                   : 'idle',
               fileMetadata: null,
@@ -549,6 +610,10 @@ export const useDataCenterStore =
               normalizedTargets: persistedTargets?.normalizedRows ?? [],
               targetsLastImportedFile: persistedTargets?.lastImportedFile ?? null,
               targetsLastImportedAt: persistedTargets?.lastImportedAt ?? null,
+              productMasterSummary: persistedProductMaster?.summary ?? null,
+              normalizedProductMaster: persistedProductMaster?.normalizedRows ?? [],
+              productMasterLastImportedFile: persistedProductMaster?.lastImportedFile ?? null,
+              productMasterLastImportedAt: persistedProductMaster?.lastImportedAt ?? null,
               isHydrating: false,
               isHydrated: true,
               persistenceError: null,
@@ -668,8 +733,11 @@ export const useDataCenterStore =
               targetsLastImportedAt: null,
 
               productMasterSummary: null,
+
               normalizedProductMaster: [],
+
               productMasterLastImportedFile: null,
+
               productMasterLastImportedAt: null,
 
               inventorySummary:

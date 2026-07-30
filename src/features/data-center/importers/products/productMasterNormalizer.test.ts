@@ -49,6 +49,7 @@ describe('PMC-004 Product Master normalizer', () => {
 
     const product = result.rows[0]
 
+    expect(product?.name).toBe('CI-IPC-A')
     expect(product?.code).toBe('CI-IPC-A')
     expect(product?.erpInternalId).toBe('12345')
     expect(product?.vendorName).toBe('Uniview Technologies')

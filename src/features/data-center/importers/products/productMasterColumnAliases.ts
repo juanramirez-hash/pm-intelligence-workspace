@@ -1,6 +1,7 @@
 export type ProductMasterField =
   | 'erpInternalId'
   | 'brand'
+  | 'name'
   | 'code'
   | 'model'
   | 'vendorCode'
@@ -43,7 +44,8 @@ export type ProductMasterField =
 export const PRODUCT_MASTER_COLUMN_ALIASES: Record<ProductMasterField, readonly string[]> = {
   erpInternalId: ['Internal ID', 'Internal Id', 'ERP Internal ID'],
   brand: ['Marca', 'Brand'],
-  code: ['Name', 'Codigo interno', 'Código interno', 'Item Name', 'SKU interno'],
+  name: ['Name', 'Product Name', 'Item: Name', 'Item Name', 'Nombre de producto'],
+  code: ['Codigo interno', 'Código interno', 'Product Code', 'ERP Product Code', 'SKU interno'],
   model: ['Modelo', 'Model'],
   vendorCode: ['Vendor Name / Code', 'Vendor Code', 'Código de proveedor', 'Codigo de proveedor'],
   vendorName: ['Vendor Name', 'Nombre del proveedor', 'Proveedor', 'Preferred Vendor'],

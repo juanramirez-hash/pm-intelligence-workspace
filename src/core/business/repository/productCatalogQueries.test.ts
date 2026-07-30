@@ -25,6 +25,7 @@ function createProductMasterRow(
 ): NormalizedProductMasterRow {
   return {
     erpInternalId: '1001',
+    name: 'CI-IPC-A',
     code: 'CI-IPC-A',
     model: 'IPC-A',
     brand: 'UNV',
@@ -104,6 +105,7 @@ function createRepository(): BusinessRepository {
     createProductMasterRow(),
     createProductMasterRow({
       erpInternalId: '1002',
+      name: 'CI-IPC-B',
       code: 'CI-IPC-B',
       model: 'IPC-B',
       description: 'Producto disponible sin venta',
@@ -125,7 +127,7 @@ function createRepository(): BusinessRepository {
 describe('PMC-004 ERP Catalog Enrichment', () => {
   it('enriquece el producto conciliado con campos canónicos', () => {
     const product =
-      createRepository().product.findByCode('ci-ipc-a')
+      createRepository().product.findByName('ci-ipc-a')
 
     expect(product?.identitySource).toBe('product_master')
     expect(product?.id).toBe('CI-IPC-A')

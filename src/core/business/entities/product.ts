@@ -20,6 +20,7 @@ export type {
 export type ProductIdentitySource =
   | 'product_master'
   | 'sales_fallback'
+  | 'historical_unlisted'
   | 'ambiguous_match'
 
 /**
@@ -35,6 +36,7 @@ export interface BusinessProduct extends BusinessProductLegacyAnalytics {
   sku: string
   brand: string
 
+  name?: BusinessProductMaster['name']
   code?: BusinessProductMaster['code']
   erpInternalId?: BusinessProductMaster['erpInternalId']
   brandId?: BusinessProductMaster['brandId']

@@ -54,6 +54,7 @@ import {
 import {
   buildProductSalesReconciliationIndex,
   createProductSalesReconciliationSummary,
+  getProductMasterName,
   reconcileSalesProduct,
   registerProductSalesReconciliationResult,
 } from '../reconciliation'
@@ -61,6 +62,12 @@ import {
 import type {
   ProductSalesReconciliationStatus,
 } from '../reconciliation'
+
+import {
+  createProductIdentityQualityAccumulator,
+  finalizeProductIdentityQualityReport,
+  registerProductIdentityQualityResult,
+} from '../quality'
 
 function normalizeIdentifier(
   value: string | null,
@@ -424,10 +431,11 @@ function createBusinessProductFromMaster(
   source: NormalizedProductMasterRow,
 ): BusinessProduct {
   return {
-    id: source.code,
+    id: getProductMasterName(source),
+    name: getProductMasterName(source),
     code: source.code,
     model: source.model,
-    sku: source.code,
+    sku: getProductMasterName(source),
     erpInternalId: source.erpInternalId,
     brandId:
       normalizeIdentifier(source.brand) ??
@@ -501,17 +509,20 @@ function createFallbackBusinessProduct(
   productId: string,
   model: string,
   brand: string,
+  sourceName: string | null,
   sourceCode: string | null,
   ambiguous = false,
+  historicalUnlisted = false,
 ): BusinessProduct {
   const fallbackCode =
     ambiguous
       ? productId
-      : sourceCode ?? productId
+      : sourceName ?? sourceCode ?? productId
 
   return {
     id: productId,
-    code: fallbackCode,
+    name: sourceName ?? fallbackCode,
+    code: sourceCode ?? fallbackCode,
     model,
     sku: fallbackCode,
     erpInternalId: null,
@@ -519,7 +530,11 @@ function createFallbackBusinessProduct(
       normalizeIdentifier(brand) ??
       brand,
     brand,
-    identitySource: ambiguous ? 'ambiguous_match' : 'sales_fallback',
+    identitySource: ambiguous
+      ? 'ambiguous_match'
+      : historicalUnlisted
+        ? 'historical_unlisted'
+        : 'sales_fallback',
     vendorCode: null,
     vendorName: null,
     description: null,
@@ -573,10 +588,12 @@ function getFallbackProductId(
   products: Map<string, BusinessProduct>,
   brandId: string,
   productModel: string | null,
+  productName: string | null,
   productCode: string | null,
   status: ProductSalesReconciliationStatus,
 ): string | null {
   const baseId =
+    normalizeIdentifier(productName) ??
     normalizeIdentifier(productCode) ??
     normalizeIdentifier(productModel)
 
@@ -745,24 +762,32 @@ export function buildBusinessDataModel(
   const productMaster =
     options.productMaster ?? []
 
+  const productIdentityQuality =
+    createProductIdentityQualityAccumulator(
+      productMaster.length,
+    )
+
   const productReconciliationIndex =
     buildProductSalesReconciliationIndex(
       productMaster,
     )
 
   for (const source of productMaster) {
-    const code = normalizeIdentifier(source.code)
+    const name = normalizeIdentifier(
+      getProductMasterName(source),
+    )
 
-    if (!code) {
+    if (!name) {
       continue
     }
 
-    if (!model.products.has(code)) {
+    if (!model.products.has(name)) {
       model.products.set(
-        code,
+        name,
         createBusinessProductFromMaster({
           ...source,
-          code,
+          name,
+          code: normalizeIdentifier(source.code) ?? name,
         }),
       )
     }
@@ -873,8 +898,17 @@ export function buildBusinessDataModel(
       )
     }
 
+    registerProductIdentityQualityResult(
+      productIdentityQuality,
+      row,
+      productReconciliation,
+    )
+
     const matchedProduct =
       productReconciliation.product
+
+    const sourceProductName =
+      productReconciliation.normalizedProductName
 
     const sourceProductCode =
       productReconciliation.normalizedProductCode
@@ -882,15 +916,19 @@ export function buildBusinessDataModel(
     const resolvedProductModel =
       matchedProduct?.model ??
       productModel ??
+      sourceProductName ??
       sourceProductCode
 
     const productId =
       matchedProduct
-        ? normalizeIdentifier(matchedProduct.code)
+        ? normalizeIdentifier(
+            getProductMasterName(matchedProduct),
+          )
         : getFallbackProductId(
             model.products,
             brandId,
             resolvedProductModel,
+            sourceProductName,
             sourceProductCode,
             productReconciliation.status,
           )
@@ -1272,8 +1310,10 @@ export function buildBusinessDataModel(
               productId,
               resolvedProductModel,
               brandName,
+              sourceProductName,
               sourceProductCode,
               productReconciliation.status === 'ambiguous',
+              productReconciliation.reason === 'historical_unlisted',
             )
 
         model.products.set(productId, product)
@@ -1612,6 +1652,11 @@ export function buildBusinessDataModel(
       productPeriod.documents = documents.size
     }
   }
+
+  model.productIdentityQuality =
+    finalizeProductIdentityQualityReport(
+      productIdentityQuality,
+    )
 
   return model
 }

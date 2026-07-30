@@ -12,8 +12,8 @@ import {
   validateSalesColumns,
 } from './salesValidator'
 
-describe('PMC-005 sales product code support', () => {
-  it('reconoce y normaliza el código ERP del producto', () => {
+describe('IQ-002 sales product Name support', () => {
+  it('reconoce Item: Name como identidad primaria del producto', () => {
     const headers = [
       'Fecha',
       'Marca',
@@ -24,7 +24,8 @@ describe('PMC-005 sales product code support', () => {
 
     const validation = validateSalesColumns(headers)
 
-    expect(validation.columnMap.productCode).toBe('Item: Name')
+    expect(validation.columnMap.productName).toBe('Item: Name')
+    expect(validation.columnMap.productCode).toBeUndefined()
 
     const row = normalizeSalesRow(
       {
@@ -37,7 +38,8 @@ describe('PMC-005 sales product code support', () => {
       validation.columnMap,
     )
 
-    expect(row?.productCode).toBe('ci-ipc-a')
+    expect(row?.productName).toBe('ci-ipc-a')
+    expect(row?.productCode).toBeNull()
     expect(row?.model).toBe('IPC-A')
   })
 })

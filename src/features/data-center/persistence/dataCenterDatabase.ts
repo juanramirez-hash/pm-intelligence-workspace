@@ -14,16 +14,22 @@ import type {
   NormalizedTargetRow,
   TargetDatasetSummary,
 } from '../importers/targets/targetTypes'
+import type {
+  NormalizedProductMasterRow,
+  ProductMasterDatasetSummary,
+} from '../importers/products/productMasterTypes'
 
 export const DATA_CENTER_DATABASE_NAME =
   'pm-intelligence-workspace'
 
-export const DATA_CENTER_DATABASE_VERSION = 2
+export const DATA_CENTER_DATABASE_VERSION = 3
 
 export const SALES_METADATA_KEY =
   'current-sales-dataset'
 export const TARGET_METADATA_KEY =
   'current-target-dataset'
+export const PRODUCT_METADATA_KEY =
+  'current-product-master-dataset'
 
 export const SALES_CHUNK_SIZE = 5_000
 
@@ -51,6 +57,15 @@ export interface PersistedTargetMetadata {
   persistenceVersion: number
 }
 
+export interface PersistedProductMasterMetadata {
+  id: string
+  summary: ProductMasterDatasetSummary
+  normalizedRows: NormalizedProductMasterRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+  persistenceVersion: number
+}
+
 interface DataCenterDatabaseSchema
   extends DBSchema {
   salesMetadata: {
@@ -66,6 +81,11 @@ interface DataCenterDatabaseSchema
   targetMetadata: {
     key: string
     value: PersistedTargetMetadata
+  }
+
+  productMetadata: {
+    key: string
+    value: PersistedProductMasterMetadata
   }
 }
 
@@ -95,6 +115,10 @@ export function getDataCenterDatabase():
 
             if (!database.objectStoreNames.contains('targetMetadata')) {
               database.createObjectStore('targetMetadata')
+            }
+
+            if (!database.objectStoreNames.contains('productMetadata')) {
+              database.createObjectStore('productMetadata')
             }
           },
         },

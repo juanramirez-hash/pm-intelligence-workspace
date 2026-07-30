@@ -51,6 +51,9 @@ export class ProductQueries {
   private readonly productsById:
     Map<string, BusinessProduct>
 
+  private readonly productsByName:
+    Map<string, BusinessProduct>
+
   private readonly productsByCode:
     Map<string, BusinessProduct>
 
@@ -106,6 +109,9 @@ export class ProductQueries {
 
     this.productsById =
       productIndexes.byId
+
+    this.productsByName =
+      productIndexes.byName
 
     this.productsByCode =
       productIndexes.byCode
@@ -168,6 +174,17 @@ export class ProductQueries {
 
     return normalizedId
       ? this.productsById.get(normalizedId)
+      : undefined
+  }
+
+  findByName(
+    name: string,
+  ): BusinessProduct | undefined {
+    const normalizedName =
+      normalizeProductIndexValue(name)
+
+    return normalizedName
+      ? this.productsByName.get(normalizedName)
       : undefined
   }
 
