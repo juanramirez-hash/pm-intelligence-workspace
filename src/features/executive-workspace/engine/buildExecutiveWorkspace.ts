@@ -24,6 +24,7 @@ export function buildExecutiveWorkspace(
     | 'productMasterLastImportedFile'
     | 'productMasterLastImportedAt'
     | 'inventorySummary'
+    | 'normalizedInventory'
     | 'inventoryLastImportedFile'
     | 'inventoryLastImportedAt'
     | 'lastImportedAt'

@@ -46,6 +46,10 @@ import {
   ProductIdentityQualityQueries,
 } from './productIdentityQualityQueries'
 
+import {
+  InventoryQueries,
+} from './inventoryQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -74,6 +78,9 @@ export class BusinessRepository {
 
   readonly productIdentityQuality:
     ProductIdentityQualityQueries
+
+  readonly inventory:
+    InventoryQueries
 
   constructor(
     model: BusinessDataModel,
@@ -120,6 +127,9 @@ export class BusinessRepository {
       new ProductIdentityQualityQueries(
         model,
       )
+
+    this.inventory =
+      new InventoryQueries(model)
   }
 
   getCustomers():
@@ -143,6 +153,14 @@ export class BusinessRepository {
 
   getProductIdentityQualityReport() {
     return this.productIdentityQuality.getReport()
+  }
+
+  getInventoryPositions() {
+    return this.inventory.getAll()
+  }
+
+  getLatestInventorySnapshot() {
+    return this.inventory.getLatestSnapshot()
   }
 
   findCustomer(

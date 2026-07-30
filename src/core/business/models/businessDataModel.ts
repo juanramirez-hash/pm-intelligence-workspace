@@ -42,6 +42,14 @@ import type {
   ProductIdentityQualityReport,
 } from '../quality'
 
+import type {
+  BusinessInventoryPosition,
+} from '../entities/inventoryPosition'
+
+import type {
+  BusinessInventorySnapshot,
+} from '../entities/inventorySnapshot'
+
 export interface BusinessDataTotals {
   revenue: number
   grossProfit: number
@@ -111,6 +119,14 @@ export interface BusinessDataModel {
   /** Product identity quality gate produced by IQ-001. */
   productIdentityQuality?:
     ProductIdentityQualityReport
+
+  /** Inventory positions materialized by IW-002. */
+  inventoryPositions?:
+    Map<string, BusinessInventoryPosition>
+
+  /** Inventory aggregates by snapshot date. */
+  inventorySnapshots?:
+    Map<string, BusinessInventorySnapshot>
 
   periods:
     Map<string, BusinessPeriod>

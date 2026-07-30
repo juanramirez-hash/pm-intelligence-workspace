@@ -63,3 +63,8 @@ export type {
   OpportunityScoreInput,
   OpportunityType,
 } from './opportunityRadar'
+
+export type { BusinessInventoryPosition, BusinessInventoryIdentityStatus } from './entities/inventoryPosition'
+export type { BusinessInventorySnapshot } from './entities/inventorySnapshot'
+export { buildBusinessInventory } from './builders/buildBusinessInventory'
+export type { BusinessInventoryBuildResult } from './builders/buildBusinessInventory'

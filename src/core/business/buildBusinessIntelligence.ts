@@ -19,6 +19,10 @@ import type {
 } from '../../features/data-center/importers/products/productMasterTypes'
 
 import type {
+  NormalizedInventoryRow,
+} from '../../features/data-center/importers/inventory/inventoryTypes'
+
+import type {
   BusinessIntelligenceModel,
 } from './businessIntelligenceModel'
 
@@ -39,6 +43,7 @@ import {
 export interface BuildBusinessIntelligenceOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
   productMaster?: readonly NormalizedProductMasterRow[]
+  inventory?: readonly NormalizedInventoryRow[]
 }
 
 export function buildBusinessIntelligence(
@@ -53,6 +58,7 @@ export function buildBusinessIntelligence(
       {
         brandTargets: options.brandTargets,
         productMaster: options.productMaster,
+        inventory: options.inventory,
       },
     )
 

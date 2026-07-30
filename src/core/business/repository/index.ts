@@ -70,3 +70,7 @@ export type {
 export {
   ProductIdentityQualityQueries,
 } from './productIdentityQualityQueries'
+
+export { InventoryQueries } from './inventoryQueries'
+export { buildInventoryIndexes } from './inventoryIndexes'
+export type { InventoryIndexes } from './inventoryIndexes'

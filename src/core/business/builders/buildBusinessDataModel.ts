@@ -7,6 +7,10 @@ import type {
 } from '../../../features/data-center/importers/products/productMasterTypes'
 
 import type {
+  NormalizedInventoryRow,
+} from '../../../features/data-center/importers/inventory/inventoryTypes'
+
+import type {
   BusinessBrand,
 } from '../entities/brand'
 
@@ -62,6 +66,10 @@ import {
 import type {
   ProductSalesReconciliationStatus,
 } from '../reconciliation'
+
+import {
+  buildBusinessInventory,
+} from './buildBusinessInventory'
 
 import {
   createProductIdentityQualityAccumulator,
@@ -658,6 +666,7 @@ function updateModelPeriodRange(
 export interface BuildBusinessDataModelOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
   productMaster?: readonly NormalizedProductMasterRow[]
+  inventory?: readonly NormalizedInventoryRow[]
 }
 
 export function buildBusinessDataModel(
@@ -737,6 +746,12 @@ export function buildBusinessDataModel(
     productReconciliation:
       createProductSalesReconciliationSummary(),
 
+    inventoryPositions:
+      new Map(),
+
+    inventorySnapshots:
+      new Map(),
+
     periods:
       new Map<
         string,
@@ -792,6 +807,14 @@ export function buildBusinessDataModel(
       )
     }
   }
+
+  const inventory = buildBusinessInventory(
+    options.inventory ?? [],
+    model.products,
+  )
+
+  model.inventoryPositions = inventory.positions
+  model.inventorySnapshots = inventory.snapshots
 
   const periodDocuments =
     new Map<

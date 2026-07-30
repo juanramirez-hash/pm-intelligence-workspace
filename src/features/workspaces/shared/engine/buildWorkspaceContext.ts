@@ -33,6 +33,7 @@ type WorkspaceContextState =
     | 'productMasterLastImportedAt'
     | 'productMasterLastImportedFile'
     | 'inventorySummary'
+    | 'normalizedInventory'
     | 'inventoryLastImportedAt'
     | 'inventoryLastImportedFile'
     | 'targetSummary'
@@ -90,6 +91,7 @@ export function buildWorkspaceContext(
           {
             brandTargets: state.normalizedTargets,
             productMaster: state.normalizedProductMaster,
+            inventory: state.normalizedInventory,
           },
         )
       : null
