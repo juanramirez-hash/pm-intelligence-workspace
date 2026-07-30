@@ -5,6 +5,7 @@
  * the documented module entry points. Internal implementation files are not
  * part of the stable API.
  */
+export * from './analytics/inventory'
 export * from './attainment'
 export * from './builders'
 export * from './cube'

@@ -74,3 +74,9 @@ export {
 export { InventoryQueries } from './inventoryQueries'
 export { buildInventoryIndexes } from './inventoryIndexes'
 export type { InventoryIndexes } from './inventoryIndexes'
+
+export { InventoryAnalyticsQueries } from './inventoryAnalyticsQueries'
+
+export {
+  InventoryRiskOpportunityQueries,
+} from './inventoryRiskOpportunityQueries'

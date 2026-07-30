@@ -50,6 +50,14 @@ import {
   InventoryQueries,
 } from './inventoryQueries'
 
+import {
+  InventoryAnalyticsQueries,
+} from './inventoryAnalyticsQueries'
+
+import {
+  InventoryRiskOpportunityQueries,
+} from './inventoryRiskOpportunityQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -81,6 +89,12 @@ export class BusinessRepository {
 
   readonly inventory:
     InventoryQueries
+
+  readonly inventoryAnalytics:
+    InventoryAnalyticsQueries
+
+  readonly inventoryRiskOpportunity:
+    InventoryRiskOpportunityQueries
 
   constructor(
     model: BusinessDataModel,
@@ -130,6 +144,12 @@ export class BusinessRepository {
 
     this.inventory =
       new InventoryQueries(model)
+
+    this.inventoryAnalytics =
+      new InventoryAnalyticsQueries(model)
+
+    this.inventoryRiskOpportunity =
+      new InventoryRiskOpportunityQueries(model)
   }
 
   getCustomers():
@@ -161,6 +181,14 @@ export class BusinessRepository {
 
   getLatestInventorySnapshot() {
     return this.inventory.getLatestSnapshot()
+  }
+
+  getInventoryAnalyticsReport() {
+    return this.inventoryAnalytics.getReport()
+  }
+
+  getInventoryRiskOpportunityReport() {
+    return this.inventoryRiskOpportunity.getReport()
   }
 
   findCustomer(
