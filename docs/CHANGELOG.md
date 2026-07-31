@@ -1,3 +1,21 @@
+# 0.28.3-PW-006.1.1
+
+- La ruta de sustitución de catálogo se integra dentro del Executive Hero de Product Workspace.
+- El panel se muestra inmediatamente debajo de Riesgo comercial y Potencial de recuperación.
+- Se conserva sin cambios el diseño interno, los estados de sustitución, la navegación y las consultas de inventario.
+- `ExecutiveHero` incorpora un slot reusable `metricFooter` para contenido contextual asociado a sus métricas.
+- Se elimina el espacio vertical duplicado que generaba el panel como sección independiente.
+- Prueba Atlas ampliada para validar el nuevo slot del Executive Hero.
+
+# 0.28.2-PW-006.1
+
+- Product Workspace incorpora una ruta de sustitución de catálogo conectada al Product Master.
+- Expone `NETSTOCK Superseded By` y `Producto sustituto directo` dentro del expediente del SKU.
+- Consulta existencia, disponibilidad y ubicaciones activas de cada producto de reemplazo desde Inventory Repository.
+- Permite abrir directamente el expediente del sustituto cuando está conciliado con Product Master.
+- Distingue producto vigente, Superseded con sustituto directo, Superseded sin sustituto y sustituto directo sin Superseded.
+- Mantiene sin cambios Business Score, ciclo de vida, riesgo comercial y reglas de Product Decision Core.
+
 # 0.28.1-IW-006.1
 
 - Inventory Workspace se enriquece desde Product Master sin duplicar atributos en las posiciones de inventario.

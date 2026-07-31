@@ -15,6 +15,9 @@ describe('ExecutiveHero', () => {
             value: '$19.3 M',
           },
         ]}
+        metricFooter={(
+          <div>Ruta de sustitución de catálogo</div>
+        )}
         score={{
           score: null,
           label: 'Pendiente',
@@ -33,6 +36,8 @@ describe('ExecutiveHero', () => {
     expect(markup).toContain('data-atlas-component="executive-health-score"')
     expect(markup).toContain('Brand Intelligence')
     expect(markup).toContain('Revenue')
+    expect(markup).toContain('data-atlas-slot="executive-hero-metric-footer"')
+    expect(markup).toContain('Ruta de sustitución de catálogo')
     expect(markup).toContain('53 marcas')
   })
 })

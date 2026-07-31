@@ -24,6 +24,9 @@ import { ExecutivePanel } from '../../../atlas/widgets/panel'
 import { WorkspaceComposition } from '../../workspaces/shared/components'
 import { buildProductKpis } from '../adapters'
 import { useProductIntelligenceWorkspace } from '../hooks/useProductIntelligenceWorkspace'
+import {
+  ProductCatalogReplacementPanel,
+} from '../components/ProductCatalogReplacementPanel'
 
 
 type ComparisonTone = 'positive' | 'negative' | 'neutral'
@@ -102,7 +105,11 @@ function scoreTone(score: number): 'healthy' | 'attention' | 'critical' {
 }
 
 export function ProductIntelligencePage() {
-  const { productId, workspace } = useProductIntelligenceWorkspace()
+  const {
+    productId,
+    workspace,
+    catalogReplacement,
+  } = useProductIntelligenceWorkspace()
 
   if (!workspace) {
     return (
@@ -137,6 +144,12 @@ export function ProductIntelligencePage() {
           eyebrow="Product Decision Intelligence"
           icon={<PackageSearch size={22} />}
           metadata={<><span>Marca: {workspace.header.brandName}</span><span>Periodo actual: {workspace.header.currentPeriodId}</span></>}
+          metricFooter={catalogReplacement ? (
+            <ProductCatalogReplacementPanel
+              currentProductId={workspace.header.productId}
+              replacement={catalogReplacement}
+            />
+          ) : undefined}
           metrics={[
             {
               label: 'Clasificación valor', value: decision.commercialStatus,
@@ -170,6 +183,13 @@ export function ProductIntelligencePage() {
             { label: 'Margen', value: workspace.cards[1]?.helper.replace('Margen ', '') ?? '—' },
             { label: 'BCG', value: decision.dna.bcg.label },
             { label: 'Concentración', value: decision.dna.concentration.label },
+            ...(catalogReplacement
+              ? [{
+                  label: 'Sustitución',
+                  value: catalogReplacement.shortLabel,
+                  tone: catalogReplacement.tone,
+                }]
+              : []),
             { label: 'Confianza', value: `${Math.round(decision.confidence)}%`, tone: 'positive' },
           ]}
           theme="product"

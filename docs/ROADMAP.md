@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.28.1
-Sprint: IW-006.1 — Inventory Catalog Enrichment
+Versión: v0.28.3
+Sprint: PW-006.1.1 — Product Replacement Hero Placement
 Estado: Completado
 ```
 
@@ -23,6 +23,17 @@ Estado: Completado
 IW-006 añade una lectura ejecutiva determinística, exportación Excel bajo demanda y consistencia completa entre filtros, KPIs, rankings, riesgos, oportunidades y posiciones exportadas.
 
 IW-006.1 conecta Inventory Workspace con los atributos persistidos de Product Master para filtrar por categoría de valor y analizar Superseded y sustitutos directos, sin duplicar esos datos en el dominio de inventario.
+
+## Product Workspace — Catalog Replacement Visibility
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| PW-006.1 | Superseded, sustituto directo e inventario del reemplazo | Completado |
+| PW-006.1.1 | Reubicación de la ruta de sustitución dentro del Executive Hero | Completado |
+
+PW-006.1 incorpora la ruta de sustitución dentro del expediente del SKU. La información se obtiene del Product Master y la disponibilidad del reemplazo se consulta desde Inventory Repository, sin alterar las reglas del Product Decision Core.
+
+PW-006.1.1 optimiza la composición visual al colocar la ruta de sustitución inmediatamente debajo de Riesgo comercial y Potencial de recuperación dentro del Executive Hero, conservando intacto el contrato funcional del panel.
 
 ## Architecture Sprint A-002
 

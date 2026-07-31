@@ -19,6 +19,7 @@ export interface ExecutiveHeroProps extends Omit<HTMLAttributes<HTMLElement>, 't
   actions?: ReactNode
   score: ExecutiveHealthScoreProps
   metrics: readonly ExecutiveHeroMetricProps[]
+  metricFooter?: ReactNode
   summaryItems: readonly ExecutiveHeroSummaryItem[]
   theme?: WorkspaceThemeName
 }
@@ -33,6 +34,7 @@ export function ExecutiveHero({
   actions,
   score,
   metrics,
+  metricFooter,
   summaryItems,
   theme = 'brand',
   className = '',
@@ -79,8 +81,18 @@ export function ExecutiveHero({
 
         <div className="mt-5 grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)_260px]">
           <ExecutiveHealthScore {...score} />
-          <div className="grid content-start gap-3 sm:grid-cols-2">
-            {metrics.map((metric) => <ExecutiveHeroMetric {...metric} key={metric.label} />)}
+          <div className="min-w-0">
+            <div className="grid content-start gap-3 sm:grid-cols-2">
+              {metrics.map((metric) => <ExecutiveHeroMetric {...metric} key={metric.label} />)}
+            </div>
+            {metricFooter && (
+              <div
+                className="mt-4"
+                data-atlas-slot="executive-hero-metric-footer"
+              >
+                {metricFooter}
+              </div>
+            )}
           </div>
           <ExecutiveHeroSummary items={summaryItems} />
         </div>
