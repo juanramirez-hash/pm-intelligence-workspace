@@ -12,16 +12,20 @@ import {
   filterInventoryRisks,
 } from './inventoryWorkspaceModel'
 
+import {
+  buildInventoryCatalogLookup,
+} from './inventoryCatalogEnrichment'
+
 import type {
-  BusinessInventoryPosition,
-} from '../../../core/business/entities/inventoryPosition'
+  InventoryWorkspacePosition,
+} from './inventoryCatalogEnrichment'
 
 import type {
   InventoryOpportunitySignal,
   InventoryRiskSignal,
 } from '../../../core/business/analytics/inventory'
 
-const position: BusinessInventoryPosition = {
+const position: InventoryWorkspacePosition = {
   id: 'P-1::CDMX',
   snapshotDate: '2026-07-30',
   productId: 'P-1',
@@ -40,6 +44,13 @@ const position: BusinessInventoryPosition = {
   inventoryValue: 1000,
   currency: 'MXN',
   sourceRows: 1,
+  commercialStatus: 'D',
+  supersededBy: 'P-2',
+  directSubstitute: 'P-2',
+  replacementStatus: 'both',
+  supersededByAvailable: 5,
+  directSubstituteAvailable: 5,
+  catalogResolved: true,
 }
 
 const risk: InventoryRiskSignal = {
@@ -114,7 +125,7 @@ describe('Inventory Workspace filters', () => {
   })
 
   it('recalcula el ranking con las posiciones filtradas por marca', () => {
-    const beldenPosition: BusinessInventoryPosition = {
+    const beldenPosition: InventoryWorkspacePosition = {
       ...position,
       id: 'P-2::QRO',
       productId: 'P-2',
@@ -173,4 +184,34 @@ describe('Inventory Workspace filters', () => {
     expect(byBrand[0]?.id).toBe('O-1')
     expect(byLocation[0]?.id).toBe('O-1')
   })
+
+  it('filtra por categoría de valor y estado de sustitución', () => {
+    const result = filterInventoryPositions(
+      [position],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        commercialStatus: 'D',
+        replacement: 'both',
+      },
+    )
+
+    expect(result[0]?.id).toBe(position.id)
+  })
+
+  it('aplica el catálogo a riesgos y permite buscar por sustituto', () => {
+    const lookup = buildInventoryCatalogLookup([position])
+    const result = filterInventoryRisks(
+      [risk],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        search: 'P-2',
+        commercialStatus: 'D',
+        replacement: 'with_superseded',
+      },
+      lookup,
+    )
+
+    expect(result[0]?.id).toBe('R-1')
+  })
+
 })

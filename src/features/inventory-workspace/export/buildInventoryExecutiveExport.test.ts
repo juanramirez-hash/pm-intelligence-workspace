@@ -11,8 +11,8 @@ import type {
 } from '../../../core/business/analytics/inventory'
 
 import type {
-  BusinessInventoryPosition,
-} from '../../../core/business/entities/inventoryPosition'
+  InventoryWorkspacePosition,
+} from '../engine/inventoryCatalogEnrichment'
 
 import {
   DEFAULT_INVENTORY_WORKSPACE_FILTERS,
@@ -26,7 +26,7 @@ import {
   buildInventoryExecutiveExport,
 } from './buildInventoryExecutiveExport'
 
-const position: BusinessInventoryPosition = {
+const position: InventoryWorkspacePosition = {
   id: '2026-07-30::P-1::CDMX',
   snapshotDate: '2026-07-30',
   productId: 'P-1',
@@ -45,6 +45,13 @@ const position: BusinessInventoryPosition = {
   inventoryValue: 1000,
   currency: 'MXN',
   sourceRows: 1,
+  commercialStatus: 'D',
+  supersededBy: 'P-2',
+  directSubstitute: 'P-2',
+  replacementStatus: 'both',
+  supersededByAvailable: 5,
+  directSubstituteAvailable: 5,
+  catalogResolved: true,
 }
 
 const analytics: InventoryAnalyticsReport = {
@@ -99,10 +106,11 @@ const risks: InventoryRiskSignal[] = []
 const opportunities: InventoryOpportunitySignal[] = []
 
 describe('IW-006 Inventory executive export', () => {
-  it('construye el libro ejecutivo con seis hojas', () => {
+  it('construye el libro ejecutivo con catálogo y sustituciones', () => {
     const filters = DEFAULT_INVENTORY_WORKSPACE_FILTERS
     const summary = buildInventoryExecutiveSummary({
       analytics,
+      positions: [position],
       risks,
       opportunities,
       filters,
@@ -127,6 +135,7 @@ describe('IW-006 Inventory executive export', () => {
       'Resumen Ejecutivo',
       'Inventario por Ubicación',
       'Posiciones',
+      'Sustituciones',
       'Riesgos',
       'Oportunidades',
       'Metadatos',
@@ -148,6 +157,25 @@ describe('IW-006 Inventory executive export', () => {
       1000,
       1,
       0.8,
+    ])
+    expect(payload.sheets[2]?.rows[0]).toContain('Categoría de valor')
+    expect(payload.sheets[3]?.rows).toContainEqual([
+      'P-1',
+      'CAMARA UNO',
+      'P-1',
+      'IPC-A',
+      'UNV',
+      'D',
+      'P-2',
+      5,
+      'P-2',
+      5,
+      'Superseded y sustituto directo',
+      1,
+      'CDMX',
+      10,
+      8,
+      1000,
     ])
   })
 })

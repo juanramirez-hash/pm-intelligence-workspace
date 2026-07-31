@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.28.0
-Sprint: IW-006 — Inventory Export, Executive Summary & Closure
+Versión: v0.28.1
+Sprint: IW-006.1 — Inventory Catalog Enrichment
 Estado: Completado
 ```
 
@@ -18,8 +18,11 @@ Estado: Completado
 | IW-004 | Risk & Opportunity Engine | Completado |
 | IW-005 | Inventory Workspace UI & undated snapshot support | Completado |
 | IW-006 | Executive Summary, Excel Export & Closure | Completado |
+| IW-006.1 | Category ABCE, Superseded & Direct Substitute Enrichment | Completado |
 
 IW-006 añade una lectura ejecutiva determinística, exportación Excel bajo demanda y consistencia completa entre filtros, KPIs, rankings, riesgos, oportunidades y posiciones exportadas.
+
+IW-006.1 conecta Inventory Workspace con los atributos persistidos de Product Master para filtrar por categoría de valor y analizar Superseded y sustitutos directos, sin duplicar esos datos en el dominio de inventario.
 
 ## Architecture Sprint A-002
 

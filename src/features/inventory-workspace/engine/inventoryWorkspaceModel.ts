@@ -2,6 +2,10 @@ import type {
   BusinessInventoryPosition,
 } from '../../../core/business/entities/inventoryPosition'
 
+import type {
+  ProductCommercialStatus,
+} from '../../../core/business/entities/product'
+
 import {
   buildInventoryAnalytics,
 } from '../../../core/business/analytics/inventory'
@@ -16,10 +20,32 @@ import type {
   InventoryStockStatus,
 } from '../../../core/business/analytics/inventory'
 
+import {
+  findInventoryCatalogEntry,
+} from './inventoryCatalogEnrichment'
+
+import type {
+  InventoryCatalogEntry,
+  InventoryCatalogLookup,
+  InventoryWorkspacePosition,
+} from './inventoryCatalogEnrichment'
+
 export type InventoryWorkspaceDimension =
   | 'brand'
   | 'location'
   | 'product'
+
+export type InventoryCommercialStatusFilter =
+  | ProductCommercialStatus
+  | 'unclassified'
+  | 'all'
+
+export type InventoryReplacementFilter =
+  | 'with_superseded'
+  | 'with_direct_substitute'
+  | 'both'
+  | 'without_replacement'
+  | 'all'
 
 export interface InventoryWorkspaceFilters {
   search: string
@@ -27,15 +53,18 @@ export interface InventoryWorkspaceFilters {
   locationId: string
   stockStatus: InventoryStockStatus | 'all'
   priority: InventoryActionPriority | 'all'
+  commercialStatus: InventoryCommercialStatusFilter
+  replacement: InventoryReplacementFilter
 }
 
 export interface InventoryWorkspaceModel {
   available: boolean
   analytics: InventoryAnalyticsReport | null
   riskOpportunity: InventoryRiskOpportunityReport | null
-  latestPositions: BusinessInventoryPosition[]
+  latestPositions: InventoryWorkspacePosition[]
   brands: string[]
   locations: string[]
+  commercialStatuses: ProductCommercialStatus[]
 }
 
 export const DEFAULT_INVENTORY_WORKSPACE_FILTERS:
@@ -45,6 +74,8 @@ export const DEFAULT_INVENTORY_WORKSPACE_FILTERS:
     locationId: 'all',
     stockStatus: 'all',
     priority: 'all',
+    commercialStatus: 'all',
+    replacement: 'all',
   }
 
 export function matchesInventorySearch(
@@ -55,6 +86,71 @@ export function matchesInventorySearch(
 
   return normalizedSearch.length === 0 ||
     value.toLocaleUpperCase('es-MX').includes(normalizedSearch)
+}
+
+function matchesCommercialStatus(
+  entry: InventoryCatalogEntry | undefined,
+  filter: InventoryCommercialStatusFilter,
+): boolean {
+  if (filter === 'all') {
+    return true
+  }
+
+  if (filter === 'unclassified') {
+    return !entry?.commercialStatus
+  }
+
+  return entry?.commercialStatus === filter
+}
+
+function matchesReplacement(
+  entry: InventoryCatalogEntry | undefined,
+  filter: InventoryReplacementFilter,
+): boolean {
+  if (filter === 'all') {
+    return true
+  }
+
+  if (filter === 'with_superseded') {
+    return Boolean(entry?.supersededBy)
+  }
+
+  if (filter === 'with_direct_substitute') {
+    return Boolean(entry?.directSubstitute)
+  }
+
+  if (filter === 'both') {
+    return Boolean(
+      entry?.supersededBy && entry.directSubstitute,
+    )
+  }
+
+  return !entry?.supersededBy && !entry?.directSubstitute
+}
+
+function matchesCatalogFilters(
+  entry: InventoryCatalogEntry | undefined,
+  filters: InventoryWorkspaceFilters,
+): boolean {
+  return matchesCommercialStatus(
+    entry,
+    filters.commercialStatus,
+  ) && matchesReplacement(entry, filters.replacement)
+}
+
+function catalogSearchValue(
+  entry: InventoryCatalogEntry | undefined,
+): string {
+  if (!entry) {
+    return ''
+  }
+
+  return [
+    entry.commercialStatus ?? '',
+    entry.supersededBy ?? '',
+    entry.directSubstitute ?? '',
+    entry.replacementStatus,
+  ].join(' ')
 }
 
 export function buildInventoryWorkspaceGroups(
@@ -91,6 +187,7 @@ export function filterInventoryGroups(
 export function filterInventoryRisks(
   risks: readonly InventoryRiskSignal[],
   filters: InventoryWorkspaceFilters,
+  catalogLookup: InventoryCatalogLookup = new Map(),
 ): InventoryRiskSignal[] {
   return risks.filter((risk) => {
     if (filters.brandId !== 'all' && risk.brandId !== filters.brandId) {
@@ -108,8 +205,18 @@ export function filterInventoryRisks(
       return false
     }
 
+    const catalog = findInventoryCatalogEntry(
+      catalogLookup,
+      risk.productId,
+      risk.productName,
+    )
+
+    if (!matchesCatalogFilters(catalog, filters)) {
+      return false
+    }
+
     return matchesInventorySearch(
-      `${risk.productName} ${risk.brandId ?? ''} ${risk.locationId ?? ''} ${risk.title} ${risk.rationale}`,
+      `${risk.productName} ${risk.brandId ?? ''} ${risk.locationId ?? ''} ${risk.title} ${risk.rationale} ${catalogSearchValue(catalog)}`,
       filters.search,
     )
   })
@@ -118,6 +225,7 @@ export function filterInventoryRisks(
 export function filterInventoryOpportunities(
   opportunities: readonly InventoryOpportunitySignal[],
   filters: InventoryWorkspaceFilters,
+  catalogLookup: InventoryCatalogLookup = new Map(),
 ): InventoryOpportunitySignal[] {
   return opportunities.filter((opportunity) => {
     if (
@@ -142,17 +250,27 @@ export function filterInventoryOpportunities(
       return false
     }
 
+    const catalog = findInventoryCatalogEntry(
+      catalogLookup,
+      opportunity.productId,
+      opportunity.productName,
+    )
+
+    if (!matchesCatalogFilters(catalog, filters)) {
+      return false
+    }
+
     return matchesInventorySearch(
-      `${opportunity.productName} ${opportunity.brandId ?? ''} ${opportunity.sourceLocationId ?? ''} ${opportunity.targetLocationId ?? ''} ${opportunity.title} ${opportunity.rationale}`,
+      `${opportunity.productName} ${opportunity.brandId ?? ''} ${opportunity.sourceLocationId ?? ''} ${opportunity.targetLocationId ?? ''} ${opportunity.title} ${opportunity.rationale} ${catalogSearchValue(catalog)}`,
       filters.search,
     )
   })
 }
 
 export function filterInventoryPositions(
-  positions: readonly BusinessInventoryPosition[],
+  positions: readonly InventoryWorkspacePosition[],
   filters: InventoryWorkspaceFilters,
-): BusinessInventoryPosition[] {
+): InventoryWorkspacePosition[] {
   return positions.filter((position) => {
     if (
       filters.brandId !== 'all' &&
@@ -168,6 +286,10 @@ export function filterInventoryPositions(
       return false
     }
 
+    if (!matchesCatalogFilters(position, filters)) {
+      return false
+    }
+
     return matchesInventorySearch(
       [
         position.productName,
@@ -175,6 +297,9 @@ export function filterInventoryPositions(
         position.model ?? '',
         position.brandId ?? '',
         position.locationId,
+        position.commercialStatus ?? '',
+        position.supersededBy ?? '',
+        position.directSubstitute ?? '',
       ].join(' '),
       filters.search,
     )

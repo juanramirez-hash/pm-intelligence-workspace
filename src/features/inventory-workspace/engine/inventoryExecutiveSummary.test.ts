@@ -14,6 +14,10 @@ import {
   DEFAULT_INVENTORY_WORKSPACE_FILTERS,
 } from './inventoryWorkspaceModel'
 
+import type {
+  InventoryWorkspacePosition,
+} from './inventoryCatalogEnrichment'
+
 import {
   buildInventoryExecutiveSummary,
 } from './inventoryExecutiveSummary'
@@ -40,6 +44,35 @@ const analytics: InventoryAnalyticsReport = {
   byLocation: [],
   byProduct: [],
   stockStatus: [],
+}
+
+
+const position: InventoryWorkspacePosition = {
+  id: '2026-07-30::P-1::CDMX',
+  snapshotDate: '2026-07-30',
+  productId: 'P-1',
+  productName: 'P-1',
+  productCode: 'P-1',
+  brandId: 'UNV',
+  model: 'IPC-A',
+  locationId: 'CDMX',
+  identityStatus: 'current_master',
+  onHand: 10,
+  available: 8,
+  committed: 2,
+  inTransit: 3,
+  onOrder: 4,
+  unitCost: 100,
+  inventoryValue: 1000,
+  currency: 'MXN',
+  sourceRows: 1,
+  commercialStatus: 'D',
+  supersededBy: 'P-2',
+  directSubstitute: null,
+  replacementStatus: 'superseded_only',
+  supersededByAvailable: 5,
+  directSubstituteAvailable: null,
+  catalogResolved: true,
 }
 
 const risk: InventoryRiskSignal = {
@@ -90,6 +123,7 @@ describe('IW-006 Inventory executive summary', () => {
   it('construye una lectura ejecutiva determinística', () => {
     const summary = buildInventoryExecutiveSummary({
       analytics,
+      positions: [position],
       risks: [risk],
       opportunities: [opportunity],
       filters: {
@@ -102,6 +136,7 @@ describe('IW-006 Inventory executive summary', () => {
     expect(summary.overview).toContain('$1,000')
     expect(summary.outlook).toContain('1 riesgos críticos o altos')
     expect(summary.filterContext).toBe('Marca: UNV')
+    expect(summary.overview).toContain('Superseded')
     expect(
       summary.findings.find(
         (finding) => finding.label === 'Productos sin conciliar',

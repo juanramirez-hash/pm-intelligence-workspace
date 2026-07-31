@@ -6,8 +6,8 @@ import {
 } from 'lucide-react'
 
 import type {
-  BusinessInventoryPosition,
-} from '../../../core/business/entities/inventoryPosition'
+  InventoryWorkspacePosition,
+} from '../engine/inventoryCatalogEnrichment'
 
 import type {
   InventoryAnalyticsGroup,
@@ -235,14 +235,17 @@ export function InventoryOpportunityList({
 export function InventoryPositionTable({
   positions,
 }: {
-  positions: readonly BusinessInventoryPosition[]
+  positions: readonly InventoryWorkspacePosition[]
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[980px] text-left text-sm">
+      <table className="w-full min-w-[1420px] text-left text-sm">
         <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
           <tr>
             <th className="px-3 py-3 font-semibold">Producto</th>
+            <th className="px-3 py-3 text-center font-semibold">Categoría</th>
+            <th className="px-3 py-3 font-semibold">Superseded By</th>
+            <th className="px-3 py-3 font-semibold">Sustituto directo</th>
             <th className="px-3 py-3 font-semibold">Marca / ubicación</th>
             <th className="px-3 py-3 text-right font-semibold">Existencia</th>
             <th className="px-3 py-3 text-right font-semibold">Disponible</th>
@@ -259,6 +262,36 @@ export function InventoryPositionTable({
                 <p className="mt-1 text-xs text-slate-500">
                   {position.model ?? position.productCode ?? 'Sin modelo'}
                 </p>
+              </td>
+              <td className="px-3 py-4 text-center">
+                <span className={[
+                  'inline-flex min-w-8 justify-center rounded-full px-2.5 py-1 text-xs font-semibold',
+                  position.commercialStatus
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'bg-slate-100 text-slate-500',
+                ].join(' ')}>
+                  {position.commercialStatus ?? 'S/C'}
+                </span>
+              </td>
+              <td className="px-3 py-4 text-slate-600">
+                <p className="font-medium text-slate-800">
+                  {position.supersededBy ?? '—'}
+                </p>
+                {position.supersededBy && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    {formatNumber(position.supersededByAvailable ?? 0)} disponibles
+                  </p>
+                )}
+              </td>
+              <td className="px-3 py-4 text-slate-600">
+                <p className="font-medium text-slate-800">
+                  {position.directSubstitute ?? '—'}
+                </p>
+                {position.directSubstitute && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    {formatNumber(position.directSubstituteAvailable ?? 0)} disponibles
+                  </p>
+                )}
               </td>
               <td className="px-3 py-4 text-slate-600">
                 {position.brandId ?? 'Sin marca'} · {position.locationId}

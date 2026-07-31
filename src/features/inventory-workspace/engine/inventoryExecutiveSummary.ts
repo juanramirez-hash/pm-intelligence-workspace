@@ -4,6 +4,14 @@ import type {
   InventoryRiskSignal,
 } from '../../../core/business/analytics/inventory'
 
+import {
+  buildInventoryCatalogSummary,
+} from './inventoryCatalogEnrichment'
+
+import type {
+  InventoryWorkspacePosition,
+} from './inventoryCatalogEnrichment'
+
 import type {
   InventoryWorkspaceFilters,
 } from './inventoryWorkspaceModel'
@@ -31,9 +39,18 @@ export interface InventoryExecutiveSummary {
 
 export interface InventoryExecutiveSummaryInput {
   analytics: InventoryAnalyticsReport
+  positions: readonly InventoryWorkspacePosition[]
   risks: readonly InventoryRiskSignal[]
   opportunities: readonly InventoryOpportunitySignal[]
   filters: InventoryWorkspaceFilters
+}
+
+const replacementFilterLabels = {
+  all: 'Todos',
+  with_superseded: 'Con Superseded',
+  with_direct_substitute: 'Con sustituto directo',
+  both: 'Con ambos reemplazos',
+  without_replacement: 'Sin reemplazo',
 }
 
 function formatCurrency(value: number): string {
@@ -78,6 +95,20 @@ function buildFilterContext(
     parts.push(`Prioridad: ${filters.priority}`)
   }
 
+  if (filters.commercialStatus !== 'all') {
+    parts.push(
+      filters.commercialStatus === 'unclassified'
+        ? 'Categoría de valor: Sin clasificación'
+        : `Categoría de valor: ${filters.commercialStatus}`,
+    )
+  }
+
+  if (filters.replacement !== 'all') {
+    parts.push(
+      `Sustitución: ${replacementFilterLabels[filters.replacement]}`,
+    )
+  }
+
   return parts.length > 0
     ? parts.join(' · ')
     : 'Vista consolidada del último corte.'
@@ -97,8 +128,15 @@ function findingTone(
 export function buildInventoryExecutiveSummary(
   input: InventoryExecutiveSummaryInput,
 ): InventoryExecutiveSummary {
-  const { analytics, risks, opportunities, filters } = input
+  const {
+    analytics,
+    positions,
+    risks,
+    opportunities,
+    filters,
+  } = input
   const totals = analytics.totals
+  const catalog = buildInventoryCatalogSummary(positions)
   const prioritizedRisks = risks.filter(
     (risk) =>
       risk.priority === 'critical' || risk.priority === 'high',
@@ -113,14 +151,20 @@ export function buildInventoryExecutiveSummary(
   )
   const snapshotLabel = analytics.snapshotDate ?? 'corte actual sin fecha'
 
-  const overview = [
+  const overviewParts = [
     `El ${snapshotLabel} concentra ${formatCurrency(totals.inventoryValue)}`,
     `en ${formatNumber(totals.positions)} posiciones,`,
     `${formatNumber(totals.products)} productos y`,
     `${formatNumber(totals.locations)} ubicaciones.`,
     `La disponibilidad representa ${formatPercentage(totals.availableRate)}`,
     `de la existencia física registrada.`,
-  ].join(' ')
+  ]
+
+  if (catalog.productsWithSuperseded > 0) {
+    overviewParts.push(
+      `${catalog.productsWithSuperseded} productos con inventario están marcados como Superseded y concentran ${formatCurrency(catalog.supersededInventoryValue)}.`,
+    )
+  }
 
   let outlook: string
 
@@ -144,9 +188,13 @@ export function buildInventoryExecutiveSummary(
     ].join(' ')
   }
 
+  if (catalog.supersededWithoutDirectSubstitute > 0) {
+    outlook += ` ${catalog.supersededWithoutDirectSubstitute} productos Superseded no tienen sustituto directo registrado.`
+  }
+
   return {
     title: `Resumen ejecutivo · ${snapshotLabel}`,
-    overview,
+    overview: overviewParts.join(' '),
     outlook,
     filterContext: buildFilterContext(filters),
     findings: [
@@ -185,6 +233,26 @@ export function buildInventoryExecutiveSummary(
         value: formatNumber(totals.unresolvedProducts),
         detail: 'Posiciones que no están vinculadas con el Product Master actual.',
         tone: findingTone(totals.unresolvedProducts > 0, true),
+      },
+      {
+        label: 'Inventario Superseded',
+        value: formatCurrency(catalog.supersededInventoryValue),
+        detail: `${catalog.productsWithSuperseded} productos · ${formatNumber(catalog.supersededOnHand)} unidades físicas · ${formatNumber(catalog.supersededAvailable)} disponibles.`,
+        tone: catalog.productsWithSuperseded > 0 ? 'warning' : 'positive',
+      },
+      {
+        label: 'Sustituto directo',
+        value: formatNumber(catalog.productsWithDirectSubstitute),
+        detail: `${catalog.productsWithBoth} productos tienen Superseded y sustituto directo; ${catalog.supersededWithoutDirectSubstitute} Superseded no tienen sustituto directo.`,
+        tone: catalog.supersededWithoutDirectSubstitute > 0
+          ? 'warning'
+          : 'positive',
+      },
+      {
+        label: 'Sin categoría de valor',
+        value: formatNumber(catalog.unclassifiedProducts),
+        detail: `${catalog.classifiedProducts} productos cuentan con clasificación A, B, C, D o E.`,
+        tone: catalog.unclassifiedProducts > 0 ? 'warning' : 'positive',
       },
     ],
   }

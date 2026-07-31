@@ -57,6 +57,10 @@ import {
   buildInventoryExecutiveSummary,
 } from '../engine/inventoryExecutiveSummary'
 
+import {
+  buildInventoryCatalogLookup,
+} from '../engine/inventoryCatalogEnrichment'
+
 import type {
   InventoryExecutiveFindingTone,
 } from '../engine/inventoryExecutiveSummary'
@@ -116,6 +120,11 @@ export function InventoryWorkspacePage() {
   const analytics = workspace.analytics
   const riskOpportunity = workspace.riskOpportunity
 
+  const catalogLookup = useMemo(
+    () => buildInventoryCatalogLookup(workspace.latestPositions),
+    [workspace.latestPositions],
+  )
+
   const filteredPositions = useMemo(
     () => filterInventoryPositions(workspace.latestPositions, filters),
     [workspace.latestPositions, filters],
@@ -135,27 +144,34 @@ export function InventoryWorkspacePage() {
   )
 
   const filteredRisks = useMemo(
-    () => filterInventoryRisks(riskOpportunity?.risks ?? [], filters),
-    [riskOpportunity, filters],
+    () => filterInventoryRisks(
+      riskOpportunity?.risks ?? [],
+      filters,
+      catalogLookup,
+    ),
+    [riskOpportunity, filters, catalogLookup],
   )
 
   const filteredOpportunities = useMemo(
     () => filterInventoryOpportunities(
       riskOpportunity?.opportunities ?? [],
       filters,
+      catalogLookup,
     ),
-    [riskOpportunity, filters],
+    [riskOpportunity, filters, catalogLookup],
   )
 
   const executiveSummary = useMemo(
     () => buildInventoryExecutiveSummary({
       analytics: filteredAnalytics,
+      positions: filteredPositions,
       risks: filteredRisks,
       opportunities: filteredOpportunities,
       filters,
     }),
     [
       filteredAnalytics,
+      filteredPositions,
       filteredRisks,
       filteredOpportunities,
       filters,
@@ -317,7 +333,7 @@ export function InventoryWorkspacePage() {
         </WorkspaceGrid>
 
         <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_160px_auto]">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_160px_160px_150px_180px_190px_auto]">
             <label className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
               <input
@@ -326,7 +342,7 @@ export function InventoryWorkspacePage() {
                   ...current,
                   search: event.target.value,
                 }))}
-                placeholder="Buscar Name, modelo, marca o ubicación"
+                placeholder="Buscar Name, modelo, marca, categoría o sustituto"
                 value={filters.search}
               />
             </label>
@@ -372,6 +388,36 @@ export function InventoryWorkspacePage() {
               <option value="high">Alta</option>
               <option value="medium">Media</option>
               <option value="low">Baja</option>
+            </select>
+
+            <select
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+              onChange={(event) => setFilters((current) => ({
+                ...current,
+                commercialStatus: event.target.value as InventoryWorkspaceFilters['commercialStatus'],
+              }))}
+              value={filters.commercialStatus}
+            >
+              <option value="all">Toda categoría ABCE</option>
+              {workspace.commercialStatuses.map((status) => (
+                <option key={status} value={status}>Categoría {status}</option>
+              ))}
+              <option value="unclassified">Sin clasificación</option>
+            </select>
+
+            <select
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+              onChange={(event) => setFilters((current) => ({
+                ...current,
+                replacement: event.target.value as InventoryWorkspaceFilters['replacement'],
+              }))}
+              value={filters.replacement}
+            >
+              <option value="all">Todo estado de sustitución</option>
+              <option value="with_superseded">Con Superseded</option>
+              <option value="with_direct_substitute">Con sustituto directo</option>
+              <option value="both">Con ambos</option>
+              <option value="without_replacement">Sin reemplazo</option>
             </select>
 
             <button

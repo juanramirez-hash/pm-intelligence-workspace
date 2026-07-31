@@ -1,3 +1,13 @@
+# 0.28.1-IW-006.1
+
+- Inventory Workspace se enriquece desde Product Master sin duplicar atributos en las posiciones de inventario.
+- Nuevo filtro dinámico por `CLASIFICACION VALOR` A, B, C, D, E y productos sin clasificación.
+- Nuevo filtro por estado de sustitución: Superseded, sustituto directo, ambos o sin reemplazo.
+- Drill-down con categoría de valor, `NETSTOCK Superseded By`, sustituto directo y disponibilidad actual de cada reemplazo.
+- Resumen ejecutivo ampliado con valor, unidades y cobertura de productos Superseded.
+- Exportación Excel 1.1 con columnas de catálogo y nueva hoja `Sustituciones`.
+- Pruebas unitarias para enriquecimiento, filtros, resumen y contrato de exportación.
+
 # 0.28.0-IW-006
 
 - Resumen ejecutivo determinístico para Inventory Workspace.

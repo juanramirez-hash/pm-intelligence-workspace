@@ -5,9 +5,13 @@ import type {
   InventoryStockStatus,
 } from '../../../core/business/analytics/inventory'
 
+import {
+  buildInventoryCatalogSummary,
+} from '../engine/inventoryCatalogEnrichment'
+
 import type {
-  BusinessInventoryPosition,
-} from '../../../core/business/entities/inventoryPosition'
+  InventoryWorkspacePosition,
+} from '../engine/inventoryCatalogEnrichment'
 
 import type {
   InventoryExecutiveSummary,
@@ -37,7 +41,7 @@ export interface InventoryExecutiveExportPayload {
 
 export interface InventoryExecutiveExportInput {
   analytics: InventoryAnalyticsReport
-  positions: readonly BusinessInventoryPosition[]
+  positions: readonly InventoryWorkspacePosition[]
   risks: readonly InventoryRiskSignal[]
   opportunities: readonly InventoryOpportunitySignal[]
   filters: InventoryWorkspaceFilters
@@ -76,6 +80,21 @@ const opportunityTypeLabels = {
   commitment_release: 'Liberación de compromisos',
 }
 
+const replacementFilterLabels = {
+  all: 'Todos',
+  with_superseded: 'Con Superseded',
+  with_direct_substitute: 'Con sustituto directo',
+  both: 'Con ambos reemplazos',
+  without_replacement: 'Sin reemplazo',
+}
+
+const replacementStatusLabels = {
+  both: 'Superseded y sustituto directo',
+  superseded_only: 'Solo Superseded',
+  direct_substitute_only: 'Solo sustituto directo',
+  none: 'Sin reemplazo',
+}
+
 function sanitizeFilePart(value: string): string {
   return value
     .normalize('NFD')
@@ -89,8 +108,9 @@ function summaryRows(
   input: InventoryExecutiveExportInput,
   generatedAt: Date,
 ): InventoryExportCell[][] {
-  const { analytics, summary } = input
+  const { analytics, positions, summary } = input
   const totals = analytics.totals
+  const catalog = buildInventoryCatalogSummary(positions)
 
   return [
     ['PM Intelligence Workspace'],
@@ -119,6 +139,14 @@ function summaryRows(
     ['Tasa de disponibilidad', totals.availableRate],
     ['Tasa de compromiso', totals.committedRate],
     ['Productos sin conciliar', totals.unresolvedProducts],
+    ['Productos clasificados A-E', catalog.classifiedProducts],
+    ['Productos sin categoría de valor', catalog.unclassifiedProducts],
+    ['Productos con Superseded', catalog.productsWithSuperseded],
+    ['Productos con sustituto directo', catalog.productsWithDirectSubstitute],
+    ['Superseded sin sustituto directo', catalog.supersededWithoutDirectSubstitute],
+    ['Valor de inventario Superseded', catalog.supersededInventoryValue],
+    ['Existencia física Superseded', catalog.supersededOnHand],
+    ['Disponible Superseded', catalog.supersededAvailable],
     [],
     ['Estado', 'Posiciones', 'Productos', 'Valor', 'Participación'],
     ...analytics.stockStatus.map((status) => [
@@ -175,7 +203,7 @@ function locationRows(
 }
 
 function positionRows(
-  positions: readonly BusinessInventoryPosition[],
+  positions: readonly InventoryWorkspacePosition[],
 ): InventoryExportCell[][] {
   return [
     [
@@ -187,6 +215,12 @@ function positionRows(
       'Marca',
       'Ubicación',
       'Estado identidad',
+      'Categoría de valor',
+      'Superseded By',
+      'Disponible Superseded',
+      'Sustituto directo',
+      'Disponible sustituto directo',
+      'Estado de sustitución',
       'Existencia',
       'Disponible',
       'Comprometido',
@@ -209,6 +243,12 @@ function positionRows(
       position.identityStatus === 'current_master'
         ? 'Conciliado'
         : 'Sin conciliar',
+      position.commercialStatus,
+      position.supersededBy,
+      position.supersededByAvailable,
+      position.directSubstitute,
+      position.directSubstituteAvailable,
+      replacementStatusLabels[position.replacementStatus],
       position.onHand,
       position.available,
       position.committed,
@@ -219,6 +259,109 @@ function positionRows(
       position.inventoryValue,
       position.currency,
       position.sourceRows,
+    ]),
+  ]
+}
+
+interface SubstitutionProductRow {
+  productId: string | null
+  productName: string
+  productCode: string | null
+  model: string | null
+  brandId: string | null
+  commercialStatus: string | null
+  supersededBy: string | null
+  supersededByAvailable: number | null
+  directSubstitute: string | null
+  directSubstituteAvailable: number | null
+  replacementStatus: InventoryWorkspacePosition['replacementStatus']
+  positions: number
+  locations: Set<string>
+  onHand: number
+  available: number
+  inventoryValue: number
+}
+
+function substitutionRows(
+  positions: readonly InventoryWorkspacePosition[],
+): InventoryExportCell[][] {
+  const products = new Map<string, SubstitutionProductRow>()
+
+  for (const position of positions) {
+    if (!position.supersededBy && !position.directSubstitute) {
+      continue
+    }
+
+    const key = position.productId ?? position.productName
+    const current = products.get(key) ?? {
+      productId: position.productId,
+      productName: position.productName,
+      productCode: position.productCode,
+      model: position.model,
+      brandId: position.brandId,
+      commercialStatus: position.commercialStatus,
+      supersededBy: position.supersededBy,
+      supersededByAvailable: position.supersededByAvailable,
+      directSubstitute: position.directSubstitute,
+      directSubstituteAvailable: position.directSubstituteAvailable,
+      replacementStatus: position.replacementStatus,
+      positions: 0,
+      locations: new Set<string>(),
+      onHand: 0,
+      available: 0,
+      inventoryValue: 0,
+    }
+
+    current.positions += 1
+    current.locations.add(position.locationId)
+    current.onHand += position.onHand
+    current.available += position.available
+    current.inventoryValue += position.inventoryValue
+    products.set(key, current)
+  }
+
+  const rows = [...products.values()].sort(
+    (left, right) =>
+      right.inventoryValue - left.inventoryValue ||
+      left.productName.localeCompare(right.productName),
+  )
+
+  return [
+    [
+      'Producto ID',
+      'Producto',
+      'Código',
+      'Modelo',
+      'Marca',
+      'Categoría de valor',
+      'Superseded By',
+      'Disponible Superseded',
+      'Sustituto directo',
+      'Disponible sustituto directo',
+      'Estado de sustitución',
+      'Posiciones',
+      'Ubicaciones',
+      'Existencia',
+      'Disponible',
+      'Valor inventario',
+    ],
+    ...rows.map((product) => [
+      product.productId,
+      product.productName,
+      product.productCode,
+      product.model,
+      product.brandId,
+      product.commercialStatus,
+      product.supersededBy,
+      product.supersededByAvailable,
+      product.directSubstitute,
+      product.directSubstituteAvailable,
+      replacementStatusLabels[product.replacementStatus],
+      product.positions,
+      [...product.locations].sort().join(' / '),
+      product.onHand,
+      product.available,
+      product.inventoryValue,
     ]),
   ]
 }
@@ -315,8 +458,8 @@ function metadataRows(
     ['Campo', 'Valor'],
     ['Aplicación', 'PM Intelligence Workspace'],
     ['Módulo', 'Inventory Workspace'],
-    ['Entrega', 'IW-006'],
-    ['Esquema de exportación', '1.0'],
+    ['Entrega', 'IW-006.1'],
+    ['Esquema de exportación', '1.1'],
     ['Corte', analytics.snapshotDate ?? 'Sin fecha de corte'],
     ['Generado', generatedAt.toISOString()],
     ['Búsqueda', filters.search || 'Todas'],
@@ -332,6 +475,18 @@ function metadataRows(
       filters.priority === 'all'
         ? 'Todas'
         : priorityLabels[filters.priority],
+    ],
+    [
+      'Categoría de valor',
+      filters.commercialStatus === 'all'
+        ? 'Todas'
+        : filters.commercialStatus === 'unclassified'
+          ? 'Sin clasificación'
+          : filters.commercialStatus,
+    ],
+    [
+      'Estado de sustitución',
+      replacementFilterLabels[filters.replacement],
     ],
     ['Posiciones exportadas', positions.length],
     ['Riesgos exportados', risks.length],
@@ -364,7 +519,13 @@ export function buildInventoryExecutiveExport(
       {
         name: 'Posiciones',
         rows: positionRows(input.positions),
-        columnWidths: [14, 18, 34, 18, 24, 20, 22, 18, 14, 14, 16, 14, 14, 20, 16, 20, 12, 14],
+        columnWidths: [14, 18, 34, 18, 24, 20, 22, 18, 18, 28, 20, 28, 24, 28, 14, 14, 16, 14, 14, 20, 16, 20, 12, 14],
+        autoFilter: true,
+      },
+      {
+        name: 'Sustituciones',
+        rows: substitutionRows(input.positions),
+        columnWidths: [18, 34, 18, 24, 20, 18, 28, 20, 28, 24, 28, 14, 32, 14, 14, 20],
         autoFilter: true,
       },
       {
