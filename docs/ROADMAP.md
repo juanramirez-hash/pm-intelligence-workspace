@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.31.0
-Sprint: FW-003 — Forecast Intelligence, Coverage & Risk
+Versión: v0.32.0
+Sprint: FW-004 — Forecast Workspace Model & Executive Aggregation
 Estado: Completado
 ```
 
@@ -22,8 +22,8 @@ Estado: Completado
 | FW-001 | Data Foundation, contratos, fuentes, granularidades y readiness | Completado |
 | FW-002 | Forecast Engine y proyección base | Completado |
 | FW-003 | Forecast Intelligence, cobertura, riesgo y sustituciones por producto | Completado |
-| FW-004 | Workspace Model, comparación de escenarios y priorización ejecutiva | Siguiente |
-| FW-005 | Forecast Workspace UI | Planeado |
+| FW-004 | Workspace Model, comparación de escenarios y priorización ejecutiva | Completado |
+| FW-005 | Forecast Workspace UI | Siguiente |
 | FW-006 | Resumen ejecutivo, exportación y cierre | Planeado |
 
 FW-001 establece que Forecast es un dominio derivado del Business Repository. Utiliza ventas históricas como fuente obligatoria y objetivos, días laborales, inventario y Product Master como contextos enriquecedores. Purchasing permanece como fuente futura opcional y no bloqueante.
@@ -34,7 +34,9 @@ FW-002 Hotfix 1 corrige únicamente el contrato de prueba de `recentTrendRate`: 
 
 FW-003 conecta el baseline por producto con Inventory y Product Master. Calcula demanda restante, cobertura disponible y con entradas agregadas, riesgo de agotamiento, exceso, productos sin demanda proyectada y rutas de sustitución. No inventa fechas de llegada y mantiene Purchasing como fuente futura.
 
-FW-004 compondrá estos resultados en un modelo de Workspace, comparación ejecutiva de escenarios y priorización para la futura interfaz, sin duplicar las fórmulas del Core.
+FW-004 compone los resultados de FW-002 y FW-003 en `ForecastWorkspaceModel`. Incorpora comparación de escenarios, resumen ejecutivo, agregación por marca, filtros, rankings, explainability y contratos de navegación sin duplicar fórmulas del Core.
+
+FW-005 utilizará este modelo como única fuente para construir la interfaz visual completa de Forecast Workspace.
 
 ## Inventory Workspace — CERRADO
 

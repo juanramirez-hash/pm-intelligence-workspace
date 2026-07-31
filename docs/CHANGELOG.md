@@ -1,3 +1,16 @@
+# 0.32.0-FW-004
+
+- Nuevo `ForecastWorkspaceModel` como contrato único para la futura interfaz de Forecast Workspace.
+- Selector contractual de escenarios conservador, esperado y acelerado sin duplicar fórmulas del Business Core.
+- Resumen ejecutivo consolidado de venta, GP, cantidad, margen, objetivo, cumplimiento, brecha, ritmo laboral y confianza.
+- Agregación ejecutiva por marca con proyección, objetivo, cobertura, criticidad y navegación a Brand Workspace.
+- KPIs de inventario recalculados sobre filtros de marca, cobertura, prioridad, confianza y búsqueda.
+- Rankings separados de riesgo y oportunidad con navegación a Product Workspace y al sustituto resuelto.
+- Contratos explícitos de periodos, filtros, opciones, explainability, limitaciones y estados vacío/parcial/listo.
+- Nuevo hook `useForecastWorkspace()` conectado exclusivamente a `BusinessRepository` mediante Workspace Context.
+- Pruebas para composición, cambio de escenario, filtros, navegación y ausencia de Repository.
+- FW-004 no incorpora UI ni recalcula Forecast Baseline o Forecast Inventory Intelligence.
+
 # 0.31.0-FW-003
 
 - Nueva capa `forecast-inventory-v1` para cruzar demanda proyectada, inventario activo y Product Master por producto.
