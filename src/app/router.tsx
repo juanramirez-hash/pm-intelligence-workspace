@@ -118,6 +118,19 @@ const loadProductIdentityQuality = async () => {
   }
 }
 
+
+const loadInventoryWorkspace = async () => {
+  const module =
+    await import(
+      '../features/inventory-workspace/pages/InventoryWorkspacePage'
+    )
+
+  return {
+    Component:
+      module.InventoryWorkspacePage,
+  }
+}
+
 const loadDataCenter = async () => {
   const module =
     await import(
@@ -187,12 +200,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'inventory',
-        element: (
-          <PlaceholderPage
-            title="Inventory Workspace"
-            description="Rotación, cobertura, riesgo y oportunidades de inventario."
-          />
-        ),
+        lazy: loadInventoryWorkspace,
       },
       {
         path: 'purchasing',

@@ -31,6 +31,7 @@ export const INVENTORY_COLUMN_ALIASES: Record<
     'Product Name',
     'Item: Name',
     'Item Name',
+    'Item',
     'Nombre de producto',
   ],
   productCode: [
@@ -57,6 +58,7 @@ export const INVENTORY_COLUMN_ALIASES: Record<
   onHand: [
     'On Hand',
     'On Hand (Grouped)',
+    'En Mano',
     'Existencia',
     'Existencias',
     'Stock',
@@ -66,6 +68,7 @@ export const INVENTORY_COLUMN_ALIASES: Record<
   available: [
     'Available',
     'Available Quantity',
+    'Cantidad Actual Disponible',
     'Disponible',
     'Existencia disponible',
     'Stock disponible',
@@ -73,17 +76,21 @@ export const INVENTORY_COLUMN_ALIASES: Record<
   committed: [
     'Committed',
     'Committed Quantity',
+    'Cantidad Comprometida',
     'Comprometido',
     'Reservado',
   ],
   inTransit: [
     'In Transit',
     'In-Transit',
+    'Cantidad Actual en Tránsito',
+    'Cantidad Actual en Transito',
     'En transito',
     'En tránsito',
   ],
   onOrder: [
     'On Order',
+    'Cantidad Actual en Orden',
     'Cantidad en orden',
     'En orden',
     'Ordenado',

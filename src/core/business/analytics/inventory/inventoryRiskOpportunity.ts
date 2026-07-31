@@ -456,8 +456,8 @@ export function buildInventoryRiskOpportunityReport(
         totalValue,
         'no_available_stock',
         68,
-        'Existencia sin disponibilidad',
-        'Hay inventario físico, pero no existen unidades disponibles para venta.',
+        'Existencia física sin disponibilidad',
+        'La sucursal tiene unidades en mano, pero el ERP reporta cero unidades disponibles para una nueva venta. Normalmente están comprometidas, reservadas o bloqueadas.',
       )
     }
 

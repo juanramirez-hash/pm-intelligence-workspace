@@ -47,11 +47,34 @@ export class InventoryQueries {
     return this.indexes.latestSnapshotDate
   }
 
+  /**
+   * Returns the positions that represent the active inventory cut.
+   *
+   * Some NetSuite inventory exports do not contain a snapshot date. Those
+   * rows are intentionally materialized with snapshotDate = null and indexed
+   * under the internal NO_DATE key. They still represent a valid current cut
+   * and must remain available to Inventory Workspace.
+   */
+  getLatestPositions(): BusinessInventoryPosition[] {
+    const date = this.getLatestSnapshotDate()
+
+    if (date) {
+      return this.findBySnapshot(date)
+    }
+
+    return this.getAll().filter(
+      (position) => position.snapshotDate === null,
+    )
+  }
+
   getLatestSnapshot(): BusinessInventorySnapshot | undefined {
     const date = this.getLatestSnapshotDate()
-    return date
-      ? this.model.inventorySnapshots?.get(date)
-      : undefined
+
+    if (date) {
+      return this.model.inventorySnapshots?.get(date)
+    }
+
+    return this.model.inventorySnapshots?.get('NO_DATE')
   }
 
   findByProduct(productIdOrName: string): BusinessInventoryPosition[] {
@@ -61,9 +84,18 @@ export class InventoryQueries {
   }
 
   findLatestByProduct(productIdOrName: string): BusinessInventoryPosition[] {
-    return [
-      ...(this.indexes.latestByProduct.get(normalize(productIdOrName)) ?? []),
-    ]
+    const normalizedIdentity = normalize(productIdOrName)
+    const indexed = this.indexes.latestByProduct.get(normalizedIdentity)
+
+    if (indexed) {
+      return [...indexed]
+    }
+
+    return this.getLatestPositions().filter(
+      (position) =>
+        normalize(position.productId ?? position.productName) ===
+          normalizedIdentity,
+    )
   }
 
   findByLocation(locationId: string): BusinessInventoryPosition[] {

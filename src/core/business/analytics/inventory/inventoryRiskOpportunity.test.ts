@@ -81,6 +81,30 @@ describe('IW-004 Inventory Risk & Opportunity Engine', () => {
     expect(transfer?.evidence.suggestedUnits).toBe(4)
   })
 
+  it('explica una existencia física sin disponibilidad', () => {
+    const report = buildInventoryRiskOpportunityReport(
+      [
+        position({
+          onHand: 10,
+          available: 0,
+          committed: 10,
+        }),
+      ],
+      '2026-07-30',
+    )
+
+    const risk = report.risks.find(
+      (signal) => signal.type === 'no_available_stock',
+    )
+
+    expect(risk?.title).toBe('Existencia física sin disponibilidad')
+    expect(risk?.rationale).toContain(
+      'cero unidades disponibles para una nueva venta',
+    )
+    expect(risk?.evidence.onHand).toBe(10)
+    expect(risk?.evidence.committed).toBe(10)
+  })
+
   it('distingue compra requerida de entrada pendiente', () => {
     const report = buildInventoryRiskOpportunityReport(
       [

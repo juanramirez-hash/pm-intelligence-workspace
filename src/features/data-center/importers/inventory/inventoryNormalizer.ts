@@ -4,7 +4,10 @@ import type {
   NormalizedInventoryRow,
   RawInventoryRow,
 } from './inventoryTypes'
-import type { InventoryValidationResult } from './inventoryValidator'
+import type {
+  InventoryValidationResult,
+  WideInventoryLocationColumnMap,
+} from './inventoryValidator'
 
 function getValue(
   row: RawInventoryRow,
@@ -12,6 +15,15 @@ function getValue(
   field: InventoryField,
 ): unknown {
   const column = validation.columnMap[field]
+  return column ? row[column] : null
+}
+
+function getWideValue(
+  row: RawInventoryRow,
+  columns: WideInventoryLocationColumnMap,
+  field: keyof WideInventoryLocationColumnMap,
+): unknown {
+  const column = columns[field]
   return column ? row[column] : null
 }
 
@@ -69,7 +81,9 @@ function dateValue(value: unknown): string | null {
     return null
   }
 
-  const directMatch = normalized.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
+  const directMatch = normalized.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/,
+  )
   if (directMatch) {
     const [, year, month, day] = directMatch
     return `${year}-${month?.padStart(2, '0')}-${day?.padStart(2, '0')}`
@@ -81,7 +95,7 @@ function dateValue(value: unknown): string | null {
     : date.toISOString().slice(0, 10)
 }
 
-export function normalizeInventoryRows(
+function normalizeLongInventoryRows(
   rows: RawInventoryRow[],
   validation: InventoryValidationResult,
 ): NormalizationResult<NormalizedInventoryRow> {
@@ -141,4 +155,104 @@ export function normalizeInventoryRows(
   }
 
   return { rows: normalizedRows, ignoredRows }
+}
+
+function normalizeWideInventoryRows(
+  rows: RawInventoryRow[],
+  validation: InventoryValidationResult,
+): NormalizationResult<NormalizedInventoryRow> {
+  const normalizedRows: NormalizedInventoryRow[] = []
+  let ignoredRows = 0
+
+  for (const row of rows) {
+    const productName = identifier(
+      getValue(row, validation, 'productName'),
+    )
+
+    if (!productName) {
+      ignoredRows += 1
+      continue
+    }
+
+    let generatedPositions = 0
+
+    for (const [location, columns] of Object.entries(
+      validation.wideLocationColumns,
+    )) {
+      const onHand = numberValue(
+        getWideValue(row, columns, 'onHand'),
+      )
+      const available = numberValue(
+        getWideValue(row, columns, 'available'),
+      )
+      const committed = numberValue(
+        getWideValue(row, columns, 'committed'),
+      )
+      const inTransit = numberValue(
+        getWideValue(row, columns, 'inTransit'),
+      )
+      const onOrder = numberValue(
+        getWideValue(row, columns, 'onOrder'),
+      )
+      const unitCost = numberValue(
+        getWideValue(row, columns, 'unitCost'),
+      )
+
+      const hasOperationalData = [
+        onHand,
+        available,
+        committed,
+        inTransit,
+        onOrder,
+      ].some((value) => value !== null)
+
+      if (!hasOperationalData) {
+        continue
+      }
+
+      const normalizedOnHand = onHand ?? 0
+
+      normalizedRows.push({
+        snapshotDate: dateValue(
+          getValue(row, validation, 'snapshotDate'),
+        ),
+        productName,
+        productCode: identifier(
+          getValue(row, validation, 'productCode'),
+        ),
+        brand: text(getValue(row, validation, 'brand')),
+        model: text(getValue(row, validation, 'model')),
+        location,
+        onHand: normalizedOnHand,
+        available,
+        committed,
+        inTransit,
+        onOrder,
+        unitCost,
+        inventoryValue:
+          unitCost !== null
+            ? normalizedOnHand * unitCost
+            : null,
+        currency: identifier(
+          getValue(row, validation, 'currency'),
+        ),
+      })
+      generatedPositions += 1
+    }
+
+    if (generatedPositions === 0) {
+      ignoredRows += 1
+    }
+  }
+
+  return { rows: normalizedRows, ignoredRows }
+}
+
+export function normalizeInventoryRows(
+  rows: RawInventoryRow[],
+  validation: InventoryValidationResult,
+): NormalizationResult<NormalizedInventoryRow> {
+  return validation.sourceLayout === 'wide_by_location'
+    ? normalizeWideInventoryRows(rows, validation)
+    : normalizeLongInventoryRows(rows, validation)
 }

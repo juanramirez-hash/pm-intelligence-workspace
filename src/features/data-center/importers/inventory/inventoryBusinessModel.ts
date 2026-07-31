@@ -12,6 +12,10 @@ function finite(value: number | null): number {
   return value !== null && Number.isFinite(value) ? value : 0
 }
 
+function roundCurrency(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
 function normalize(value: string | null | undefined): string {
   return (value ?? '')
     .trim()
@@ -78,7 +82,7 @@ export function buildInventoryBusinessModel(
       totalCommitted,
       totalInTransit,
       totalOnOrder,
-      totalInventoryValue,
+      totalInventoryValue: roundCurrency(totalInventoryValue),
       negativeStockRows,
       duplicatePositions: [...positionCounts.values()].filter(
         (count) => count > 1,

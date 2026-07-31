@@ -8,6 +8,7 @@ import {
   REQUIRED_INVENTORY_FIELDS,
 } from './inventorySchema'
 import {
+  normalizeInventoryHeader,
   validateInventoryHeaders,
   type InventoryValidationResult,
 } from './inventoryValidator'
@@ -24,23 +25,65 @@ import type {
 const INVENTORY_REPORT_TYPE = 'inventory' as const
 
 function extractHeaders(rows: SpreadsheetRow[]): string[] {
-  const headers = new Set<string>()
+  /*
+   * Preserve the exact spreadsheet key used by each row.
+   *
+   * Wide NetSuite inventory exports can contain leading spaces, repeated
+   * spaces, or NBSP characters in physical column names. Trimming here
+   * makes validation succeed but breaks the later `row[column]` lookup.
+   * Normalization is used only to deduplicate equivalent headers.
+   */
+  const headersByNormalizedValue = new Map<string, string>()
 
   for (const row of rows) {
-    Object.keys(row).forEach((header) => {
-      const cleanHeader = header.trim()
-      if (cleanHeader) {
-        headers.add(cleanHeader)
+    for (const header of Object.keys(row)) {
+      const normalizedHeader = normalizeInventoryHeader(header)
+
+      if (
+        normalizedHeader &&
+        !headersByNormalizedValue.has(normalizedHeader)
+      ) {
+        headersByNormalizedValue.set(
+          normalizedHeader,
+          header,
+        )
       }
-    })
+    }
   }
 
-  return [...headers]
+  return [...headersByNormalizedValue.values()]
+}
+
+function matchedFields(
+  validation: InventoryValidationResult,
+  fields: readonly (keyof InventoryValidationResult['columnMap'])[],
+): string[] {
+  if (
+    validation.valid &&
+    validation.sourceLayout === 'wide_by_location'
+  ) {
+    return fields.map(String)
+  }
+
+  return fields
+    .filter((field) => Boolean(validation.columnMap[field]))
+    .map(String)
 }
 
 function calculateConfidence(
   validation: InventoryValidationResult,
 ): number {
+  if (
+    validation.valid &&
+    validation.sourceLayout === 'wide_by_location'
+  ) {
+    const locations = Object.keys(
+      validation.wideLocationColumns,
+    ).length
+
+    return Math.min(99, 90 + locations)
+  }
+
   const required = REQUIRED_INVENTORY_FIELDS.filter(
     (field) => Boolean(validation.columnMap[field]),
   ).length
@@ -96,15 +139,18 @@ export const inventoryImportPlugin: ImportPlugin<
       reportType: INVENTORY_REPORT_TYPE,
       valid: validation.valid,
       confidence: calculateConfidence(validation),
-      matchedRequiredFields: REQUIRED_INVENTORY_FIELDS.filter(
-        (field) => Boolean(validation.columnMap[field]),
+      matchedRequiredFields: matchedFields(
+        validation,
+        REQUIRED_INVENTORY_FIELDS,
       ),
       missingRequiredFields: validation.missingRequiredFields,
-      matchedRecommendedFields: RECOMMENDED_INVENTORY_FIELDS.filter(
-        (field) => Boolean(validation.columnMap[field]),
+      matchedRecommendedFields: matchedFields(
+        validation,
+        RECOMMENDED_INVENTORY_FIELDS,
       ),
-      matchedOptionalFields: OPTIONAL_INVENTORY_FIELDS.filter(
-        (field) => Boolean(validation.columnMap[field]),
+      matchedOptionalFields: matchedFields(
+        validation,
+        OPTIONAL_INVENTORY_FIELDS,
       ),
     }
   },
