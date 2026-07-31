@@ -5,14 +5,17 @@ import type {
 import {
   buildForecastDataFoundation,
   buildForecastSeries,
+  ForecastBaselineEngine,
 } from '../forecast'
 
 import type {
+  ForecastBaselineProjection,
   ForecastCapabilityId,
   ForecastCapabilityProfile,
   ForecastDataFoundation,
   ForecastGranularity,
   ForecastGranularityProfile,
+  ForecastProjectionGranularity,
   ForecastQualityIssue,
   ForecastSourceId,
   ForecastSeries,
@@ -61,6 +64,46 @@ function cloneSeries(
   }
 }
 
+function cloneProjection(
+  projection: ForecastBaselineProjection,
+): ForecastBaselineProjection {
+  return {
+    ...projection,
+    metrics: [...projection.metrics],
+    actual: { ...projection.actual },
+    timing: { ...projection.timing },
+    historical: {
+      ...projection.historical,
+      periodIds: [...projection.historical.periodIds],
+      lookbackPeriodIds: [...projection.historical.lookbackPeriodIds],
+      average: projection.historical.average
+        ? { ...projection.historical.average }
+        : null,
+      seasonalReference: projection.historical.seasonalReference
+        ? { ...projection.historical.seasonalReference }
+        : null,
+    },
+    methods: projection.methods.map((method) => ({
+      ...method,
+      values: method.values
+        ? { ...method.values }
+        : null,
+    })),
+    expected: { ...projection.expected },
+    scenarios: projection.scenarios.map((scenario) => ({
+      ...scenario,
+      values: { ...scenario.values },
+    })),
+    target: { ...projection.target },
+    confidence: {
+      ...projection.confidence,
+      signals: [...projection.confidence.signals],
+      limitations: [...projection.confidence.limitations],
+    },
+    explainability: [...projection.explainability],
+  }
+}
+
 function cloneFoundation(
   report: ForecastDataFoundation,
 ): ForecastDataFoundation {
@@ -91,6 +134,11 @@ export class ForecastDataQueries {
   private readonly seriesByGranularity:
     Map<ForecastGranularity, ForecastSeries[]>
 
+  private readonly baselineEngine: ForecastBaselineEngine
+
+  private readonly projectionCache:
+    Map<string, ForecastBaselineProjection>
+
   constructor(
     model: BusinessDataModel,
   ) {
@@ -106,6 +154,31 @@ export class ForecastDataQueries {
         buildForecastSeries(model, granularity),
       ]),
     )
+    this.baselineEngine = new ForecastBaselineEngine(
+      model,
+      this.foundation,
+    )
+    this.projectionCache = new Map()
+  }
+
+  private projectSeries(
+    series: ForecastSeries,
+  ): ForecastBaselineProjection | undefined {
+    const cached = this.projectionCache.get(series.id)
+
+    if (cached) {
+      return cloneProjection(cached)
+    }
+
+    const projection = this.baselineEngine.project(series)
+
+    if (!projection) {
+      return undefined
+    }
+
+    this.projectionCache.set(series.id, projection)
+
+    return cloneProjection(projection)
   }
 
   getFoundation(): ForecastDataFoundation {
@@ -181,6 +254,39 @@ export class ForecastDataQueries {
 
     return series
       ? cloneSeries(series)
+      : undefined
+  }
+
+  getPortfolioBaselineProjection():
+    ForecastBaselineProjection | undefined {
+    const series = this.seriesByGranularity
+      .get('portfolio')?.[0]
+
+    return series
+      ? this.projectSeries(series)
+      : undefined
+  }
+
+  getBaselineProjections(
+    granularity: Exclude<ForecastProjectionGranularity, 'portfolio'>,
+  ): ForecastBaselineProjection[] {
+    return (
+      this.seriesByGranularity.get(granularity) ?? []
+    ).map((series) => this.projectSeries(series))
+      .filter(
+        (projection): projection is ForecastBaselineProjection =>
+          projection !== undefined,
+      )
+  }
+
+  findBaselineProjection(
+    granularity: Exclude<ForecastProjectionGranularity, 'portfolio'>,
+    entityId: string,
+  ): ForecastBaselineProjection | undefined {
+    const series = this.findSeries(granularity, entityId)
+
+    return series
+      ? this.projectSeries(series)
       : undefined
   }
 

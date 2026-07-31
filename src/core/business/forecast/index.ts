@@ -7,6 +7,15 @@ export {
 } from './buildForecastSeries'
 
 export {
+  ForecastBaselineEngine,
+} from './forecastBaselineEngine'
+
+export {
+  countWeekdaysThroughDate,
+  previousYearPeriodId,
+} from './forecastCalendar'
+
+export {
   FORECAST_METRICS,
   FORECAST_SCENARIOS,
 } from './forecastContracts'
@@ -33,3 +42,20 @@ export type {
   ForecastSourceRole,
   ForecastSourceStatus,
 } from './forecastContracts'
+
+export type {
+  ForecastBaselineProjection,
+  ForecastConfidenceLevel,
+  ForecastConfidenceProfile,
+  ForecastHistoricalBaseline,
+  ForecastMethodId,
+  ForecastMethodProjection,
+  ForecastMetricValues,
+  ForecastPeriodStatus,
+  ForecastProjectionGranularity,
+  ForecastProjectionStatus,
+  ForecastScenarioProjection,
+  ForecastTargetContext,
+  ForecastTargetStatus,
+  ForecastTimingProfile,
+} from './forecastProjectionContracts'

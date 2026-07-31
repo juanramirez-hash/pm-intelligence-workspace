@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.29.0
-Sprint: FW-001 — Forecast Data Foundation & Contract Definition
+Versión: v0.30.1
+Sprint: FW-002 — Forecast Engine & Baseline Projection
 Estado: Completado
 ```
 
@@ -20,15 +20,19 @@ Estado: Completado
 | Entrega | Alcance | Estado |
 |---|---|---|
 | FW-001 | Data Foundation, contratos, fuentes, granularidades y readiness | Completado |
-| FW-002 | Forecast Engine y proyección base | Siguiente |
-| FW-003 | Forecast por marca y producto | Planeado |
+| FW-002 | Forecast Engine y proyección base | Completado |
+| FW-003 | Forecast por marca y producto | Siguiente |
 | FW-004 | Escenarios, cobertura y riesgo de inventario | Planeado |
 | FW-005 | Forecast Workspace UI | Planeado |
 | FW-006 | Resumen ejecutivo, exportación y cierre | Planeado |
 
 FW-001 establece que Forecast es un dominio derivado del Business Repository. Utiliza ventas históricas como fuente obligatoria y objetivos, días laborales, inventario y Product Master como contextos enriquecedores. Purchasing permanece como fuente futura opcional y no bloqueante.
 
-FW-001 no calcula todavía proyecciones. Materializa series mensuales oficiales y define los contratos para los escenarios conservador, esperado y acelerado que implementará FW-002.
+FW-002 implementa el baseline determinista para portafolio, marca y producto. Combina ritmo del periodo, promedio histórico, tendencia reciente y referencia estacional cuando cada componente está disponible. También activa los escenarios conservador, esperado y acelerado con confianza y explicabilidad.
+
+FW-002 Hotfix 1 corrige únicamente el contrato de prueba de `recentTrendRate`: la tasa se expresa contra el último periodo cerrado. No modifica el algoritmo productivo ni sus resultados de proyección.
+
+FW-003 consumirá estos resultados para construir análisis comparativos y priorización específica por marca y producto, sin duplicar las fórmulas del Engine.
 
 ## Inventory Workspace — CERRADO
 

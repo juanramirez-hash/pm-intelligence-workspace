@@ -8,6 +8,10 @@ import type {
   BusinessBrandPeriod,
 } from '../../business/entities/brandPeriod'
 
+import {
+  countWeekdaysThroughDate,
+} from '../../business/forecast'
+
 import type {
   BusinessRepository,
 } from '../../business/repository'
@@ -43,28 +47,6 @@ import type {
 } from './brandDecisionTypes'
 
 const MAX_PRIORITY_SCORE = 100
-
-function countWeekdaysThroughDate(
-  periodId: string,
-  dataPeriodEnd: string | null,
-  workingDays: number | null,
-): number | undefined {
-  if (workingDays === null || !dataPeriodEnd) return undefined
-  const match = /^(\d{4})-(\d{2})$/.exec(periodId)
-  if (!match) return undefined
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const end = new Date(`${dataPeriodEnd}T00:00:00Z`)
-  if (end.getUTCFullYear() !== year || end.getUTCMonth() + 1 !== month) {
-    return workingDays
-  }
-  let count = 0
-  for (let day = 1; day <= end.getUTCDate(); day += 1) {
-    const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
-    if (weekday !== 0 && weekday !== 6) count += 1
-  }
-  return Math.min(workingDays, count)
-}
 
 function roundScore(
   value: number,

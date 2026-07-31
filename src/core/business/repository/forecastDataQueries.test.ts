@@ -83,3 +83,55 @@ describe('FW-001 ForecastDataQueries', () => {
     ).toBe(100)
   })
 })
+
+describe('FW-002 Forecast baseline queries', () => {
+  it('expone proyecciones de portafolio, marca y producto con aislamiento', () => {
+    const model = buildBusinessDataModel(
+      [
+        {
+          ...row('2026-01-30'),
+          revenue: 100,
+          grossProfit: 25,
+        },
+        {
+          ...row('2026-02-27'),
+          revenue: 120,
+          grossProfit: 30,
+        },
+        {
+          ...row('2026-03-13'),
+          revenue: 100,
+          grossProfit: 25,
+        },
+      ],
+      {
+        brandTargets: [
+          {
+            brandId: 'UNV',
+            periodId: '2026-03',
+            targetRevenue: 300,
+            workingDays: 22,
+          },
+        ],
+      },
+    )
+    const queries = new ForecastDataQueries(model)
+
+    const portfolio = queries.getPortfolioBaselineProjection()
+    const brand = queries.findBaselineProjection('brand', 'unv')
+    const products = queries.getBaselineProjections('product')
+
+    expect(portfolio?.methodologyVersion).toBe('baseline-v1')
+    expect(brand?.entityId).toBe('UNV')
+    expect(products).toHaveLength(1)
+
+    if (brand) {
+      brand.confidence.signals.push('Mutación externa')
+    }
+
+    expect(
+      queries.findBaselineProjection('brand', 'UNV')
+        ?.confidence.signals,
+    ).not.toContain('Mutación externa')
+  })
+})

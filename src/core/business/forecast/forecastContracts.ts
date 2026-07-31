@@ -119,7 +119,7 @@ export interface ForecastScenarioDefinition {
   id: ForecastScenarioId
   label: string
   purpose: string
-  status: 'contract-only'
+  status: 'contract-only' | 'active'
 }
 
 export interface ForecastQualityIssue {
@@ -166,18 +166,18 @@ export const FORECAST_SCENARIOS: readonly ForecastScenarioDefinition[] = [
     id: 'conservative',
     label: 'Conservador',
     purpose: 'Representar un cierre inferior al escenario esperado sin alterar los hechos base.',
-    status: 'contract-only',
+    status: 'active',
   },
   {
     id: 'expected',
     label: 'Esperado',
-    purpose: 'Representar la proyección central que calculará el Forecast Engine.',
-    status: 'contract-only',
+    purpose: 'Representar la proyección central calculada por Forecast Baseline Engine.',
+    status: 'active',
   },
   {
     id: 'accelerated',
     label: 'Acelerado',
     purpose: 'Representar un cierre superior al escenario esperado bajo condiciones favorables.',
-    status: 'contract-only',
+    status: 'active',
   },
 ]

@@ -53,3 +53,32 @@ describe('FW-001 BusinessRepository integration', () => {
     ])
   })
 })
+
+describe('FW-002 BusinessRepository Forecast Engine integration', () => {
+  it('publica el baseline desde repository.forecast', () => {
+    const repository = new BusinessRepository(
+      buildBusinessDataModel(
+        rows,
+        {
+          brandTargets: [
+            {
+              brandId: 'UNV',
+              periodId: '2026-03',
+              targetRevenue: 500,
+              workingDays: 22,
+            },
+          ],
+        },
+      ),
+    )
+
+    expect(
+      repository.forecast.getPortfolioBaselineProjection()
+        ?.methodologyVersion,
+    ).toBe('baseline-v1')
+    expect(
+      repository.forecast.findBaselineProjection('brand', 'UNV')
+        ?.granularity,
+    ).toBe('brand')
+  })
+})

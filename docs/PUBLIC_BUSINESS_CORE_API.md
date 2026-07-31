@@ -20,6 +20,7 @@ Los siguientes módulos forman la API pública del Core:
 - `builders`
 - `cube`
 - `formatting`
+- `forecast`
 - `health`
 - `metrics`
 - `models`
@@ -27,6 +28,21 @@ Los siguientes módulos forman la API pública del Core:
 - `repository`
 - `snapshots`
 - `targets`
+
+## Forecast API
+
+`BusinessRepository` expone el baseline oficial mediante:
+
+```ts
+repository.forecast.getFoundation()
+repository.forecast.getPortfolioBaselineProjection()
+repository.forecast.getBaselineProjections('brand')
+repository.forecast.getBaselineProjections('product')
+repository.forecast.findBaselineProjection('brand', brandId)
+repository.forecast.findBaselineProjection('product', productId)
+```
+
+Los resultados se devuelven clonados. Ningún Workspace debe modificar escenarios, pesos, confianza o métodos dentro del Core.
 
 ## Regla de consumo
 

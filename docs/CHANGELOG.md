@@ -1,3 +1,23 @@
+# 0.30.1-FW-002-HOTFIX1
+
+- Corrige la expectativa de prueba de `recentTrendRate`: la variación se mide contra el último periodo cerrado, no contra el promedio histórico.
+- Para una venta reciente de 120 y una tendencia proyectada de 140, la tasa correcta es `0.1667` (16.67%).
+- Añade una prueba directa al contrato matemático para evitar que el denominador cambie accidentalmente.
+- No modifica el Forecast Baseline Engine productivo, sus pesos, escenarios ni la proyección esperada de `176.13` del caso de referencia.
+
+# 0.30.0-FW-002
+
+- Forecast Baseline Engine determinista para portafolio, marca y producto.
+- Métodos `run-rate`, promedio histórico, tendencia lineal reciente y referencia estacional con pesos redistribuidos según disponibilidad.
+- Proyección simultánea de venta, GP y cantidad, con margen derivado.
+- Escenarios conservador, esperado y acelerado activados mediante banda de incertidumbre basada en confianza y volatilidad.
+- Contexto contra objetivo: cumplimiento esperado, brecha y venta diaria requerida.
+- Confianza explicable por historia, continuidad, ritmo laboral, avance, estacionalidad y estabilidad.
+- Los meses sin actividad de una entidad se incorporan como cero dentro de periodos históricos disponibles.
+- API pública en `repository.forecast` para baseline de portafolio, marca y producto.
+- Conteo de días laborables centralizado y reutilizado por Brand Decision Engine.
+- Pruebas deterministas de calendario, matemáticas, Engine, escenarios, consultas, aislamiento e integración.
+
 # 0.29.0-FW-001
 
 - Forecast se incorpora como dominio de primera clase del Business Core mediante `repository.forecast`.

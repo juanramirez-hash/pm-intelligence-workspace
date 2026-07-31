@@ -267,7 +267,7 @@ function buildSources(
         },
         notes: [
           'Fuente obligatoria para todos los Forecast Workspaces.',
-          'FW-001 no calcula todavía ninguna proyección.',
+          'Forecast Baseline Engine consume estos hechos sin modificar las ventas históricas.',
         ],
       },
       {
@@ -307,7 +307,7 @@ function buildSources(
           currentWorkingDaysCoverage: workingDaysCoverage,
         },
         notes: [
-          'El calendario laboral se conserva como dato declarado; FW-001 no inventa días faltantes.',
+          'El calendario laboral se conserva como dato declarado; Forecast no inventa días faltantes.',
         ],
       },
       {
@@ -429,7 +429,7 @@ function buildGranularities(
         : 'unavailable',
       entityCount: model.customers.size,
       observationCount: model.customerPeriods.size,
-      summary: 'Contrato reservado para una etapa posterior; no es la granularidad primaria de FW-001.',
+      summary: 'Contrato reservado para una etapa posterior; no es granularidad primaria del baseline actual.',
     },
   ]
 }
@@ -741,7 +741,7 @@ export function buildForecastDataFoundation(
       inventoryIdentityCoverage,
     },
     constraints: [
-      'FW-001 define contratos y disponibilidad; no calcula proyecciones.',
+      'FW-002 calcula un baseline determinista; no incorpora todavía cobertura de inventario ni Purchasing detallado.',
       'El forecast oficial se derivará de BusinessDataModel y BusinessRepository, no de una calculadora aislada.',
       'Un forecast manual futuro será un escenario u override explícito y nunca reemplazará los hechos base.',
       'Purchasing es una fuente opcional futura y no bloquea Forecast, Pricing Laboratory ni Executive Workspace.',
