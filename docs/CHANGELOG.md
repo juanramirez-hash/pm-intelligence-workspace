@@ -1,3 +1,15 @@
+# 0.29.0-FW-001
+
+- Forecast se incorpora como dominio de primera clase del Business Core mediante `repository.forecast`.
+- Nueva fundación determinística que declara historia disponible, periodo actual, corte de datos, continuidad mensual y baseline histórico.
+- Contratos oficiales para granularidades de portafolio, marca, producto y cliente.
+- Series mensuales normalizadas de venta, GP, cantidad y documentos, sin calcular todavía proyecciones.
+- Registro explícito de fuentes: ventas, objetivos, días laborales, inventario, Product Master y Purchasing futuro.
+- Readiness por capacidad para forecast consolidado, marca, demanda de producto, ritmo contra objetivo, cobertura de inventario y sustituciones.
+- Escenarios conservador, esperado y acelerado definidos como contratos, sin multiplicadores ni resultados inventados.
+- Purchasing queda marcado como fuente futura opcional y no bloqueante.
+- Pruebas para foundation, series, queries, aislamiento de colecciones e integración con BusinessRepository.
+
 # 0.28.3-PW-006.1.1
 
 - La ruta de sustitución de catálogo se integra dentro del Executive Hero de Product Workspace.

@@ -3,10 +3,32 @@
 ## Estado actual
 
 ```text
-Versión: v0.28.3
-Sprint: PW-006.1.1 — Product Replacement Hero Placement
+Versión: v0.29.0
+Sprint: FW-001 — Forecast Data Foundation & Contract Definition
 Estado: Completado
 ```
+
+## Orden estratégico de ejecución
+
+1. Forecast Workspace.
+2. Pricing Laboratory Workspace.
+3. Executive Workspace preparado para Purchasing.
+4. Purchasing Visibility Workspace como módulo consultivo final.
+
+## Forecast Workspace
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| FW-001 | Data Foundation, contratos, fuentes, granularidades y readiness | Completado |
+| FW-002 | Forecast Engine y proyección base | Siguiente |
+| FW-003 | Forecast por marca y producto | Planeado |
+| FW-004 | Escenarios, cobertura y riesgo de inventario | Planeado |
+| FW-005 | Forecast Workspace UI | Planeado |
+| FW-006 | Resumen ejecutivo, exportación y cierre | Planeado |
+
+FW-001 establece que Forecast es un dominio derivado del Business Repository. Utiliza ventas históricas como fuente obligatoria y objetivos, días laborales, inventario y Product Master como contextos enriquecedores. Purchasing permanece como fuente futura opcional y no bloqueante.
+
+FW-001 no calcula todavía proyecciones. Materializa series mensuales oficiales y define los contratos para los escenarios conservador, esperado y acelerado que implementará FW-002.
 
 ## Inventory Workspace — CERRADO
 

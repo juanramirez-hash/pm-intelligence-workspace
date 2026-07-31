@@ -80,3 +80,4 @@ export { InventoryAnalyticsQueries } from './inventoryAnalyticsQueries'
 export {
   InventoryRiskOpportunityQueries,
 } from './inventoryRiskOpportunityQueries'
+export { ForecastDataQueries } from './forecastDataQueries'

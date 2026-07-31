@@ -58,6 +58,10 @@ import {
   InventoryRiskOpportunityQueries,
 } from './inventoryRiskOpportunityQueries'
 
+import {
+  ForecastDataQueries,
+} from './forecastDataQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -95,6 +99,9 @@ export class BusinessRepository {
 
   readonly inventoryRiskOpportunity:
     InventoryRiskOpportunityQueries
+
+  readonly forecast:
+    ForecastDataQueries
 
   constructor(
     model: BusinessDataModel,
@@ -150,6 +157,9 @@ export class BusinessRepository {
 
     this.inventoryRiskOpportunity =
       new InventoryRiskOpportunityQueries(model)
+
+    this.forecast =
+      new ForecastDataQueries(model)
   }
 
   getCustomers():
