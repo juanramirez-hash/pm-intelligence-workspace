@@ -119,6 +119,18 @@ const loadProductIdentityQuality = async () => {
 }
 
 
+const loadForecastWorkspace = async () => {
+  const module =
+    await import(
+      '../features/forecast-workspace/pages/ForecastWorkspacePage'
+    )
+
+  return {
+    Component:
+      module.ForecastWorkspacePage,
+  }
+}
+
 const loadInventoryWorkspace = async () => {
   const module =
     await import(
@@ -191,12 +203,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'forecast',
-        element: (
-          <PlaceholderPage
-            title="Forecast Workspace"
-            description="Proyección de venta y cumplimiento de objetivos."
-          />
-        ),
+        lazy: loadForecastWorkspace,
       },
       {
         path: 'inventory',

@@ -1,3 +1,17 @@
+# 0.33.0-FW-005
+
+- Sustituye el placeholder de `/forecast` por Forecast Workspace conectado a `ForecastWorkspaceModel`.
+- Executive Hero con cierre proyectado, cumplimiento, brecha, margen y score de confianza.
+- Selector interactivo de escenarios conservador, esperado y acelerado sin modificar los datos base.
+- KPIs de venta, GP, demanda, disponibilidad y productos criticos.
+- Filtros por busqueda, marca, cobertura, prioridad y confianza.
+- Mapa visual de cobertura y balance entre demanda restante, disponibilidad y entradas agregadas.
+- Tabla ejecutiva por marca con objetivo, cumplimiento, confianza, cobertura y riesgo.
+- Rankings navegables de riesgo y oportunidad con acceso a Brand Workspace, Product Workspace y sustitutos.
+- Paneles de explainability, limitaciones y estados sin datos.
+- Diseno responsive, impresion/PDF y pruebas de componentes visuales.
+- FW-005 consume exclusivamente FW-004; no duplica formulas de Forecast ni inventa fechas de Purchasing.
+
 # 0.32.0-FW-004
 
 - Nuevo `ForecastWorkspaceModel` como contrato único para la futura interfaz de Forecast Workspace.

@@ -7,6 +7,10 @@ export {
 } from './hooks/useForecastWorkspace'
 
 export {
+  ForecastWorkspacePage,
+} from './pages/ForecastWorkspacePage'
+
+export {
   DEFAULT_FORECAST_WORKSPACE_FILTERS,
   DEFAULT_FORECAST_WORKSPACE_REQUEST,
 } from './types/forecastWorkspaceTypes'
@@ -29,3 +33,6 @@ export type {
   ForecastWorkspaceScenarioOption,
   ForecastWorkspaceStatus,
 } from './types/forecastWorkspaceTypes'
+
+export * from './components'
+export * from './utils/forecastWorkspaceFormatters'
