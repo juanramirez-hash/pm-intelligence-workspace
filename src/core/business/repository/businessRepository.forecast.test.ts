@@ -82,3 +82,33 @@ describe('FW-002 BusinessRepository Forecast Engine integration', () => {
     ).toBe('brand')
   })
 })
+
+
+describe('FW-003 BusinessRepository Forecast Inventory integration', () => {
+  it('publica inteligencia de cobertura sin inventar stock cuando falta la fuente', () => {
+    const repository = new BusinessRepository(
+      buildBusinessDataModel(
+        rows,
+        {
+          brandTargets: [
+            {
+              brandId: 'UNV',
+              periodId: '2026-03',
+              targetRevenue: 500,
+              workingDays: 22,
+            },
+          ],
+        },
+      ),
+    )
+
+    const report =
+      repository.forecast.getInventoryIntelligenceReport()
+
+    expect(report.methodologyVersion).toBe(
+      'forecast-inventory-v1',
+    )
+    expect(report.status).toBe('partial')
+    expect(report.summary.stockoutRisks).toBe(0)
+  })
+})

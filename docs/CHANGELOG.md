@@ -1,3 +1,15 @@
+# 0.31.0-FW-003
+
+- Nueva capa `forecast-inventory-v1` para cruzar demanda proyectada, inventario activo y Product Master por producto.
+- Calcula demanda restante, cobertura disponible y cobertura con entradas agregadas en meses y días laborales.
+- Clasifica stockout, brecha para el cierre, cobertura baja, cobertura balanceada, exceso e inventario sin demanda proyectada.
+- Genera señales priorizadas y explicables de riesgo, oportunidad y contexto.
+- Detecta inventario en productos Superseded, referencias no resueltas y sustitutos con disponibilidad.
+- `inTransit` y `onOrder` se mantienen como entradas agregadas sin inventar fechas de llegada mientras Purchasing no esté conectado.
+- La ausencia global de inventario produce estado `partial` y nunca se interpreta automáticamente como stock cero.
+- API pública ampliada en `repository.forecast` para reporte, detalle por producto, ranking y filtros de cobertura.
+- Pruebas para shortage, stockout, inbound recovery, exceso, Superseded, sustitución, ausencia de inventario y aislamiento de resultados.
+
 # 0.30.1-FW-002-HOTFIX1
 
 - Corrige la expectativa de prueba de `recentTrendRate`: la variación se mide contra el último periodo cerrado, no contra el promedio histórico.

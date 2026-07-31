@@ -11,6 +11,34 @@ export {
 } from './forecastBaselineEngine'
 
 export {
+  ForecastInventoryIntelligenceEngine,
+} from './forecastInventoryIntelligence'
+
+export {
+  FORECAST_INVENTORY_THRESHOLDS,
+} from './forecastInventoryContracts'
+
+export type {
+  ForecastCatalogContext,
+  ForecastCoverageProfile,
+  ForecastCoverageStatus,
+  ForecastDemandProfile,
+  ForecastInventoryIntelligenceReport,
+  ForecastInventoryIntelligenceSummary,
+  ForecastInventoryMethodologyVersion,
+  ForecastInventoryPriority,
+  ForecastInventoryProfile,
+  ForecastInventoryQualityProfile,
+  ForecastInventoryReportStatus,
+  ForecastInventorySignal,
+  ForecastInventorySignalCategory,
+  ForecastInventorySignalType,
+  ForecastInventoryThresholds,
+  ForecastProductInventoryInsight,
+  ForecastReplacementContext,
+} from './forecastInventoryContracts'
+
+export {
   countWeekdaysThroughDate,
   previousYearPeriodId,
 } from './forecastCalendar'

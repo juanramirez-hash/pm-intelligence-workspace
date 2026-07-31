@@ -6,6 +6,7 @@ import {
   buildForecastDataFoundation,
   buildForecastSeries,
   ForecastBaselineEngine,
+  ForecastInventoryIntelligenceEngine,
 } from '../forecast'
 
 import type {
@@ -13,6 +14,9 @@ import type {
   ForecastCapabilityId,
   ForecastCapabilityProfile,
   ForecastDataFoundation,
+  ForecastCoverageStatus,
+  ForecastInventoryIntelligenceReport,
+  ForecastProductInventoryInsight,
   ForecastGranularity,
   ForecastGranularityProfile,
   ForecastProjectionGranularity,
@@ -104,6 +108,52 @@ function cloneProjection(
   }
 }
 
+function cloneInventoryInsight(
+  insight: ForecastProductInventoryInsight,
+): ForecastProductInventoryInsight {
+  return {
+    ...insight,
+    demand: { ...insight.demand },
+    inventory: { ...insight.inventory },
+    coverage: { ...insight.coverage },
+    catalog: { ...insight.catalog },
+    replacement: insight.replacement
+      ? { ...insight.replacement }
+      : null,
+    signals: insight.signals.map((signal) => ({
+      ...signal,
+      evidence: { ...signal.evidence },
+    })),
+    explainability: [...insight.explainability],
+    limitations: [...insight.limitations],
+  }
+}
+
+function cloneInventoryIntelligenceReport(
+  report: ForecastInventoryIntelligenceReport,
+): ForecastInventoryIntelligenceReport {
+  return {
+    ...report,
+    thresholds: { ...report.thresholds },
+    summary: { ...report.summary },
+    quality: {
+      ...report.quality,
+      notes: [...report.quality.notes],
+    },
+    items: report.items.map(cloneInventoryInsight),
+  }
+}
+
+function normalizeLimit(
+  limit: number,
+): number {
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return 0
+  }
+
+  return Math.floor(limit)
+}
+
 function cloneFoundation(
   report: ForecastDataFoundation,
 ): ForecastDataFoundation {
@@ -136,6 +186,12 @@ export class ForecastDataQueries {
 
   private readonly baselineEngine: ForecastBaselineEngine
 
+  private readonly inventoryIntelligenceEngine:
+    ForecastInventoryIntelligenceEngine
+
+  private inventoryIntelligenceCache:
+    ForecastInventoryIntelligenceReport | null
+
   private readonly projectionCache:
     Map<string, ForecastBaselineProjection>
 
@@ -158,6 +214,9 @@ export class ForecastDataQueries {
       model,
       this.foundation,
     )
+    this.inventoryIntelligenceEngine =
+      new ForecastInventoryIntelligenceEngine(model)
+    this.inventoryIntelligenceCache = null
     this.projectionCache = new Map()
   }
 
@@ -288,6 +347,67 @@ export class ForecastDataQueries {
     return series
       ? this.projectSeries(series)
       : undefined
+  }
+
+  getInventoryIntelligenceReport():
+    ForecastInventoryIntelligenceReport {
+    if (!this.inventoryIntelligenceCache) {
+      this.inventoryIntelligenceCache =
+        this.inventoryIntelligenceEngine.build(
+          this.getBaselineProjections('product'),
+        )
+    }
+
+    return cloneInventoryIntelligenceReport(
+      this.inventoryIntelligenceCache,
+    )
+  }
+
+  getProductInventoryInsights():
+    ForecastProductInventoryInsight[] {
+    return this.getInventoryIntelligenceReport().items
+  }
+
+  findProductInventoryInsight(
+    productId: string,
+  ): ForecastProductInventoryInsight | undefined {
+    const normalizedProductId = productId
+      .trim()
+      .toLocaleUpperCase('es-MX')
+      .replace(/\s+/g, ' ')
+
+    const insight = this.inventoryIntelligenceCache
+      ? this.inventoryIntelligenceCache.items.find(
+          (candidate) => candidate.productId === normalizedProductId,
+        )
+      : this.getInventoryIntelligenceReport().items.find(
+          (candidate) => candidate.productId === normalizedProductId,
+        )
+
+    return insight
+      ? cloneInventoryInsight(insight)
+      : undefined
+  }
+
+  getTopInventoryIntelligence(
+    limit = 10,
+  ): ForecastProductInventoryInsight[] {
+    return this.getInventoryIntelligenceReport()
+      .items
+      .filter((item) => item.priority !== 'none')
+      .slice(0, normalizeLimit(limit))
+  }
+
+  findInventoryInsightsByCoverage(
+    status: ForecastCoverageStatus,
+  ): ForecastProductInventoryInsight[] {
+    return this.getInventoryIntelligenceReport()
+      .items
+      .filter(
+        (item) =>
+          item.coverage.availableStatus === status ||
+          item.coverage.supplyStatus === status,
+      )
   }
 
   getQualityIssues(): ForecastQualityIssue[] {

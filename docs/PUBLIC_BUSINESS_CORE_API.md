@@ -40,9 +40,17 @@ repository.forecast.getBaselineProjections('brand')
 repository.forecast.getBaselineProjections('product')
 repository.forecast.findBaselineProjection('brand', brandId)
 repository.forecast.findBaselineProjection('product', productId)
+
+repository.forecast.getInventoryIntelligenceReport()
+repository.forecast.getProductInventoryInsights()
+repository.forecast.findProductInventoryInsight(productId)
+repository.forecast.getTopInventoryIntelligence(limit)
+repository.forecast.findInventoryInsightsByCoverage(status)
 ```
 
-Los resultados se devuelven clonados. Ningún Workspace debe modificar escenarios, pesos, confianza o métodos dentro del Core.
+Los resultados se devuelven clonados. Ningún Workspace debe modificar escenarios, pesos, confianza, cobertura, señales o métodos dentro del Core.
+
+`getInventoryIntelligenceReport()` utiliza la proyección oficial de FW-002 y el corte activo de Inventory. Las unidades `inTransit` y `onOrder` se tratan como entradas agregadas sin fecha hasta que Purchasing Visibility esté conectado.
 
 ## Regla de consumo
 

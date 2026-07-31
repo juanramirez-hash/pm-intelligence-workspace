@@ -519,7 +519,7 @@ function buildCapabilities(
         findGranularityStatus(granularities, 'product'),
         inventoryStatus,
       ]),
-      summary: 'Permitirá comparar demanda futura contra disponible y entradas agregadas.',
+      summary: 'Compara demanda proyectada contra disponibilidad y entradas agregadas mediante Forecast Inventory Intelligence.',
       dependencies: ['sales-history', 'inventory'],
     },
     {
@@ -531,7 +531,7 @@ function buildCapabilities(
           : replacementRecords > 0
             ? combineStatus([productMasterStatus, salesStatus])
             : 'partial',
-      summary: 'Preparado para analizar productos Superseded y sustitutos directos sin reescribir el histórico.',
+      summary: 'Analiza productos Superseded y sustitutos directos sin reescribir los hechos históricos.',
       dependencies: ['sales-history', 'product-master'],
     },
     {

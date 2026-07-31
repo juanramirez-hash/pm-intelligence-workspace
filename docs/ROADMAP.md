@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.30.1
-Sprint: FW-002 — Forecast Engine & Baseline Projection
+Versión: v0.31.0
+Sprint: FW-003 — Forecast Intelligence, Coverage & Risk
 Estado: Completado
 ```
 
@@ -21,8 +21,8 @@ Estado: Completado
 |---|---|---|
 | FW-001 | Data Foundation, contratos, fuentes, granularidades y readiness | Completado |
 | FW-002 | Forecast Engine y proyección base | Completado |
-| FW-003 | Forecast por marca y producto | Siguiente |
-| FW-004 | Escenarios, cobertura y riesgo de inventario | Planeado |
+| FW-003 | Forecast Intelligence, cobertura, riesgo y sustituciones por producto | Completado |
+| FW-004 | Workspace Model, comparación de escenarios y priorización ejecutiva | Siguiente |
 | FW-005 | Forecast Workspace UI | Planeado |
 | FW-006 | Resumen ejecutivo, exportación y cierre | Planeado |
 
@@ -32,7 +32,9 @@ FW-002 implementa el baseline determinista para portafolio, marca y producto. Co
 
 FW-002 Hotfix 1 corrige únicamente el contrato de prueba de `recentTrendRate`: la tasa se expresa contra el último periodo cerrado. No modifica el algoritmo productivo ni sus resultados de proyección.
 
-FW-003 consumirá estos resultados para construir análisis comparativos y priorización específica por marca y producto, sin duplicar las fórmulas del Engine.
+FW-003 conecta el baseline por producto con Inventory y Product Master. Calcula demanda restante, cobertura disponible y con entradas agregadas, riesgo de agotamiento, exceso, productos sin demanda proyectada y rutas de sustitución. No inventa fechas de llegada y mantiene Purchasing como fuente futura.
+
+FW-004 compondrá estos resultados en un modelo de Workspace, comparación ejecutiva de escenarios y priorización para la futura interfaz, sin duplicar las fórmulas del Core.
 
 ## Inventory Workspace — CERRADO
 
