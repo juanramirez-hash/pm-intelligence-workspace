@@ -3,10 +3,23 @@
 ## Estado actual
 
 ```text
-Versión: v0.9.6
-Sprint: Architecture Sprint A-002
-Último commit: A-002.9
+Versión: v0.28.0
+Sprint: IW-006 — Inventory Export, Executive Summary & Closure
+Estado: Completado
 ```
+
+## Inventory Workspace — CERRADO
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| IW-001 | Inventory Import Plugin | Completado |
+| IW-002 | Inventory Business Model & Repository | Completado |
+| IW-003 | Inventory Analytics | Completado |
+| IW-004 | Risk & Opportunity Engine | Completado |
+| IW-005 | Inventory Workspace UI & undated snapshot support | Completado |
+| IW-006 | Executive Summary, Excel Export & Closure | Completado |
+
+IW-006 añade una lectura ejecutiva determinística, exportación Excel bajo demanda y consistencia completa entre filtros, KPIs, rankings, riesgos, oportunidades y posiciones exportadas.
 
 ## Architecture Sprint A-002
 

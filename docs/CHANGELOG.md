@@ -1,3 +1,12 @@
+# 0.28.0-IW-006
+
+- Resumen ejecutivo determinístico para Inventory Workspace.
+- KPIs, estado de posiciones y narrativa recalculados sobre los filtros activos.
+- Exportación Excel bajo demanda con resumen, inventario por ubicación, posiciones, riesgos, oportunidades y metadatos.
+- Carga dinámica de `xlsx` únicamente al solicitar la exportación.
+- Pruebas unitarias para resumen ejecutivo y contrato del libro exportado.
+- Cierre funcional de Inventory Workspace IW-001 a IW-006.
+
 # 0.27.0-IQ-002
 
 - `Name` adoptado como identidad primaria y unica del producto.

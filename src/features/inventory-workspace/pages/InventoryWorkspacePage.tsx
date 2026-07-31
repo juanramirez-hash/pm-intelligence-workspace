@@ -2,6 +2,8 @@ import {
   AlertTriangle,
   Boxes,
   CircleDollarSign,
+  Download,
+  FileSpreadsheet,
   PackageCheck,
   PackageSearch,
   Search,
@@ -31,6 +33,10 @@ import {
 } from '../../../components/workspace/section'
 
 import {
+  buildInventoryAnalytics,
+} from '../../../core/business/analytics/inventory'
+
+import {
   useInventoryWorkspace,
 } from '../hooks/useInventoryWorkspace'
 
@@ -46,6 +52,19 @@ import type {
   InventoryWorkspaceDimension,
   InventoryWorkspaceFilters,
 } from '../engine/inventoryWorkspaceModel'
+
+import {
+  buildInventoryExecutiveSummary,
+} from '../engine/inventoryExecutiveSummary'
+
+import type {
+  InventoryExecutiveFindingTone,
+} from '../engine/inventoryExecutiveSummary'
+
+import {
+  buildInventoryExecutiveExport,
+  downloadInventoryExecutiveExport,
+} from '../export'
 
 import {
   InventoryOpportunityList,
@@ -74,6 +93,16 @@ const dimensionLabels: Record<InventoryWorkspaceDimension, string> = {
   product: 'Producto',
 }
 
+const summaryToneStyles: Record<
+  InventoryExecutiveFindingTone,
+  string
+> = {
+  positive: 'border-emerald-100 bg-emerald-50/70 text-emerald-700',
+  warning: 'border-amber-100 bg-amber-50/70 text-amber-700',
+  critical: 'border-rose-100 bg-rose-50/70 text-rose-700',
+  neutral: 'border-slate-200 bg-slate-50 text-slate-700',
+}
+
 export function InventoryWorkspacePage() {
   const workspace = useInventoryWorkspace()
   const [dimension, setDimension] =
@@ -81,14 +110,23 @@ export function InventoryWorkspacePage() {
   const [filters, setFilters] =
     useState<InventoryWorkspaceFilters>(DEFAULT_INVENTORY_WORKSPACE_FILTERS)
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const analytics = workspace.analytics
   const riskOpportunity = workspace.riskOpportunity
-  const totals = analytics?.totals
 
   const filteredPositions = useMemo(
     () => filterInventoryPositions(workspace.latestPositions, filters),
     [workspace.latestPositions, filters],
+  )
+
+  const filteredAnalytics = useMemo(
+    () => buildInventoryAnalytics(
+      filteredPositions,
+      analytics?.snapshotDate ?? null,
+    ),
+    [filteredPositions, analytics?.snapshotDate],
   )
 
   const dimensionGroups = useMemo(
@@ -109,6 +147,61 @@ export function InventoryWorkspacePage() {
     [riskOpportunity, filters],
   )
 
+  const executiveSummary = useMemo(
+    () => buildInventoryExecutiveSummary({
+      analytics: filteredAnalytics,
+      risks: filteredRisks,
+      opportunities: filteredOpportunities,
+      filters,
+    }),
+    [
+      filteredAnalytics,
+      filteredRisks,
+      filteredOpportunities,
+      filters,
+    ],
+  )
+
+  const prioritizedRisks = useMemo(
+    () => filteredRisks.filter(
+      (risk) =>
+        risk.priority === 'critical' || risk.priority === 'high',
+    ).length,
+    [filteredRisks],
+  )
+
+  const totals = filteredAnalytics.totals
+
+  async function handleExecutiveExport(): Promise<void> {
+    if (!workspace.available || isExporting) {
+      return
+    }
+
+    setIsExporting(true)
+    setExportError(null)
+
+    try {
+      const payload = buildInventoryExecutiveExport({
+        analytics: filteredAnalytics,
+        positions: filteredPositions,
+        risks: filteredRisks,
+        opportunities: filteredOpportunities,
+        filters,
+        summary: executiveSummary,
+      })
+
+      await downloadInventoryExecutiveExport(payload)
+    } catch (error) {
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : 'No fue posible generar el archivo Excel.',
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto w-full max-w-[1600px] px-5 py-8 sm:px-8 lg:px-10">
@@ -128,35 +221,98 @@ export function InventoryWorkspacePage() {
           tone="blue"
         />
 
-        <WorkspaceGrid className="mt-6" columns={4}>
+        <WorkspaceSection
+          actions={(
+            <div className="flex flex-col items-end gap-2">
+              <button
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={!workspace.available || isExporting}
+                onClick={() => void handleExecutiveExport()}
+                type="button"
+              >
+                <Download size={16} />
+                {isExporting ? 'Preparando Excel...' : 'Exportar Excel'}
+              </button>
+              {exportError && (
+                <p className="max-w-72 text-right text-xs text-rose-600">
+                  {exportError}
+                </p>
+              )}
+            </div>
+          )}
+          className="mt-6"
+          icon={FileSpreadsheet}
+          subtitle={executiveSummary.filterContext}
+          title={executiveSummary.title}
+          tone="blue"
+        >
+          <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+            <article className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Lectura del corte
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                {executiveSummary.overview}
+              </p>
+            </article>
+            <article className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Perspectiva operativa
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                {executiveSummary.outlook}
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {executiveSummary.findings.map((finding) => (
+              <article
+                className={`rounded-2xl border p-4 ${summaryToneStyles[finding.tone]}`}
+                key={finding.label}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
+                  {finding.label}
+                </p>
+                <p className="mt-2 text-2xl font-bold">
+                  {finding.value}
+                </p>
+                <p className="mt-2 text-xs leading-5 opacity-80">
+                  {finding.detail}
+                </p>
+              </article>
+            ))}
+          </div>
+        </WorkspaceSection>
+
+        <WorkspaceGrid className="mt-5" columns={4}>
           <KpiCard
             icon={CircleDollarSign}
-            subtitle={`${totals?.products ?? 0} productos en ${totals?.locations ?? 0} ubicaciones`}
+            subtitle={`${totals.products} productos en ${totals.locations} ubicaciones`}
             title="Valor de inventario"
             tone="blue"
-            value={formatCurrency(totals?.inventoryValue ?? 0)}
+            value={formatCurrency(totals.inventoryValue)}
           />
           <KpiCard
             icon={Boxes}
-            subtitle={`${formatNumber(totals?.available ?? 0)} disponibles`}
+            subtitle={`${formatNumber(totals.available)} disponibles`}
             title="Existencia física"
             tone="slate"
-            value={formatNumber(totals?.onHand ?? 0)}
+            value={formatNumber(totals.onHand)}
           />
           <KpiCard
             icon={Truck}
             subtitle="Tránsito + órdenes de compra"
             title="Entradas pendientes"
             tone="emerald"
-            value={formatNumber(totals?.inboundUnits ?? 0)}
+            value={formatNumber(totals.inboundUnits)}
           />
           <KpiCard
             icon={AlertTriangle}
-            subtitle={`${riskOpportunity?.summary.opportunities ?? 0} oportunidades detectadas`}
+            subtitle={`${filteredOpportunities.length} oportunidades detectadas`}
             title="Riesgos prioritarios"
             tone="amber"
-            value={(riskOpportunity?.summary.criticalRisks ?? 0) +
-              (riskOpportunity?.summary.highRisks ?? 0)}
+            value={prioritizedRisks}
           />
         </WorkspaceGrid>
 
@@ -297,7 +453,7 @@ export function InventoryWorkspacePage() {
             tone="slate"
           >
             <div className="space-y-3">
-              {(analytics?.stockStatus ?? []).map((status) => (
+              {filteredAnalytics.stockStatus.map((status) => (
                 <article
                   className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
                   key={status.status}

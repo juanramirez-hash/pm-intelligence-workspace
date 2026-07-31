@@ -1,0 +1,5364 @@
+PM INTELLIGENCE WORKSPACE - IW-006 CONTEXTO ACTUAL
+Generado: 31/07/2026 10:57:31.75
+Directorio: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace
+
+============================================================
+GIT STATUS
+============================================================
+?? IW006_CONTEXTO_ACTUAL.txt
+?? IW006_PREPARAR_CONTEXTO.cmd
+
+============================================================
+FILE: package.json
+============================================================
+{
+  "name": "pm-intelligence-workspace",
+  "private": true,
+  "version": "0.27.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@heroui/react": "^3.2.2",
+    "@heroui/styles": "^3.2.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.101.2",
+    "axios": "^1.18.1",
+    "idb": "^8.0.3",
+    "lucide-react": "^1.25.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1",
+    "tailwindcss": "^4.3.3",
+    "xlsx": "^0.18.5",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "oxlint": "^1.71.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\index.ts
+============================================================
+export * from './inventoryTypes'
+export * from './inventoryColumnAliases'
+export * from './inventorySchema'
+export * from './inventoryValidator'
+export * from './inventoryNormalizer'
+export * from './inventoryBusinessModel'
+export * from './inventoryPlugin'
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventoryBusinessModel.ts
+============================================================
+import type {
+  InventoryDatasetSummary,
+  NormalizedInventoryRow,
+} from './inventoryTypes'
+
+export interface InventoryBusinessModel {
+  positions: NormalizedInventoryRow[]
+  summary: InventoryDatasetSummary
+}
+
+function finite(value: number | null): number {
+  return value !== null && Number.isFinite(value) ? value : 0
+}
+
+function roundCurrency(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function normalize(value: string | null | undefined): string {
+  return (value ?? '')
+    .trim()
+    .toLocaleUpperCase('es-MX')
+    .replace(/\s+/g, ' ')
+}
+
+export function buildInventoryBusinessModel(
+  positions: NormalizedInventoryRow[],
+  ignoredRows: number,
+): InventoryBusinessModel {
+  const products = new Set<string>()
+  const locations = new Set<string>()
+  const positionCounts = new Map<string, number>()
+  const dates: string[] = []
+
+  let totalOnHand = 0
+  let totalAvailable = 0
+  let totalCommitted = 0
+  let totalInTransit = 0
+  let totalOnOrder = 0
+  let totalInventoryValue = 0
+  let negativeStockRows = 0
+
+  for (const position of positions) {
+    products.add(normalize(position.productName))
+    locations.add(normalize(position.location))
+
+    if (position.snapshotDate) {
+      dates.push(position.snapshotDate)
+    }
+
+    const key = [
+      position.snapshotDate ?? 'NO_DATE',
+      normalize(position.productName),
+      normalize(position.location),
+    ].join('::')
+    positionCounts.set(key, (positionCounts.get(key) ?? 0) + 1)
+
+    totalOnHand += finite(position.onHand)
+    totalAvailable += finite(position.available)
+    totalCommitted += finite(position.committed)
+    totalInTransit += finite(position.inTransit)
+    totalOnOrder += finite(position.onOrder)
+    totalInventoryValue += finite(position.inventoryValue)
+
+    if (position.onHand < 0) {
+      negativeStockRows += 1
+    }
+  }
+
+  dates.sort()
+
+  return {
+    positions,
+    summary: {
+      periodStart: dates[0] ?? null,
+      periodEnd: dates.at(-1) ?? null,
+      totalPositions: positionCounts.size,
+      uniqueProducts: products.size,
+      uniqueLocations: locations.size,
+      totalOnHand,
+      totalAvailable,
+      totalCommitted,
+      totalInTransit,
+      totalOnOrder,
+      totalInventoryValue: roundCurrency(totalInventoryValue),
+      negativeStockRows,
+      duplicatePositions: [...positionCounts.values()].filter(
+        (count) => count > 1,
+      ).length,
+      processedRows: positions.length,
+      ignoredRows,
+    },
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventoryColumnAliases.ts
+============================================================
+export type InventoryField =
+  | 'snapshotDate'
+  | 'productName'
+  | 'productCode'
+  | 'brand'
+  | 'model'
+  | 'location'
+  | 'onHand'
+  | 'available'
+  | 'committed'
+  | 'inTransit'
+  | 'onOrder'
+  | 'unitCost'
+  | 'inventoryValue'
+  | 'currency'
+
+export const INVENTORY_COLUMN_ALIASES: Record<
+  InventoryField,
+  readonly string[]
+> = {
+  snapshotDate: [
+    'Fecha de corte',
+    'Snapshot Date',
+    'Inventory Date',
+    'Fecha inventario',
+    'Date',
+  ],
+  productName: [
+    'Name',
+    'Name (Grouped)',
+    'Product Name',
+    'Item: Name',
+    'Item Name',
+    'Item',
+    'Nombre de producto',
+  ],
+  productCode: [
+    'Product Code',
+    'ERP Product Code',
+    'ERP Code',
+    'Item Code',
+    'SKU',
+    'Codigo',
+    'Código',
+  ],
+  brand: ['Marca', 'Brand'],
+  model: ['Modelo', 'Model'],
+  location: [
+    'Location',
+    'Location: Name',
+    'Location: Name (Grouped)',
+    'Ubicacion',
+    'Ubicación',
+    'Almacen',
+    'Almacén',
+    'Sucursal',
+  ],
+  onHand: [
+    'On Hand',
+    'On Hand (Grouped)',
+    'En Mano',
+    'Existencia',
+    'Existencias',
+    'Stock',
+    'Cantidad disponible fisica',
+    'Cantidad disponible física',
+  ],
+  available: [
+    'Available',
+    'Available Quantity',
+    'Cantidad Actual Disponible',
+    'Disponible',
+    'Existencia disponible',
+    'Stock disponible',
+  ],
+  committed: [
+    'Committed',
+    'Committed Quantity',
+    'Cantidad Comprometida',
+    'Comprometido',
+    'Reservado',
+  ],
+  inTransit: [
+    'In Transit',
+    'In-Transit',
+    'Cantidad Actual en Tránsito',
+    'Cantidad Actual en Transito',
+    'En transito',
+    'En tránsito',
+  ],
+  onOrder: [
+    'On Order',
+    'Cantidad Actual en Orden',
+    'Cantidad en orden',
+    'En orden',
+    'Ordenado',
+  ],
+  unitCost: [
+    'Unit Cost',
+    'Average Cost',
+    'Costo unitario',
+    'Costo promedio',
+    'costo promedio (USD)',
+  ],
+  inventoryValue: [
+    'Inventory Value',
+    'Total Value',
+    'Valor de inventario',
+    'Valor inventario',
+  ],
+  currency: ['Currency', 'Moneda', 'Divisa'],
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventoryNormalizer.ts
+============================================================
+import type { NormalizationResult } from '../../engine/importPlugin'
+import type { InventoryField } from './inventoryColumnAliases'
+import type {
+  NormalizedInventoryRow,
+  RawInventoryRow,
+} from './inventoryTypes'
+import type {
+  InventoryValidationResult,
+  WideInventoryLocationColumnMap,
+} from './inventoryValidator'
+
+function getValue(
+  row: RawInventoryRow,
+  validation: InventoryValidationResult,
+  field: InventoryField,
+): unknown {
+  const column = validation.columnMap[field]
+  return column ? row[column] : null
+}
+
+function getWideValue(
+  row: RawInventoryRow,
+  columns: WideInventoryLocationColumnMap,
+  field: keyof WideInventoryLocationColumnMap,
+): unknown {
+  const column = columns[field]
+  return column ? row[column] : null
+}
+
+function text(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  const normalized = String(value).trim().replace(/\s+/g, ' ')
+  return normalized || null
+}
+
+function identifier(value: unknown): string | null {
+  const normalized = text(value)
+  return normalized
+    ? normalized.toLocaleUpperCase('es-MX')
+    : null
+}
+
+function numberValue(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  const normalizedText = text(value)
+  if (!normalizedText) {
+    return null
+  }
+
+  const negativeByParentheses =
+    normalizedText.startsWith('(') && normalizedText.endsWith(')')
+  const normalized = normalizedText
+    .replace(/[()$,%]/g, '')
+    .replace(/,/g, '')
+    .replace(/\s/g, '')
+  const parsed = Number(normalized)
+
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
+
+  return negativeByParentheses ? -parsed : parsed
+}
+
+function dateValue(value: unknown): string | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const excelEpoch = Date.UTC(1899, 11, 30)
+    return new Date(excelEpoch + value * 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+  }
+
+  const normalized = text(value)
+  if (!normalized) {
+    return null
+  }
+
+  const directMatch = normalized.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/,
+  )
+  if (directMatch) {
+    const [, year, month, day] = directMatch
+    return `${year}-${month?.padStart(2, '0')}-${day?.padStart(2, '0')}`
+  }
+
+  const date = new Date(normalized)
+  return Number.isNaN(date.getTime())
+    ? null
+    : date.toISOString().slice(0, 10)
+}
+
+function normalizeLongInventoryRows(
+  rows: RawInventoryRow[],
+  validation: InventoryValidationResult,
+): NormalizationResult<NormalizedInventoryRow> {
+  const normalizedRows: NormalizedInventoryRow[] = []
+  let ignoredRows = 0
+
+  for (const row of rows) {
+    const productName = identifier(
+      getValue(row, validation, 'productName'),
+    )
+    const location = text(
+      getValue(row, validation, 'location'),
+    )
+    const onHand = numberValue(
+      getValue(row, validation, 'onHand'),
+    )
+
+    if (!productName || !location || onHand === null) {
+      ignoredRows += 1
+      continue
+    }
+
+    normalizedRows.push({
+      snapshotDate: dateValue(
+        getValue(row, validation, 'snapshotDate'),
+      ),
+      productName,
+      productCode: identifier(
+        getValue(row, validation, 'productCode'),
+      ),
+      brand: text(getValue(row, validation, 'brand')),
+      model: text(getValue(row, validation, 'model')),
+      location,
+      onHand,
+      available: numberValue(
+        getValue(row, validation, 'available'),
+      ),
+      committed: numberValue(
+        getValue(row, validation, 'committed'),
+      ),
+      inTransit: numberValue(
+        getValue(row, validation, 'inTransit'),
+      ),
+      onOrder: numberValue(
+        getValue(row, validation, 'onOrder'),
+      ),
+      unitCost: numberValue(
+        getValue(row, validation, 'unitCost'),
+      ),
+      inventoryValue: numberValue(
+        getValue(row, validation, 'inventoryValue'),
+      ),
+      currency: identifier(
+        getValue(row, validation, 'currency'),
+      ),
+    })
+  }
+
+  return { rows: normalizedRows, ignoredRows }
+}
+
+function normalizeWideInventoryRows(
+  rows: RawInventoryRow[],
+  validation: InventoryValidationResult,
+): NormalizationResult<NormalizedInventoryRow> {
+  const normalizedRows: NormalizedInventoryRow[] = []
+  let ignoredRows = 0
+
+  for (const row of rows) {
+    const productName = identifier(
+      getValue(row, validation, 'productName'),
+    )
+
+    if (!productName) {
+      ignoredRows += 1
+      continue
+    }
+
+    let generatedPositions = 0
+
+    for (const [location, columns] of Object.entries(
+      validation.wideLocationColumns,
+    )) {
+      const onHand = numberValue(
+        getWideValue(row, columns, 'onHand'),
+      )
+      const available = numberValue(
+        getWideValue(row, columns, 'available'),
+      )
+      const committed = numberValue(
+        getWideValue(row, columns, 'committed'),
+      )
+      const inTransit = numberValue(
+        getWideValue(row, columns, 'inTransit'),
+      )
+      const onOrder = numberValue(
+        getWideValue(row, columns, 'onOrder'),
+      )
+      const unitCost = numberValue(
+        getWideValue(row, columns, 'unitCost'),
+      )
+
+      const hasOperationalData = [
+        onHand,
+        available,
+        committed,
+        inTransit,
+        onOrder,
+      ].some((value) => value !== null)
+
+      if (!hasOperationalData) {
+        continue
+      }
+
+      const normalizedOnHand = onHand ?? 0
+
+      normalizedRows.push({
+        snapshotDate: dateValue(
+          getValue(row, validation, 'snapshotDate'),
+        ),
+        productName,
+        productCode: identifier(
+          getValue(row, validation, 'productCode'),
+        ),
+        brand: text(getValue(row, validation, 'brand')),
+        model: text(getValue(row, validation, 'model')),
+        location,
+        onHand: normalizedOnHand,
+        available,
+        committed,
+        inTransit,
+        onOrder,
+        unitCost,
+        inventoryValue:
+          unitCost !== null
+            ? normalizedOnHand * unitCost
+            : null,
+        currency: identifier(
+          getValue(row, validation, 'currency'),
+        ),
+      })
+      generatedPositions += 1
+    }
+
+    if (generatedPositions === 0) {
+      ignoredRows += 1
+    }
+  }
+
+  return { rows: normalizedRows, ignoredRows }
+}
+
+export function normalizeInventoryRows(
+  rows: RawInventoryRow[],
+  validation: InventoryValidationResult,
+): NormalizationResult<NormalizedInventoryRow> {
+  return validation.sourceLayout === 'wide_by_location'
+    ? normalizeWideInventoryRows(rows, validation)
+    : normalizeLongInventoryRows(rows, validation)
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventoryPlugin.test.ts
+============================================================
+import { describe, expect, it } from 'vitest'
+
+import { runImportEngine } from '../../engine/importEngine'
+import { inventoryImportPlugin } from './inventoryPlugin'
+
+const longRows = [
+  {
+    'Fecha de corte': '2026-07-30',
+    'Name (Grouped)': 'P-1',
+    Marca: 'UNV',
+    Modelo: 'IPC-A',
+    'Location: Name (Grouped)': '002 CDMX',
+    'On Hand': '10',
+    Disponible: '8',
+    Reservado: '2',
+    'En tránsito': '4',
+    'Total Value': '$1,250.50',
+    Moneda: 'MXN',
+  },
+]
+
+const wideRows = [
+  {
+    Item: '8R320HYT02',
+    Marca: 'HYTERA',
+    'CEDIS CDMX Cantidad Actual en Orden': 3,
+    'CEDIS CDMX En Mano': 10,
+    'CEDIS CDMX Cantidad Comprometida': 2,
+    'CEDIS CDMX Cantidad Actual Disponible': 8,
+    ' CEDIS CDMX Cantidad Actual en Tránsito': 4,
+    'CEDIS CDMX Average Cost': 0.99,
+    'VENTAS QRO Cantidad Actual en Orden': null,
+    'VENTAS QRO En Mano': 1,
+    'VENTAS QRO Cantidad Comprometida': 0,
+    'VENTAS QRO Cantidad Actual Disponible': 1,
+    'VENTAS QRO  Cantidad Actual en Tránsito': null,
+    'VENTAS QRO Average Cost': 1.05,
+    'TOTAL Cantidad Actual en Orden': 3,
+    'TOTAL En Mano': 11,
+    'TOTAL Cantidad Comprometida': 2,
+    'TOTAL Cantidad Actual Disponible': 9,
+    'TOTAL  Cantidad Actual en Tránsito': 4,
+    'TOTAL Average Cost': 1,
+  },
+]
+
+describe('IW-001 Inventory Import Plugin', () => {
+  it('mantiene soporte para el formato largo', () => {
+    const result = runImportEngine(
+      inventoryImportPlugin,
+      longRows,
+    )
+
+    expect(result.valid).toBe(true)
+    expect(result.processedRows).toBe(1)
+    expect(result.normalizedRows[0]).toMatchObject({
+      productName: 'P-1',
+      location: '002 CDMX',
+      onHand: 10,
+      available: 8,
+    })
+  })
+
+  it('detecta y despivota inventario por sucursal', () => {
+    const result = runImportEngine(
+      inventoryImportPlugin,
+      wideRows,
+    )
+
+    expect(result.valid).toBe(true)
+    expect(result.reportType).toBe('inventory')
+    expect(result.processedRows).toBe(2)
+    expect(result.normalizedRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          productName: '8R320HYT02',
+          brand: 'HYTERA',
+          location: 'CEDIS CDMX',
+          onHand: 10,
+          available: 8,
+          committed: 2,
+          inTransit: 4,
+          onOrder: 3,
+          unitCost: 0.99,
+          inventoryValue: 9.9,
+        }),
+        expect.objectContaining({
+          location: 'VENTAS QRO',
+          onHand: 1,
+          available: 1,
+          unitCost: 1.05,
+          inventoryValue: 1.05,
+        }),
+      ]),
+    )
+    expect(
+      result.normalizedRows.some(
+        (row) => row.location === 'TOTAL',
+      ),
+    ).toBe(false)
+    expect(result.summary).toMatchObject({
+      uniqueProducts: 1,
+      uniqueLocations: 2,
+      totalOnHand: 11,
+      totalAvailable: 9,
+      totalCommitted: 2,
+      totalInTransit: 4,
+      totalOnOrder: 3,
+      totalInventoryValue: 10.95,
+      processedRows: 2,
+    })
+  })
+
+  it('reconoce el encabezado real aunque tenga espacios y acentos', () => {
+    const detection = inventoryImportPlugin.detect([
+      'Item',
+      'Marca',
+      'CEDIS CDMX En Mano',
+      ' CEDIS CDMX Cantidad Actual en Tránsito',
+      'VENTAS QRO  Cantidad Actual en Tránsito',
+      'TOTAL En Mano',
+    ])
+
+    expect(detection.valid).toBe(true)
+    expect(detection.reportType).toBe('inventory')
+    expect(detection.confidence).toBeGreaterThanOrEqual(90)
+    expect(detection.missingRequiredFields).toEqual([])
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventoryPlugin.ts
+============================================================
+import type { SpreadsheetRow } from '../../parsers/spreadsheetParser'
+import type { ImportPlugin } from '../../engine/importPlugin'
+import type { ReportDetectionResult } from '../../types/reportDetectionTypes'
+
+import {
+  OPTIONAL_INVENTORY_FIELDS,
+  RECOMMENDED_INVENTORY_FIELDS,
+  REQUIRED_INVENTORY_FIELDS,
+} from './inventorySchema'
+import {
+  normalizeInventoryHeader,
+  validateInventoryHeaders,
+  type InventoryValidationResult,
+} from './inventoryValidator'
+import { normalizeInventoryRows } from './inventoryNormalizer'
+import {
+  buildInventoryBusinessModel,
+  type InventoryBusinessModel,
+} from './inventoryBusinessModel'
+import type {
+  InventoryDatasetSummary,
+  NormalizedInventoryRow,
+} from './inventoryTypes'
+
+const INVENTORY_REPORT_TYPE = 'inventory' as const
+
+function extractHeaders(rows: SpreadsheetRow[]): string[] {
+  /*
+   * Preserve the exact spreadsheet key used by each row.
+   *
+   * Wide NetSuite inventory exports can contain leading spaces, repeated
+   * spaces, or NBSP characters in physical column names. Trimming here
+   * makes validation succeed but breaks the later `row[column]` lookup.
+   * Normalization is used only to deduplicate equivalent headers.
+   */
+  const headersByNormalizedValue = new Map<string, string>()
+
+  for (const row of rows) {
+    for (const header of Object.keys(row)) {
+      const normalizedHeader = normalizeInventoryHeader(header)
+
+      if (
+        normalizedHeader &&
+        !headersByNormalizedValue.has(normalizedHeader)
+      ) {
+        headersByNormalizedValue.set(
+          normalizedHeader,
+          header,
+        )
+      }
+    }
+  }
+
+  return [...headersByNormalizedValue.values()]
+}
+
+function matchedFields(
+  validation: InventoryValidationResult,
+  fields: readonly (keyof InventoryValidationResult['columnMap'])[],
+): string[] {
+  if (
+    validation.valid &&
+    validation.sourceLayout === 'wide_by_location'
+  ) {
+    return fields.map(String)
+  }
+
+  return fields
+    .filter((field) => Boolean(validation.columnMap[field]))
+    .map(String)
+}
+
+function calculateConfidence(
+  validation: InventoryValidationResult,
+): number {
+  if (
+    validation.valid &&
+    validation.sourceLayout === 'wide_by_location'
+  ) {
+    const locations = Object.keys(
+      validation.wideLocationColumns,
+    ).length
+
+    return Math.min(99, 90 + locations)
+  }
+
+  const required = REQUIRED_INVENTORY_FIELDS.filter(
+    (field) => Boolean(validation.columnMap[field]),
+  ).length
+  const recommended = RECOMMENDED_INVENTORY_FIELDS.filter(
+    (field) => Boolean(validation.columnMap[field]),
+  ).length
+  const optional = OPTIONAL_INVENTORY_FIELDS.filter(
+    (field) => Boolean(validation.columnMap[field]),
+  ).length
+
+  return Math.round(
+    (required / REQUIRED_INVENTORY_FIELDS.length) * 70 +
+    (recommended / RECOMMENDED_INVENTORY_FIELDS.length) * 25 +
+    (optional / OPTIONAL_INVENTORY_FIELDS.length) * 5,
+  )
+}
+
+function createEmptySummary(
+  ignoredRows: number,
+): InventoryDatasetSummary {
+  return {
+    periodStart: null,
+    periodEnd: null,
+    totalPositions: 0,
+    uniqueProducts: 0,
+    uniqueLocations: 0,
+    totalOnHand: 0,
+    totalAvailable: 0,
+    totalCommitted: 0,
+    totalInTransit: 0,
+    totalOnOrder: 0,
+    totalInventoryValue: 0,
+    negativeStockRows: 0,
+    duplicatePositions: 0,
+    processedRows: 0,
+    ignoredRows,
+  }
+}
+
+export const inventoryImportPlugin: ImportPlugin<
+  SpreadsheetRow,
+  NormalizedInventoryRow,
+  InventoryBusinessModel,
+  InventoryDatasetSummary,
+  InventoryValidationResult
+> = {
+  reportType: INVENTORY_REPORT_TYPE,
+
+  detect(headers): ReportDetectionResult {
+    const validation = validateInventoryHeaders(headers)
+
+    return {
+      reportType: INVENTORY_REPORT_TYPE,
+      valid: validation.valid,
+      confidence: calculateConfidence(validation),
+      matchedRequiredFields: matchedFields(
+        validation,
+        REQUIRED_INVENTORY_FIELDS,
+      ),
+      missingRequiredFields: validation.missingRequiredFields,
+      matchedRecommendedFields: matchedFields(
+        validation,
+        RECOMMENDED_INVENTORY_FIELDS,
+      ),
+      matchedOptionalFields: matchedFields(
+        validation,
+        OPTIONAL_INVENTORY_FIELDS,
+      ),
+    }
+  },
+
+  extractHeaders,
+  validate: validateInventoryHeaders,
+  normalize: normalizeInventoryRows,
+  buildBusinessModel: buildInventoryBusinessModel,
+  process: (businessModel) => businessModel.summary,
+  createEmptySummary,
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventorySchema.ts
+============================================================
+import type { InventoryField } from './inventoryColumnAliases'
+
+export const REQUIRED_INVENTORY_FIELDS: InventoryField[] = [
+  'productName',
+  'location',
+  'onHand',
+]
+
+export const RECOMMENDED_INVENTORY_FIELDS: InventoryField[] = [
+  'snapshotDate',
+  'brand',
+  'model',
+  'available',
+  'inventoryValue',
+]
+
+export const OPTIONAL_INVENTORY_FIELDS: InventoryField[] = [
+  'productCode',
+  'committed',
+  'inTransit',
+  'onOrder',
+  'unitCost',
+  'currency',
+]
+
+export const ALL_INVENTORY_FIELDS: InventoryField[] = [
+  ...REQUIRED_INVENTORY_FIELDS,
+  ...RECOMMENDED_INVENTORY_FIELDS,
+  ...OPTIONAL_INVENTORY_FIELDS,
+]
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventoryTypes.ts
+============================================================
+export interface RawInventoryRow {
+  [column: string]: unknown
+}
+
+export interface NormalizedInventoryRow {
+  snapshotDate: string | null
+  productName: string
+  productCode: string | null
+  brand: string | null
+  model: string | null
+  location: string
+
+  onHand: number
+  available: number | null
+  committed: number | null
+  inTransit: number | null
+  onOrder: number | null
+
+  unitCost: number | null
+  inventoryValue: number | null
+  currency: string | null
+}
+
+export interface InventoryDatasetSummary {
+  periodStart: string | null
+  periodEnd: string | null
+
+  totalPositions: number
+  uniqueProducts: number
+  uniqueLocations: number
+
+  totalOnHand: number
+  totalAvailable: number
+  totalCommitted: number
+  totalInTransit: number
+  totalOnOrder: number
+  totalInventoryValue: number
+
+  negativeStockRows: number
+  duplicatePositions: number
+
+  processedRows: number
+  ignoredRows: number
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\data-center\importers\inventory\inventoryValidator.ts
+============================================================
+import type { ValidationResult } from '../../types/commonTypes'
+
+import {
+  INVENTORY_COLUMN_ALIASES,
+  type InventoryField,
+} from './inventoryColumnAliases'
+import {
+  ALL_INVENTORY_FIELDS,
+  RECOMMENDED_INVENTORY_FIELDS,
+  REQUIRED_INVENTORY_FIELDS,
+} from './inventorySchema'
+
+export type InventoryColumnMap =
+  Partial<Record<InventoryField, string>>
+
+export type InventorySourceLayout =
+  | 'long'
+  | 'wide_by_location'
+
+export type WideInventoryMetric =
+  | 'onHand'
+  | 'available'
+  | 'committed'
+  | 'inTransit'
+  | 'onOrder'
+  | 'unitCost'
+
+export type WideInventoryLocationColumnMap = Partial<
+  Record<WideInventoryMetric, string>
+>
+
+export interface InventoryValidationResult
+  extends ValidationResult {
+  columnMap: InventoryColumnMap
+  sourceLayout: InventorySourceLayout
+  wideLocationColumns: Record<
+    string,
+    WideInventoryLocationColumnMap
+  >
+  missingRequiredFields: InventoryField[]
+  missingRecommendedFields: InventoryField[]
+  unknownColumns: string[]
+}
+
+export function normalizeInventoryHeader(
+  value: string,
+): string {
+  return value
+    .replace(/\u00a0/g, ' ')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+}
+
+function findMatchingColumn(
+  headers: string[],
+  aliases: readonly string[],
+): string | undefined {
+  const normalizedHeaders = new Map(
+    headers.map((header) => [
+      normalizeInventoryHeader(header),
+      header,
+    ]),
+  )
+
+  for (const alias of aliases) {
+    const match = normalizedHeaders.get(
+      normalizeInventoryHeader(alias),
+    )
+
+    if (match) {
+      return match
+    }
+  }
+
+  return undefined
+}
+
+const WIDE_METRIC_SUFFIXES: readonly [
+  WideInventoryMetric,
+  readonly string[],
+][] = [
+  ['onOrder', ['cantidad actual en orden']],
+  ['onHand', ['en mano']],
+  ['committed', ['cantidad comprometida']],
+  ['available', ['cantidad actual disponible']],
+  [
+    'inTransit',
+    [
+      'cantidad actual en tránsito',
+      'cantidad actual en transito',
+      'cantidad en tránsito',
+      'cantidad en transito',
+    ],
+  ],
+  ['unitCost', ['average cost', 'costo promedio']],
+]
+
+const NORMALIZED_WIDE_METRIC_SUFFIXES =
+  WIDE_METRIC_SUFFIXES.flatMap(([metric, suffixes]) =>
+    suffixes.map((suffix) => ({
+      metric,
+      suffix: normalizeInventoryHeader(suffix),
+    })),
+  ).sort(
+    (left, right) =>
+      right.suffix.length - left.suffix.length,
+  )
+
+function parseWideLocationColumn(
+  header: string,
+): {
+  location: string
+  metric: WideInventoryMetric
+} | null {
+  const normalizedHeader = normalizeInventoryHeader(header)
+
+  for (const {
+    metric,
+    suffix,
+  } of NORMALIZED_WIDE_METRIC_SUFFIXES) {
+    const separator = ` ${suffix}`
+
+    if (!normalizedHeader.endsWith(separator)) {
+      continue
+    }
+
+    const normalizedLocation = normalizedHeader
+      .slice(0, -separator.length)
+      .trim()
+
+    if (
+      !normalizedLocation ||
+      normalizedLocation === 'total'
+    ) {
+      return null
+    }
+
+    return {
+      location: normalizedLocation
+        .toLocaleUpperCase('es-MX'),
+      metric,
+    }
+  }
+
+  return null
+}
+
+function buildWideLocationColumns(
+  headers: readonly string[],
+): Record<string, WideInventoryLocationColumnMap> {
+  const result: Record<
+    string,
+    WideInventoryLocationColumnMap
+  > = {}
+
+  for (const header of headers) {
+    const parsed = parseWideLocationColumn(header)
+
+    if (!parsed) {
+      continue
+    }
+
+    const locationColumns = result[parsed.location] ?? {}
+    locationColumns[parsed.metric] = header
+    result[parsed.location] = locationColumns
+  }
+
+  return Object.fromEntries(
+    Object.entries(result).filter(
+      ([, columns]) => Boolean(columns.onHand),
+    ),
+  )
+}
+
+export function validateInventoryHeaders(
+  headers: string[],
+): InventoryValidationResult {
+  /*
+   * Preserve the exact source header as the row lookup key.
+   *
+   * Excel reports may contain leading spaces, repeated spaces, or NBSP
+   * characters in the physical column name. Normalization is only for
+   * matching; trimming the stored header breaks `row[column]` because the
+   * original object key remains unchanged.
+   */
+  const sourceHeaders = headers
+    .map((header) => String(header))
+    .filter((header) => Boolean(normalizeInventoryHeader(header)))
+
+  const columnMap: InventoryColumnMap = {}
+
+  for (const field of ALL_INVENTORY_FIELDS) {
+    const matchedColumn = findMatchingColumn(
+      sourceHeaders,
+      INVENTORY_COLUMN_ALIASES[field],
+    )
+
+    if (matchedColumn) {
+      columnMap[field] = matchedColumn
+    }
+  }
+
+  const longLayoutValid = REQUIRED_INVENTORY_FIELDS.every(
+    (field) => Boolean(columnMap[field]),
+  )
+
+  const wideLocationColumns = buildWideLocationColumns(
+    sourceHeaders,
+  )
+  const wideLayoutValid =
+    Boolean(columnMap.productName) &&
+    Object.keys(wideLocationColumns).length > 0
+
+  const sourceLayout: InventorySourceLayout =
+    longLayoutValid
+      ? 'long'
+      : 'wide_by_location'
+
+  const valid = longLayoutValid || wideLayoutValid
+
+  const missingRequiredFields = valid
+    ? []
+    : REQUIRED_INVENTORY_FIELDS.filter(
+        (field) => !columnMap[field],
+      )
+
+  const missingRecommendedFields =
+    RECOMMENDED_INVENTORY_FIELDS.filter((field) => {
+      if (columnMap[field]) {
+        return false
+      }
+
+      if (wideLayoutValid) {
+        return ![
+          'available',
+          'inventoryValue',
+        ].includes(field)
+      }
+
+      return true
+    })
+
+  const recognizedColumns = new Set(
+    Object.values(columnMap).filter(
+      (column): column is string => Boolean(column),
+    ),
+  )
+
+  for (const columns of Object.values(wideLocationColumns)) {
+    for (const column of Object.values(columns)) {
+      if (column) {
+        recognizedColumns.add(column)
+      }
+    }
+  }
+
+  return {
+    valid,
+    errors: missingRequiredFields.map((field) => ({
+      column: field,
+      message: `Falta una columna obligatoria para inventario: "${field}".`,
+    })),
+    warnings: missingRecommendedFields.map(
+      (field) =>
+        `No se encontró la columna recomendada de inventario "${field}".`,
+    ),
+    columnMap,
+    sourceLayout,
+    wideLocationColumns,
+    missingRequiredFields: [...missingRequiredFields],
+    missingRecommendedFields: [...missingRecommendedFields],
+    unknownColumns: sourceHeaders.filter(
+      (header) => !recognizedColumns.has(header),
+    ),
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\inventory-workspace\components\InventoryTables.tsx
+============================================================
+import {
+  ArrowRight,
+  CircleAlert,
+  MapPin,
+  PackageSearch,
+} from 'lucide-react'
+
+import type {
+  BusinessInventoryPosition,
+} from '../../../core/business/entities/inventoryPosition'
+
+import type {
+  InventoryAnalyticsGroup,
+  InventoryOpportunitySignal,
+  InventoryRiskSignal,
+} from '../../../core/business/analytics/inventory'
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0,
+  })
+}
+
+function formatNumber(value: number): string {
+  return value.toLocaleString('es-MX', {
+    maximumFractionDigits: 1,
+  })
+}
+
+function opportunityEvidenceLabel(
+  opportunity: InventoryOpportunitySignal,
+): string {
+  if (opportunity.type === 'inbound_recovery') {
+    return [
+      formatNumber(opportunity.evidence.inboundUnits),
+      'unidades pendientes de entrada',
+    ].join(' ')
+  }
+
+  if (opportunity.type === 'purchase_review') {
+    return [
+      formatNumber(opportunity.evidence.suggestedUnits),
+      'unidades para revisión de compra',
+    ].join(' ')
+  }
+
+  if (opportunity.type === 'commitment_release') {
+    return [
+      formatNumber(opportunity.evidence.shortageUnits),
+      'unidades sobrecomprometidas',
+    ].join(' ')
+  }
+
+  return [
+    formatNumber(opportunity.evidence.suggestedUnits),
+    'unidades sugeridas',
+  ].join(' ')
+}
+
+function opportunityRouteLabel(
+  opportunity: InventoryOpportunitySignal,
+): string {
+  if (opportunity.type === 'transfer_candidate') {
+    return [
+      opportunity.sourceLocationId ?? 'Sin origen',
+      '→',
+      opportunity.targetLocationId ?? 'Sin destino',
+    ].join(' ')
+  }
+
+  return opportunity.targetLocationId ?? 'Sin ubicación'
+}
+
+const priorityStyles = {
+  critical: 'bg-rose-100 text-rose-700',
+  high: 'bg-amber-100 text-amber-700',
+  medium: 'bg-blue-100 text-blue-700',
+  low: 'bg-slate-100 text-slate-600',
+}
+
+export function InventoryRankingTable({
+  groups,
+  onSelect,
+}: {
+  groups: readonly InventoryAnalyticsGroup[]
+  onSelect: (group: InventoryAnalyticsGroup) => void
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] text-left text-sm">
+        <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+          <tr>
+            <th className="px-3 py-3 font-semibold">Elemento</th>
+            <th className="px-3 py-3 text-right font-semibold">Existencia</th>
+            <th className="px-3 py-3 text-right font-semibold">Disponible</th>
+            <th className="px-3 py-3 text-right font-semibold">Entradas</th>
+            <th className="px-3 py-3 text-right font-semibold">Valor</th>
+            <th className="px-3 py-3 text-right font-semibold">Participación</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {groups.map((group) => (
+            <tr
+              key={group.key}
+              className="cursor-pointer transition hover:bg-slate-50"
+              onClick={() => onSelect(group)}
+            >
+              <td className="px-3 py-4">
+                <p className="font-semibold text-slate-900">{group.label}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {group.products} productos · {group.locations} ubicaciones
+                </p>
+              </td>
+              <td className="px-3 py-4 text-right text-slate-700">
+                {formatNumber(group.onHand)}
+              </td>
+              <td className="px-3 py-4 text-right text-slate-700">
+                {formatNumber(group.available)}
+              </td>
+              <td className="px-3 py-4 text-right text-slate-700">
+                {formatNumber(group.inTransit + group.onOrder)}
+              </td>
+              <td className="px-3 py-4 text-right font-semibold text-slate-900">
+                {formatCurrency(group.inventoryValue)}
+              </td>
+              <td className="px-3 py-4 text-right text-slate-700">
+                {(group.valueShare * 100).toFixed(1)}%
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+export function InventoryRiskList({
+  risks,
+}: {
+  risks: readonly InventoryRiskSignal[]
+}) {
+  if (risks.length === 0) {
+    return <EmptyState label="No hay riesgos con los filtros actuales." />
+  }
+
+  return (
+    <div className="space-y-3">
+      {risks.map((risk) => (
+        <article
+          key={risk.id}
+          className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                <CircleAlert size={18} />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">{risk.productName}</p>
+                <p className="mt-1 text-sm text-slate-600">{risk.title}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  {risk.rationale}
+                </p>
+                <p className="mt-2 text-xs font-medium text-slate-400">
+                  {risk.brandId ?? 'Sin marca'} · {risk.locationId ?? 'Sin ubicación'}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  En mano: {formatNumber(risk.evidence.onHand)}
+                  {' · '}Comprometido: {formatNumber(risk.evidence.committed)}
+                  {' · '}Disponible: {formatNumber(risk.evidence.available)}
+                  {' · '}Entradas: {formatNumber(risk.evidence.inbound)}
+                </p>
+              </div>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${priorityStyles[risk.priority]}`}>
+              {risk.priority} · {risk.score}
+            </span>
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+export function InventoryOpportunityList({
+  opportunities,
+}: {
+  opportunities: readonly InventoryOpportunitySignal[]
+}) {
+  if (opportunities.length === 0) {
+    return <EmptyState label="No hay oportunidades con los filtros actuales." />
+  }
+
+  return (
+    <div className="space-y-3">
+      {opportunities.map((opportunity) => (
+        <article
+          key={opportunity.id}
+          className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <ArrowRight size={18} />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">
+                  {opportunity.productName}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {opportunity.title}
+                </p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  {opportunity.rationale}
+                </p>
+                <p className="mt-2 flex items-center gap-1 text-xs font-medium text-slate-400">
+                  <MapPin size={13} />
+                  {opportunityRouteLabel(opportunity)}
+                  {' · '}{opportunityEvidenceLabel(opportunity)}
+                </p>
+              </div>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${priorityStyles[opportunity.priority]}`}>
+              {opportunity.priority} · {opportunity.score}
+            </span>
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+export function InventoryPositionTable({
+  positions,
+}: {
+  positions: readonly BusinessInventoryPosition[]
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[980px] text-left text-sm">
+        <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+          <tr>
+            <th className="px-3 py-3 font-semibold">Producto</th>
+            <th className="px-3 py-3 font-semibold">Marca / ubicación</th>
+            <th className="px-3 py-3 text-right font-semibold">Existencia</th>
+            <th className="px-3 py-3 text-right font-semibold">Disponible</th>
+            <th className="px-3 py-3 text-right font-semibold">Comprometido</th>
+            <th className="px-3 py-3 text-right font-semibold">Entradas</th>
+            <th className="px-3 py-3 text-right font-semibold">Valor</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {positions.map((position) => (
+            <tr key={position.id} className="hover:bg-slate-50">
+              <td className="px-3 py-4">
+                <p className="font-semibold text-slate-900">{position.productName}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {position.model ?? position.productCode ?? 'Sin modelo'}
+                </p>
+              </td>
+              <td className="px-3 py-4 text-slate-600">
+                {position.brandId ?? 'Sin marca'} · {position.locationId}
+              </td>
+              <td className="px-3 py-4 text-right">{formatNumber(position.onHand)}</td>
+              <td className="px-3 py-4 text-right">{formatNumber(position.available)}</td>
+              <td className="px-3 py-4 text-right">{formatNumber(position.committed)}</td>
+              <td className="px-3 py-4 text-right">
+                {formatNumber(position.inTransit + position.onOrder)}
+              </td>
+              <td className="px-3 py-4 text-right font-semibold text-slate-900">
+                {formatCurrency(position.inventoryValue)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center">
+      <PackageSearch className="text-slate-300" size={28} />
+      <p className="mt-3 text-sm text-slate-500">{label}</p>
+    </div>
+  )
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\inventory-workspace\engine\inventoryWorkspaceModel.test.ts
+============================================================
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest'
+
+import {
+  buildInventoryWorkspaceGroups,
+  DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+  filterInventoryOpportunities,
+  filterInventoryPositions,
+  filterInventoryRisks,
+} from './inventoryWorkspaceModel'
+
+import type {
+  BusinessInventoryPosition,
+} from '../../../core/business/entities/inventoryPosition'
+
+import type {
+  InventoryOpportunitySignal,
+  InventoryRiskSignal,
+} from '../../../core/business/analytics/inventory'
+
+const position: BusinessInventoryPosition = {
+  id: 'P-1::CDMX',
+  snapshotDate: '2026-07-30',
+  productId: 'P-1',
+  productName: 'CAMARA UNO',
+  productCode: 'P-1',
+  brandId: 'UNV',
+  model: 'IPC-A',
+  locationId: 'CDMX',
+  identityStatus: 'current_master',
+  onHand: 10,
+  available: 6,
+  committed: 4,
+  inTransit: 0,
+  onOrder: 2,
+  unitCost: 100,
+  inventoryValue: 1000,
+  currency: 'MXN',
+  sourceRows: 1,
+}
+
+const risk: InventoryRiskSignal = {
+  id: 'R-1',
+  type: 'overcommitted',
+  priority: 'high',
+  score: 70,
+  snapshotDate: '2026-07-30',
+  productId: 'P-1',
+  productName: 'CAMARA UNO',
+  brandId: 'UNV',
+  locationId: 'CDMX',
+  title: 'Compromiso elevado',
+  rationale: 'Prueba',
+  evidence: {
+    onHand: 10,
+    available: -1,
+    committed: 11,
+    inbound: 0,
+    inventoryValue: 1000,
+    valueShare: 0.1,
+  },
+}
+
+const opportunity: InventoryOpportunitySignal = {
+  id: 'O-1',
+  type: 'inbound_recovery',
+  priority: 'high',
+  score: 70,
+  snapshotDate: '2026-07-30',
+  productId: 'P-1',
+  productName: 'CAMARA UNO',
+  brandId: 'UNV',
+  sourceLocationId: null,
+  targetLocationId: 'CDMX',
+  title: 'Seguimiento de entrada pendiente',
+  rationale: 'Prueba',
+  evidence: {
+    shortageUnits: 0,
+    surplusUnits: 0,
+    suggestedUnits: 0,
+    inboundUnits: 2,
+    inventoryValue: 0,
+  },
+}
+
+describe('Inventory Workspace filters', () => {
+  it('filtra posiciones por texto y ubicación', () => {
+    const result = filterInventoryPositions(
+      [position],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        search: 'ipc-a',
+        locationId: 'CDMX',
+      },
+    )
+
+    expect(result).toHaveLength(1)
+  })
+
+  it('filtra riesgos por prioridad y marca', () => {
+    const result = filterInventoryRisks(
+      [risk],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        brandId: 'UNV',
+        priority: 'high',
+      },
+    )
+
+    expect(result[0]?.id).toBe('R-1')
+  })
+
+  it('recalcula el ranking con las posiciones filtradas por marca', () => {
+    const beldenPosition: BusinessInventoryPosition = {
+      ...position,
+      id: 'P-2::QRO',
+      productId: 'P-2',
+      productName: 'CABLE BELDEN',
+      productCode: 'P-2',
+      brandId: 'BELDEN',
+      model: 'CB02BBEL05',
+      locationId: 'QRO',
+      inventoryValue: 500,
+    }
+
+    const filtered = filterInventoryPositions(
+      [position, beldenPosition],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        brandId: 'BELDEN',
+      },
+    )
+
+    const groups = buildInventoryWorkspaceGroups(filtered, 'brand')
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.key).toBe('BELDEN')
+    expect(groups[0]?.valueShare).toBe(1)
+  })
+
+  it('mantiene riesgos visibles al buscar por marca', () => {
+    const result = filterInventoryRisks(
+      [risk],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        search: 'UNV',
+      },
+    )
+
+    expect(result[0]?.id).toBe('R-1')
+  })
+
+  it('mantiene oportunidades visibles al buscar por marca o ubicación', () => {
+    const byBrand = filterInventoryOpportunities(
+      [opportunity],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        search: 'UNV',
+      },
+    )
+
+    const byLocation = filterInventoryOpportunities(
+      [opportunity],
+      {
+        ...DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+        search: 'CDMX',
+      },
+    )
+
+    expect(byBrand[0]?.id).toBe('O-1')
+    expect(byLocation[0]?.id).toBe('O-1')
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\inventory-workspace\engine\inventoryWorkspaceModel.ts
+============================================================
+import type {
+  BusinessInventoryPosition,
+} from '../../../core/business/entities/inventoryPosition'
+
+import {
+  buildInventoryAnalytics,
+} from '../../../core/business/analytics/inventory'
+
+import type {
+  InventoryActionPriority,
+  InventoryAnalyticsGroup,
+  InventoryAnalyticsReport,
+  InventoryOpportunitySignal,
+  InventoryRiskOpportunityReport,
+  InventoryRiskSignal,
+  InventoryStockStatus,
+} from '../../../core/business/analytics/inventory'
+
+export type InventoryWorkspaceDimension =
+  | 'brand'
+  | 'location'
+  | 'product'
+
+export interface InventoryWorkspaceFilters {
+  search: string
+  brandId: string
+  locationId: string
+  stockStatus: InventoryStockStatus | 'all'
+  priority: InventoryActionPriority | 'all'
+}
+
+export interface InventoryWorkspaceModel {
+  available: boolean
+  analytics: InventoryAnalyticsReport | null
+  riskOpportunity: InventoryRiskOpportunityReport | null
+  latestPositions: BusinessInventoryPosition[]
+  brands: string[]
+  locations: string[]
+}
+
+export const DEFAULT_INVENTORY_WORKSPACE_FILTERS:
+  InventoryWorkspaceFilters = {
+    search: '',
+    brandId: 'all',
+    locationId: 'all',
+    stockStatus: 'all',
+    priority: 'all',
+  }
+
+export function matchesInventorySearch(
+  value: string,
+  search: string,
+): boolean {
+  const normalizedSearch = search.trim().toLocaleUpperCase('es-MX')
+
+  return normalizedSearch.length === 0 ||
+    value.toLocaleUpperCase('es-MX').includes(normalizedSearch)
+}
+
+export function buildInventoryWorkspaceGroups(
+  positions: readonly BusinessInventoryPosition[],
+  dimension: InventoryWorkspaceDimension,
+): InventoryAnalyticsGroup[] {
+  if (positions.length === 0) {
+    return []
+  }
+
+  const snapshotDate = positions[0]?.snapshotDate ?? null
+  const analytics = buildInventoryAnalytics(positions, snapshotDate)
+
+  if (dimension === 'brand') {
+    return analytics.byBrand
+  }
+
+  if (dimension === 'location') {
+    return analytics.byLocation
+  }
+
+  return analytics.byProduct
+}
+
+export function filterInventoryGroups(
+  groups: readonly InventoryAnalyticsGroup[],
+  search: string,
+): InventoryAnalyticsGroup[] {
+  return groups.filter((group) =>
+    matchesInventorySearch(`${group.label} ${group.key}`, search),
+  )
+}
+
+export function filterInventoryRisks(
+  risks: readonly InventoryRiskSignal[],
+  filters: InventoryWorkspaceFilters,
+): InventoryRiskSignal[] {
+  return risks.filter((risk) => {
+    if (filters.brandId !== 'all' && risk.brandId !== filters.brandId) {
+      return false
+    }
+
+    if (
+      filters.locationId !== 'all' &&
+      risk.locationId !== filters.locationId
+    ) {
+      return false
+    }
+
+    if (filters.priority !== 'all' && risk.priority !== filters.priority) {
+      return false
+    }
+
+    return matchesInventorySearch(
+      `${risk.productName} ${risk.brandId ?? ''} ${risk.locationId ?? ''} ${risk.title} ${risk.rationale}`,
+      filters.search,
+    )
+  })
+}
+
+export function filterInventoryOpportunities(
+  opportunities: readonly InventoryOpportunitySignal[],
+  filters: InventoryWorkspaceFilters,
+): InventoryOpportunitySignal[] {
+  return opportunities.filter((opportunity) => {
+    if (
+      filters.brandId !== 'all' &&
+      opportunity.brandId !== filters.brandId
+    ) {
+      return false
+    }
+
+    if (
+      filters.locationId !== 'all' &&
+      opportunity.sourceLocationId !== filters.locationId &&
+      opportunity.targetLocationId !== filters.locationId
+    ) {
+      return false
+    }
+
+    if (
+      filters.priority !== 'all' &&
+      opportunity.priority !== filters.priority
+    ) {
+      return false
+    }
+
+    return matchesInventorySearch(
+      `${opportunity.productName} ${opportunity.brandId ?? ''} ${opportunity.sourceLocationId ?? ''} ${opportunity.targetLocationId ?? ''} ${opportunity.title} ${opportunity.rationale}`,
+      filters.search,
+    )
+  })
+}
+
+export function filterInventoryPositions(
+  positions: readonly BusinessInventoryPosition[],
+  filters: InventoryWorkspaceFilters,
+): BusinessInventoryPosition[] {
+  return positions.filter((position) => {
+    if (
+      filters.brandId !== 'all' &&
+      position.brandId !== filters.brandId
+    ) {
+      return false
+    }
+
+    if (
+      filters.locationId !== 'all' &&
+      position.locationId !== filters.locationId
+    ) {
+      return false
+    }
+
+    return matchesInventorySearch(
+      [
+        position.productName,
+        position.productCode ?? '',
+        position.model ?? '',
+        position.brandId ?? '',
+        position.locationId,
+      ].join(' '),
+      filters.search,
+    )
+  })
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\inventory-workspace\hooks\useInventoryWorkspace.ts
+============================================================
+import {
+  useMemo,
+} from 'react'
+
+import {
+  useWorkspaceContext,
+} from '../../workspaces/shared/hooks/useWorkspaceContext'
+
+import type {
+  InventoryWorkspaceModel,
+} from '../engine/inventoryWorkspaceModel'
+
+export function useInventoryWorkspace(): InventoryWorkspaceModel {
+  const workspace = useWorkspaceContext()
+
+  return useMemo(() => {
+    const repository = workspace.repository
+
+    if (!repository) {
+      return {
+        available: false,
+        analytics: null,
+        riskOpportunity: null,
+        latestPositions: [],
+        brands: [],
+        locations: [],
+      }
+    }
+
+    const analytics = repository.inventoryAnalytics.getReport()
+    const riskOpportunity =
+      repository.inventoryRiskOpportunity.getReport()
+    const latestPositions =
+      repository.inventory.getLatestPositions()
+
+    const brands = [...new Set(
+      latestPositions
+        .map((position) => position.brandId)
+        .filter((brandId): brandId is string => Boolean(brandId)),
+    )].sort((left, right) => left.localeCompare(right))
+
+    const locations = [...new Set(
+      latestPositions.map((position) => position.locationId),
+    )].sort((left, right) => left.localeCompare(right))
+
+    return {
+      available: latestPositions.length > 0,
+      analytics,
+      riskOpportunity,
+      latestPositions,
+      brands,
+      locations,
+    }
+  }, [workspace.repository])
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\features\inventory-workspace\pages\InventoryWorkspacePage.tsx
+============================================================
+import {
+  AlertTriangle,
+  Boxes,
+  CircleDollarSign,
+  PackageCheck,
+  PackageSearch,
+  Search,
+  Truck,
+  Warehouse,
+} from 'lucide-react'
+
+import {
+  useMemo,
+  useState,
+} from 'react'
+
+import {
+  KpiCard,
+} from '../../../components/business/kpi'
+
+import {
+  WorkspaceGrid,
+} from '../../../components/workspace/grid'
+
+import {
+  WorkspaceHeader,
+} from '../../../components/workspace/header'
+
+import {
+  WorkspaceSection,
+} from '../../../components/workspace/section'
+
+import {
+  useInventoryWorkspace,
+} from '../hooks/useInventoryWorkspace'
+
+import {
+  buildInventoryWorkspaceGroups,
+  DEFAULT_INVENTORY_WORKSPACE_FILTERS,
+  filterInventoryOpportunities,
+  filterInventoryPositions,
+  filterInventoryRisks,
+} from '../engine/inventoryWorkspaceModel'
+
+import type {
+  InventoryWorkspaceDimension,
+  InventoryWorkspaceFilters,
+} from '../engine/inventoryWorkspaceModel'
+
+import {
+  InventoryOpportunityList,
+  InventoryPositionTable,
+  InventoryRankingTable,
+  InventoryRiskList,
+} from '../components/InventoryTables'
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0,
+  })
+}
+
+function formatNumber(value: number): string {
+  return value.toLocaleString('es-MX', {
+    maximumFractionDigits: 1,
+  })
+}
+
+const dimensionLabels: Record<InventoryWorkspaceDimension, string> = {
+  brand: 'Marca',
+  location: 'Ubicación',
+  product: 'Producto',
+}
+
+export function InventoryWorkspacePage() {
+  const workspace = useInventoryWorkspace()
+  const [dimension, setDimension] =
+    useState<InventoryWorkspaceDimension>('brand')
+  const [filters, setFilters] =
+    useState<InventoryWorkspaceFilters>(DEFAULT_INVENTORY_WORKSPACE_FILTERS)
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
+
+  const analytics = workspace.analytics
+  const riskOpportunity = workspace.riskOpportunity
+  const totals = analytics?.totals
+
+  const filteredPositions = useMemo(
+    () => filterInventoryPositions(workspace.latestPositions, filters),
+    [workspace.latestPositions, filters],
+  )
+
+  const dimensionGroups = useMemo(
+    () => buildInventoryWorkspaceGroups(filteredPositions, dimension),
+    [filteredPositions, dimension],
+  )
+
+  const filteredRisks = useMemo(
+    () => filterInventoryRisks(riskOpportunity?.risks ?? [], filters),
+    [riskOpportunity, filters],
+  )
+
+  const filteredOpportunities = useMemo(
+    () => filterInventoryOpportunities(
+      riskOpportunity?.opportunities ?? [],
+      filters,
+    ),
+    [riskOpportunity, filters],
+  )
+
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto w-full max-w-[1600px] px-5 py-8 sm:px-8 lg:px-10">
+        <WorkspaceHeader
+          connected={workspace.available}
+          connectedLabel="Inventario conectado"
+          description="Supervisa existencias, disponibilidad, compromisos, valor, riesgos y oportunidades por marca, producto y ubicación."
+          disconnectedLabel="Carga un inventario en Data Center"
+          eyebrow="Inventory Intelligence"
+          icon={Warehouse}
+          metadata={analytics?.snapshotDate ? (
+            <p className="text-xs font-medium text-slate-400">
+              Último corte: {analytics.snapshotDate}
+            </p>
+          ) : null}
+          title="Centro de Inteligencia de Inventario"
+          tone="blue"
+        />
+
+        <WorkspaceGrid className="mt-6" columns={4}>
+          <KpiCard
+            icon={CircleDollarSign}
+            subtitle={`${totals?.products ?? 0} productos en ${totals?.locations ?? 0} ubicaciones`}
+            title="Valor de inventario"
+            tone="blue"
+            value={formatCurrency(totals?.inventoryValue ?? 0)}
+          />
+          <KpiCard
+            icon={Boxes}
+            subtitle={`${formatNumber(totals?.available ?? 0)} disponibles`}
+            title="Existencia física"
+            tone="slate"
+            value={formatNumber(totals?.onHand ?? 0)}
+          />
+          <KpiCard
+            icon={Truck}
+            subtitle="Tránsito + órdenes de compra"
+            title="Entradas pendientes"
+            tone="emerald"
+            value={formatNumber(totals?.inboundUnits ?? 0)}
+          />
+          <KpiCard
+            icon={AlertTriangle}
+            subtitle={`${riskOpportunity?.summary.opportunities ?? 0} oportunidades detectadas`}
+            title="Riesgos prioritarios"
+            tone="amber"
+            value={(riskOpportunity?.summary.criticalRisks ?? 0) +
+              (riskOpportunity?.summary.highRisks ?? 0)}
+          />
+        </WorkspaceGrid>
+
+        <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_160px_auto]">
+            <label className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+              <input
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                onChange={(event) => setFilters((current) => ({
+                  ...current,
+                  search: event.target.value,
+                }))}
+                placeholder="Buscar Name, modelo, marca o ubicación"
+                value={filters.search}
+              />
+            </label>
+
+            <select
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+              onChange={(event) => setFilters((current) => ({
+                ...current,
+                brandId: event.target.value,
+              }))}
+              value={filters.brandId}
+            >
+              <option value="all">Todas las marcas</option>
+              {workspace.brands.map((brand) => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+
+            <select
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+              onChange={(event) => setFilters((current) => ({
+                ...current,
+                locationId: event.target.value,
+              }))}
+              value={filters.locationId}
+            >
+              <option value="all">Todas las ubicaciones</option>
+              {workspace.locations.map((location) => (
+                <option key={location} value={location}>{location}</option>
+              ))}
+            </select>
+
+            <select
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+              onChange={(event) => setFilters((current) => ({
+                ...current,
+                priority: event.target.value as InventoryWorkspaceFilters['priority'],
+              }))}
+              value={filters.priority}
+            >
+              <option value="all">Toda prioridad</option>
+              <option value="critical">Crítica</option>
+              <option value="high">Alta</option>
+              <option value="medium">Media</option>
+              <option value="low">Baja</option>
+            </select>
+
+            <button
+              className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              onClick={() => {
+                setFilters(DEFAULT_INVENTORY_WORKSPACE_FILTERS)
+                setSelectedLabel(null)
+              }}
+              type="button"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </section>
+
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+          <WorkspaceSection
+            actions={(
+              <div className="flex rounded-xl bg-slate-100 p-1">
+                {(Object.keys(dimensionLabels) as InventoryWorkspaceDimension[]).map((item) => (
+                  <button
+                    className={[
+                      'rounded-lg px-3 py-2 text-xs font-semibold transition',
+                      dimension === item
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800',
+                    ].join(' ')}
+                    key={item}
+                    onClick={() => {
+                      setDimension(item)
+                      setSelectedLabel(null)
+                    }}
+                    type="button"
+                  >
+                    {dimensionLabels[item]}
+                  </button>
+                ))}
+              </div>
+            )}
+            icon={PackageCheck}
+            subtitle={`${dimensionGroups.length} elementos · ordenados por valor de inventario`}
+            title={`Inventario por ${dimensionLabels[dimension].toLowerCase()}`}
+            tone="blue"
+          >
+            <InventoryRankingTable
+              groups={dimensionGroups.slice(0, 25)}
+              onSelect={(group) => {
+                setSelectedLabel(group.label)
+                setFilters((current) => {
+                  if (dimension === 'brand') {
+                    return {
+                      ...current,
+                      search: '',
+                      brandId: group.key,
+                    }
+                  }
+
+                  if (dimension === 'location') {
+                    return {
+                      ...current,
+                      search: '',
+                      locationId: group.key,
+                    }
+                  }
+
+                  return {
+                    ...current,
+                    search: group.label,
+                  }
+                })
+              }}
+            />
+          </WorkspaceSection>
+
+          <WorkspaceSection
+            icon={PackageSearch}
+            subtitle="Distribución operativa del último corte"
+            title="Estado de posiciones"
+            tone="slate"
+          >
+            <div className="space-y-3">
+              {(analytics?.stockStatus ?? []).map((status) => (
+                <article
+                  className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
+                  key={status.status}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {status.status.replaceAll('_', ' ')}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {status.positions} posiciones · {status.products} productos
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-slate-900">
+                        {formatCurrency(status.inventoryValue)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {(status.valueShare * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </WorkspaceSection>
+        </div>
+
+        <div className="mt-5 grid gap-5 xl:grid-cols-2">
+          <WorkspaceSection
+            icon={AlertTriangle}
+            subtitle={`${filteredRisks.length} señales después de filtros`}
+            title="Riesgos de inventario"
+            tone="rose"
+          >
+            <InventoryRiskList risks={filteredRisks.slice(0, 20)} />
+          </WorkspaceSection>
+
+          <WorkspaceSection
+            icon={Truck}
+            subtitle={`${filteredOpportunities.length} acciones sugeridas`}
+            title="Oportunidades operativas"
+            tone="emerald"
+          >
+            <InventoryOpportunityList
+              opportunities={filteredOpportunities.slice(0, 20)}
+            />
+          </WorkspaceSection>
+        </div>
+
+        <WorkspaceSection
+          className="mt-5"
+          icon={Boxes}
+          subtitle={`${filteredPositions.length} posiciones del último corte${selectedLabel ? ` · selección: ${selectedLabel}` : ''}`}
+          title="Drill-down de posiciones"
+          tone="violet"
+        >
+          <InventoryPositionTable positions={filteredPositions.slice(0, 200)} />
+          {filteredPositions.length > 200 && (
+            <p className="mt-4 text-center text-xs text-slate-400">
+              Se muestran las primeras 200 posiciones. Refina los filtros para revisar un subconjunto.
+            </p>
+          )}
+        </WorkspaceSection>
+      </div>
+    </main>
+  )
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\analytics\inventory\index.ts
+============================================================
+export {
+  buildInventoryAnalytics,
+} from './inventoryAnalytics'
+
+export type {
+  InventoryAnalyticsGroup,
+  InventoryAnalyticsReport,
+  InventoryAnalyticsTotals,
+  InventoryStockStatus,
+  InventoryStockStatusSummary,
+} from './inventoryAnalytics'
+
+export {
+  buildInventoryRiskOpportunityReport,
+} from './inventoryRiskOpportunity'
+
+export type {
+  InventoryActionPriority,
+  InventoryOpportunityEvidence,
+  InventoryOpportunitySignal,
+  InventoryOpportunityType,
+  InventoryRiskEvidence,
+  InventoryRiskOpportunityReport,
+  InventoryRiskOpportunitySummary,
+  InventoryRiskSignal,
+  InventoryRiskType,
+} from './inventoryRiskOpportunity'
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\analytics\inventory\inventoryAnalytics.test.ts
+============================================================
+import { describe, expect, it } from 'vitest'
+
+import { buildInventoryAnalytics } from './inventoryAnalytics'
+
+import type {
+  BusinessInventoryPosition,
+} from '../../entities/inventoryPosition'
+
+function position(
+  overrides: Partial<BusinessInventoryPosition>,
+): BusinessInventoryPosition {
+  return {
+    id: '2026-07-30::P-1::CDMX',
+    snapshotDate: '2026-07-30',
+    productId: 'P-1',
+    productName: 'P-1',
+    productCode: null,
+    brandId: 'UNV',
+    model: 'IPC-A',
+    locationId: 'CDMX',
+    identityStatus: 'current_master',
+    onHand: 10,
+    available: 7,
+    committed: 3,
+    inTransit: 2,
+    onOrder: 4,
+    unitCost: 100,
+    inventoryValue: 1000,
+    currency: 'MXN',
+    sourceRows: 1,
+    ...overrides,
+  }
+}
+
+describe('IW-003 buildInventoryAnalytics', () => {
+  it('calcula totales y segmentaciones del ultimo corte', () => {
+    const report = buildInventoryAnalytics([
+      position({}),
+      position({
+        id: '2026-07-30::P-2::QRO',
+        productId: 'P-2',
+        productName: 'P-2',
+        brandId: 'ZKTECO',
+        locationId: 'QRO',
+        onHand: 5,
+        available: 5,
+        committed: 0,
+        inTransit: 0,
+        onOrder: 1,
+        inventoryValue: 500,
+      }),
+      position({
+        id: '2026-06-30::P-OLD::CDMX',
+        snapshotDate: '2026-06-30',
+        productId: 'P-OLD',
+        productName: 'P-OLD',
+        inventoryValue: 9000,
+      }),
+    ], '2026-07-30')
+
+    expect(report.totals.positions).toBe(2)
+    expect(report.totals.products).toBe(2)
+    expect(report.totals.locations).toBe(2)
+    expect(report.totals.inventoryValue).toBe(1500)
+    expect(report.totals.inboundUnits).toBe(7)
+    expect(report.byBrand[0]?.key).toBe('UNV')
+    expect(report.byBrand[0]?.valueShare).toBeCloseTo(2 / 3)
+    expect(report.byLocation).toHaveLength(2)
+  })
+
+  it('clasifica posiciones criticas y productos no resueltos', () => {
+    const report = buildInventoryAnalytics([
+      position({
+        id: 'NEG',
+        productId: null,
+        productName: 'OLD-1',
+        identityStatus: 'unresolved',
+        onHand: -2,
+        available: -2,
+        committed: 0,
+        inventoryValue: 200,
+      }),
+      position({
+        id: 'OUT',
+        productId: 'P-2',
+        productName: 'P-2',
+        onHand: 0,
+        available: 0,
+        committed: 0,
+        inTransit: 0,
+        onOrder: 0,
+        inventoryValue: 0,
+      }),
+      position({
+        id: 'INBOUND',
+        productId: 'P-3',
+        productName: 'P-3',
+        onHand: 0,
+        available: 0,
+        committed: 0,
+        inTransit: 5,
+        onOrder: 0,
+        inventoryValue: 0,
+      }),
+    ], '2026-07-30')
+
+    expect(report.totals.unresolvedProducts).toBe(1)
+    expect(
+      report.stockStatus.find(
+        (summary) => summary.status === 'negative_stock',
+      )?.positions,
+    ).toBe(1)
+    expect(
+      report.stockStatus.find(
+        (summary) => summary.status === 'out_of_stock',
+      )?.positions,
+    ).toBe(1)
+    expect(
+      report.stockStatus.find(
+        (summary) => summary.status === 'inbound_only',
+      )?.positions,
+    ).toBe(1)
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\analytics\inventory\inventoryAnalytics.ts
+============================================================
+import type {
+  BusinessInventoryPosition,
+} from '../../entities/inventoryPosition'
+
+export type InventoryStockStatus =
+  | 'available'
+  | 'out_of_stock'
+  | 'negative_stock'
+  | 'overcommitted'
+  | 'inbound_only'
+  | 'no_available_stock'
+
+export interface InventoryAnalyticsTotals {
+  positions: number
+  products: number
+  locations: number
+  unresolvedProducts: number
+
+  onHand: number
+  available: number
+  committed: number
+  inTransit: number
+  onOrder: number
+  inventoryValue: number
+
+  availableRate: number
+  committedRate: number
+  inboundUnits: number
+}
+
+export interface InventoryAnalyticsGroup {
+  key: string
+  label: string
+  positions: number
+  products: number
+  locations: number
+
+  onHand: number
+  available: number
+  committed: number
+  inTransit: number
+  onOrder: number
+  inventoryValue: number
+
+  valueShare: number
+  availableRate: number
+}
+
+export interface InventoryStockStatusSummary {
+  status: InventoryStockStatus
+  positions: number
+  products: number
+  inventoryValue: number
+  valueShare: number
+}
+
+export interface InventoryAnalyticsReport {
+  generatedAt: string
+  snapshotDate: string | null
+  totals: InventoryAnalyticsTotals
+  byBrand: InventoryAnalyticsGroup[]
+  byLocation: InventoryAnalyticsGroup[]
+  byProduct: InventoryAnalyticsGroup[]
+  stockStatus: InventoryStockStatusSummary[]
+}
+
+interface MutableGroup {
+  key: string
+  label: string
+  positions: number
+  products: Set<string>
+  locations: Set<string>
+  onHand: number
+  available: number
+  committed: number
+  inTransit: number
+  onOrder: number
+  inventoryValue: number
+}
+
+interface MutableStatus {
+  positions: number
+  products: Set<string>
+  inventoryValue: number
+}
+
+function safeRatio(numerator: number, denominator: number): number {
+  return denominator > 0 ? numerator / denominator : 0
+}
+
+function productKey(position: BusinessInventoryPosition): string {
+  return position.productId ?? position.productName
+}
+
+function classifyStockStatus(
+  position: BusinessInventoryPosition,
+): InventoryStockStatus {
+  if (position.onHand < 0 || position.available < 0) {
+    return 'negative_stock'
+  }
+
+  if (position.committed > position.onHand) {
+    return 'overcommitted'
+  }
+
+  if (
+    position.onHand <= 0 &&
+    (position.inTransit > 0 || position.onOrder > 0)
+  ) {
+    return 'inbound_only'
+  }
+
+  if (position.onHand <= 0) {
+    return 'out_of_stock'
+  }
+
+  if (position.available <= 0) {
+    return 'no_available_stock'
+  }
+
+  return 'available'
+}
+
+function registerGroup(
+  groups: Map<string, MutableGroup>,
+  key: string,
+  label: string,
+  position: BusinessInventoryPosition,
+): void {
+  let group = groups.get(key)
+
+  if (!group) {
+    group = {
+      key,
+      label,
+      positions: 0,
+      products: new Set<string>(),
+      locations: new Set<string>(),
+      onHand: 0,
+      available: 0,
+      committed: 0,
+      inTransit: 0,
+      onOrder: 0,
+      inventoryValue: 0,
+    }
+
+    groups.set(key, group)
+  }
+
+  group.positions += 1
+  group.products.add(productKey(position))
+  group.locations.add(position.locationId)
+  group.onHand += position.onHand
+  group.available += position.available
+  group.committed += position.committed
+  group.inTransit += position.inTransit
+  group.onOrder += position.onOrder
+  group.inventoryValue += position.inventoryValue
+}
+
+function finalizeGroups(
+  groups: Map<string, MutableGroup>,
+  totalInventoryValue: number,
+): InventoryAnalyticsGroup[] {
+  return [...groups.values()]
+    .map((group) => ({
+      key: group.key,
+      label: group.label,
+      positions: group.positions,
+      products: group.products.size,
+      locations: group.locations.size,
+      onHand: group.onHand,
+      available: group.available,
+      committed: group.committed,
+      inTransit: group.inTransit,
+      onOrder: group.onOrder,
+      inventoryValue: group.inventoryValue,
+      valueShare: safeRatio(
+        group.inventoryValue,
+        totalInventoryValue,
+      ),
+      availableRate: safeRatio(group.available, group.onHand),
+    }))
+    .sort(
+      (left, right) =>
+        right.inventoryValue - left.inventoryValue ||
+        right.onHand - left.onHand ||
+        left.label.localeCompare(right.label),
+    )
+}
+
+export function buildInventoryAnalytics(
+  positions: readonly BusinessInventoryPosition[],
+  snapshotDate: string | null,
+): InventoryAnalyticsReport {
+  const selectedPositions = positions.filter(
+    (position) => position.snapshotDate === snapshotDate,
+  )
+
+  const products = new Set<string>()
+  const locations = new Set<string>()
+  const unresolvedProducts = new Set<string>()
+
+  const totals: InventoryAnalyticsTotals = {
+    positions: 0,
+    products: 0,
+    locations: 0,
+    unresolvedProducts: 0,
+    onHand: 0,
+    available: 0,
+    committed: 0,
+    inTransit: 0,
+    onOrder: 0,
+    inventoryValue: 0,
+    availableRate: 0,
+    committedRate: 0,
+    inboundUnits: 0,
+  }
+
+  const brandGroups = new Map<string, MutableGroup>()
+  const locationGroups = new Map<string, MutableGroup>()
+  const productGroups = new Map<string, MutableGroup>()
+  const statuses = new Map<InventoryStockStatus, MutableStatus>()
+
+  for (const position of selectedPositions) {
+    const identity = productKey(position)
+    const brandId = position.brandId ?? 'SIN MARCA'
+
+    products.add(identity)
+    locations.add(position.locationId)
+
+    if (position.identityStatus === 'unresolved') {
+      unresolvedProducts.add(position.productName)
+    }
+
+    totals.positions += 1
+    totals.onHand += position.onHand
+    totals.available += position.available
+    totals.committed += position.committed
+    totals.inTransit += position.inTransit
+    totals.onOrder += position.onOrder
+    totals.inventoryValue += position.inventoryValue
+
+    registerGroup(brandGroups, brandId, brandId, position)
+    registerGroup(
+      locationGroups,
+      position.locationId,
+      position.locationId,
+      position,
+    )
+    registerGroup(
+      productGroups,
+      identity,
+      position.productName,
+      position,
+    )
+
+    const status = classifyStockStatus(position)
+    const currentStatus = statuses.get(status) ?? {
+      positions: 0,
+      products: new Set<string>(),
+      inventoryValue: 0,
+    }
+
+    currentStatus.positions += 1
+    currentStatus.products.add(identity)
+    currentStatus.inventoryValue += position.inventoryValue
+    statuses.set(status, currentStatus)
+  }
+
+  totals.products = products.size
+  totals.locations = locations.size
+  totals.unresolvedProducts = unresolvedProducts.size
+  totals.availableRate = safeRatio(totals.available, totals.onHand)
+  totals.committedRate = safeRatio(totals.committed, totals.onHand)
+  totals.inboundUnits = totals.inTransit + totals.onOrder
+
+  const stockStatus = [...statuses.entries()]
+    .map(([status, summary]) => ({
+      status,
+      positions: summary.positions,
+      products: summary.products.size,
+      inventoryValue: summary.inventoryValue,
+      valueShare: safeRatio(
+        summary.inventoryValue,
+        totals.inventoryValue,
+      ),
+    }))
+    .sort(
+      (left, right) =>
+        right.inventoryValue - left.inventoryValue ||
+        right.positions - left.positions ||
+        left.status.localeCompare(right.status),
+    )
+
+  return {
+    generatedAt: new Date().toISOString(),
+    snapshotDate,
+    totals,
+    byBrand: finalizeGroups(brandGroups, totals.inventoryValue),
+    byLocation: finalizeGroups(locationGroups, totals.inventoryValue),
+    byProduct: finalizeGroups(productGroups, totals.inventoryValue),
+    stockStatus,
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\analytics\inventory\inventoryRiskOpportunity.test.ts
+============================================================
+import { describe, expect, it } from 'vitest'
+
+import type {
+  BusinessInventoryPosition,
+} from '../../entities/inventoryPosition'
+
+import {
+  buildInventoryRiskOpportunityReport,
+} from './inventoryRiskOpportunity'
+
+function position(
+  overrides: Partial<BusinessInventoryPosition>,
+): BusinessInventoryPosition {
+  return {
+    id: '2026-07-30::P-1::CDMX',
+    snapshotDate: '2026-07-30',
+    productId: 'P-1',
+    productName: 'P-1',
+    productCode: 'P-1',
+    brandId: 'UNV',
+    model: 'IPC-A',
+    locationId: 'CDMX',
+    identityStatus: 'current_master',
+    onHand: 10,
+    available: 8,
+    committed: 2,
+    inTransit: 0,
+    onOrder: 0,
+    unitCost: 100,
+    inventoryValue: 1000,
+    currency: 'MXN',
+    sourceRows: 1,
+    ...overrides,
+  }
+}
+
+describe('IW-004 Inventory Risk & Opportunity Engine', () => {
+  it('detecta riesgos operativos y prioriza inventario negativo', () => {
+    const report = buildInventoryRiskOpportunityReport(
+      [
+        position({ available: -2, onHand: -2 }),
+        position({
+          id: 'P-2',
+          productId: 'P-2',
+          productName: 'P-2',
+          onHand: 0,
+          available: 0,
+          inventoryValue: 0,
+        }),
+      ],
+      '2026-07-30',
+    )
+
+    expect(report.risks[0]?.type).toBe('negative_stock')
+    expect(report.risks.some((risk) => risk.type === 'out_of_stock')).toBe(true)
+    expect(report.summary.criticalRisks).toBeGreaterThan(0)
+  })
+
+  it('propone transferencia entre ubicaciones del mismo producto', () => {
+    const report = buildInventoryRiskOpportunityReport(
+      [
+        position({ locationId: 'CDMX', available: 12, onHand: 12 }),
+        position({
+          id: '2026-07-30::P-1::QRO',
+          locationId: 'QRO',
+          available: 0,
+          onHand: 0,
+          committed: 4,
+          inventoryValue: 0,
+        }),
+      ],
+      '2026-07-30',
+    )
+
+    const transfer = report.opportunities.find(
+      (opportunity) => opportunity.type === 'transfer_candidate',
+    )
+
+    expect(transfer?.sourceLocationId).toBe('CDMX')
+    expect(transfer?.targetLocationId).toBe('QRO')
+    expect(transfer?.evidence.suggestedUnits).toBe(4)
+  })
+
+  it('explica una existencia física sin disponibilidad', () => {
+    const report = buildInventoryRiskOpportunityReport(
+      [
+        position({
+          onHand: 10,
+          available: 0,
+          committed: 10,
+        }),
+      ],
+      '2026-07-30',
+    )
+
+    const risk = report.risks.find(
+      (signal) => signal.type === 'no_available_stock',
+    )
+
+    expect(risk?.title).toBe('Existencia física sin disponibilidad')
+    expect(risk?.rationale).toContain(
+      'cero unidades disponibles para una nueva venta',
+    )
+    expect(risk?.evidence.onHand).toBe(10)
+    expect(risk?.evidence.committed).toBe(10)
+  })
+
+  it('distingue compra requerida de entrada pendiente', () => {
+    const report = buildInventoryRiskOpportunityReport(
+      [
+        position({ onHand: 0, available: 0, committed: 3 }),
+        position({
+          id: 'P-2',
+          productId: 'P-2',
+          productName: 'P-2',
+          onHand: 0,
+          available: 0,
+          onOrder: 5,
+          inventoryValue: 0,
+        }),
+      ],
+      '2026-07-30',
+    )
+
+    expect(
+      report.opportunities.some(
+        (opportunity) => opportunity.type === 'purchase_review',
+      ),
+    ).toBe(true)
+    expect(
+      report.opportunities.some(
+        (opportunity) => opportunity.type === 'inbound_recovery',
+      ),
+    ).toBe(true)
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\analytics\inventory\inventoryRiskOpportunity.ts
+============================================================
+import type {
+  BusinessInventoryPosition,
+} from '../../entities/inventoryPosition'
+
+export type InventoryRiskType =
+  | 'negative_stock'
+  | 'out_of_stock'
+  | 'overcommitted'
+  | 'no_available_stock'
+  | 'unresolved_product'
+  | 'value_concentration'
+
+export type InventoryOpportunityType =
+  | 'transfer_candidate'
+  | 'purchase_review'
+  | 'inbound_recovery'
+  | 'commitment_release'
+
+export type InventoryActionPriority =
+  | 'critical'
+  | 'high'
+  | 'medium'
+  | 'low'
+
+export interface InventoryRiskEvidence {
+  onHand: number
+  available: number
+  committed: number
+  inbound: number
+  inventoryValue: number
+  valueShare: number
+}
+
+export interface InventoryRiskSignal {
+  id: string
+  type: InventoryRiskType
+  priority: InventoryActionPriority
+  score: number
+  snapshotDate: string | null
+  productId: string | null
+  productName: string
+  brandId: string | null
+  locationId: string | null
+  title: string
+  rationale: string
+  evidence: InventoryRiskEvidence
+}
+
+export interface InventoryOpportunityEvidence {
+  shortageUnits: number
+  surplusUnits: number
+  suggestedUnits: number
+  inboundUnits: number
+  inventoryValue: number
+}
+
+export interface InventoryOpportunitySignal {
+  id: string
+  type: InventoryOpportunityType
+  priority: InventoryActionPriority
+  score: number
+  snapshotDate: string | null
+  productId: string | null
+  productName: string
+  brandId: string | null
+  sourceLocationId: string | null
+  targetLocationId: string | null
+  title: string
+  rationale: string
+  evidence: InventoryOpportunityEvidence
+}
+
+export interface InventoryRiskOpportunitySummary {
+  risks: number
+  criticalRisks: number
+  highRisks: number
+  opportunities: number
+  transferCandidates: number
+  purchaseReviews: number
+  affectedProducts: number
+  affectedInventoryValue: number
+}
+
+export interface InventoryRiskOpportunityReport {
+  generatedAt: string
+  snapshotDate: string | null
+  summary: InventoryRiskOpportunitySummary
+  risks: InventoryRiskSignal[]
+  opportunities: InventoryOpportunitySignal[]
+}
+
+interface ProductPositionGroup {
+  productId: string | null
+  productName: string
+  brandId: string | null
+  positions: BusinessInventoryPosition[]
+}
+
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+function ratio(numerator: number, denominator: number): number {
+  return denominator > 0 ? numerator / denominator : 0
+}
+
+function priorityFromScore(score: number): InventoryActionPriority {
+  if (score >= 85) return 'critical'
+  if (score >= 65) return 'high'
+  if (score >= 40) return 'medium'
+  return 'low'
+}
+
+function identityKey(position: BusinessInventoryPosition): string {
+  return position.productId ?? position.productName
+}
+
+function signalId(parts: Array<string | null>): string {
+  return parts.map((part) => part ?? 'NONE').join('::')
+}
+
+function riskEvidence(
+  position: BusinessInventoryPosition,
+  totalValue: number,
+): InventoryRiskEvidence {
+  return {
+    onHand: position.onHand,
+    available: position.available,
+    committed: position.committed,
+    inbound: position.inTransit + position.onOrder,
+    inventoryValue: position.inventoryValue,
+    valueShare: ratio(position.inventoryValue, totalValue),
+  }
+}
+
+function addPositionRisk(
+  risks: InventoryRiskSignal[],
+  position: BusinessInventoryPosition,
+  totalValue: number,
+  type: InventoryRiskType,
+  baseScore: number,
+  title: string,
+  rationale: string,
+): void {
+  const evidence = riskEvidence(position, totalValue)
+  const valueWeight = Math.min(15, evidence.valueShare * 100)
+  const score = clampScore(baseScore + valueWeight)
+
+  risks.push({
+    id: signalId([
+      type,
+      position.snapshotDate,
+      identityKey(position),
+      position.locationId,
+    ]),
+    type,
+    priority: priorityFromScore(score),
+    score,
+    snapshotDate: position.snapshotDate,
+    productId: position.productId,
+    productName: position.productName,
+    brandId: position.brandId,
+    locationId: position.locationId,
+    title,
+    rationale,
+    evidence,
+  })
+}
+
+function groupByProduct(
+  positions: readonly BusinessInventoryPosition[],
+): ProductPositionGroup[] {
+  const groups = new Map<string, ProductPositionGroup>()
+
+  for (const position of positions) {
+    const key = identityKey(position)
+    const existing = groups.get(key)
+
+    if (existing) {
+      existing.positions.push(position)
+      continue
+    }
+
+    groups.set(key, {
+      productId: position.productId,
+      productName: position.productName,
+      brandId: position.brandId,
+      positions: [position],
+    })
+  }
+
+  return [...groups.values()]
+}
+
+function buildTransferOpportunities(
+  groups: readonly ProductPositionGroup[],
+  snapshotDate: string | null,
+): InventoryOpportunitySignal[] {
+  const opportunities: InventoryOpportunitySignal[] = []
+
+  for (const group of groups) {
+    const sources = group.positions
+      .filter((position) => position.available > 1)
+      .sort((left, right) => right.available - left.available)
+
+    const targets = group.positions
+      .filter(
+        (position) =>
+          position.available <= 0 &&
+          position.onHand >= 0 &&
+          position.inTransit + position.onOrder <= 0,
+      )
+      .sort((left, right) => left.available - right.available)
+
+    if (sources.length === 0 || targets.length === 0) continue
+
+    for (const target of targets) {
+      const source = sources.find(
+        (candidate) => candidate.locationId !== target.locationId,
+      )
+
+      if (!source) continue
+
+      const shortageUnits = Math.max(1, target.committed - target.onHand)
+      const surplusUnits = Math.max(0, source.available - 1)
+      const suggestedUnits = Math.min(shortageUnits, surplusUnits)
+
+      if (suggestedUnits <= 0) continue
+
+      const score = clampScore(
+        60 +
+        Math.min(20, suggestedUnits * 2) +
+        (target.committed > target.onHand ? 15 : 0),
+      )
+
+      opportunities.push({
+        id: signalId([
+          'transfer_candidate',
+          snapshotDate,
+          group.productId ?? group.productName,
+          source.locationId,
+          target.locationId,
+        ]),
+        type: 'transfer_candidate',
+        priority: priorityFromScore(score),
+        score,
+        snapshotDate,
+        productId: group.productId,
+        productName: group.productName,
+        brandId: group.brandId,
+        sourceLocationId: source.locationId,
+        targetLocationId: target.locationId,
+        title: 'Transferencia interna sugerida',
+        rationale:
+          'Otra ubicación tiene disponibilidad y la ubicación destino no tiene stock utilizable ni entradas pendientes.',
+        evidence: {
+          shortageUnits,
+          surplusUnits,
+          suggestedUnits,
+          inboundUnits: 0,
+          inventoryValue: target.inventoryValue,
+        },
+      })
+    }
+  }
+
+  return opportunities
+}
+
+function buildPositionOpportunities(
+  positions: readonly BusinessInventoryPosition[],
+): InventoryOpportunitySignal[] {
+  const opportunities: InventoryOpportunitySignal[] = []
+
+  for (const position of positions) {
+    const inboundUnits = position.inTransit + position.onOrder
+    const shortageUnits = Math.max(
+      0,
+      position.committed - Math.max(0, position.onHand),
+    )
+
+    if (
+      position.available <= 0 &&
+      position.onHand <= 0 &&
+      inboundUnits <= 0
+    ) {
+      const score = clampScore(
+        70 + Math.min(20, shortageUnits * 2) +
+        (position.committed > 0 ? 10 : 0),
+      )
+
+      opportunities.push({
+        id: signalId([
+          'purchase_review',
+          position.snapshotDate,
+          identityKey(position),
+          position.locationId,
+        ]),
+        type: 'purchase_review',
+        priority: priorityFromScore(score),
+        score,
+        snapshotDate: position.snapshotDate,
+        productId: position.productId,
+        productName: position.productName,
+        brandId: position.brandId,
+        sourceLocationId: null,
+        targetLocationId: position.locationId,
+        title: 'Revisión de compra requerida',
+        rationale:
+          'La posición no tiene existencia disponible ni entradas registradas.',
+        evidence: {
+          shortageUnits: Math.max(1, shortageUnits),
+          surplusUnits: 0,
+          suggestedUnits: Math.max(1, shortageUnits),
+          inboundUnits,
+          inventoryValue: position.inventoryValue,
+        },
+      })
+    } else if (position.available <= 0 && inboundUnits > 0) {
+      const score = clampScore(45 + Math.min(25, inboundUnits))
+
+      opportunities.push({
+        id: signalId([
+          'inbound_recovery',
+          position.snapshotDate,
+          identityKey(position),
+          position.locationId,
+        ]),
+        type: 'inbound_recovery',
+        priority: priorityFromScore(score),
+        score,
+        snapshotDate: position.snapshotDate,
+        productId: position.productId,
+        productName: position.productName,
+        brandId: position.brandId,
+        sourceLocationId: null,
+        targetLocationId: position.locationId,
+        title: 'Seguimiento de entrada pendiente',
+        rationale:
+          'La disponibilidad es nula, pero existen unidades en tránsito o en orden de compra.',
+        evidence: {
+          shortageUnits: Math.max(0, shortageUnits),
+          surplusUnits: 0,
+          suggestedUnits: 0,
+          inboundUnits,
+          inventoryValue: position.inventoryValue,
+        },
+      })
+    }
+
+    if (position.committed > position.onHand && position.onHand > 0) {
+      const excessCommitment = position.committed - position.onHand
+      const score = clampScore(65 + Math.min(30, excessCommitment * 3))
+
+      opportunities.push({
+        id: signalId([
+          'commitment_release',
+          position.snapshotDate,
+          identityKey(position),
+          position.locationId,
+        ]),
+        type: 'commitment_release',
+        priority: priorityFromScore(score),
+        score,
+        snapshotDate: position.snapshotDate,
+        productId: position.productId,
+        productName: position.productName,
+        brandId: position.brandId,
+        sourceLocationId: null,
+        targetLocationId: position.locationId,
+        title: 'Revisar compromisos de inventario',
+        rationale:
+          'Las unidades comprometidas exceden la existencia física registrada.',
+        evidence: {
+          shortageUnits: excessCommitment,
+          surplusUnits: 0,
+          suggestedUnits: 0,
+          inboundUnits,
+          inventoryValue: position.inventoryValue,
+        },
+      })
+    }
+  }
+
+  return opportunities
+}
+
+export function buildInventoryRiskOpportunityReport(
+  positions: readonly BusinessInventoryPosition[],
+  snapshotDate: string | null,
+): InventoryRiskOpportunityReport {
+  const selected = positions.filter(
+    (position) => position.snapshotDate === snapshotDate,
+  )
+  const totalValue = selected.reduce(
+    (total, position) => total + position.inventoryValue,
+    0,
+  )
+  const risks: InventoryRiskSignal[] = []
+
+  for (const position of selected) {
+    if (position.identityStatus === 'unresolved') {
+      addPositionRisk(
+        risks,
+        position,
+        totalValue,
+        'unresolved_product',
+        55,
+        'Producto sin conciliación',
+        'La posición de inventario no está vinculada con el Product Master actual.',
+      )
+    }
+
+    if (position.onHand < 0 || position.available < 0) {
+      addPositionRisk(
+        risks,
+        position,
+        totalValue,
+        'negative_stock',
+        90,
+        'Inventario negativo',
+        'La existencia física o la disponibilidad presenta un valor negativo.',
+      )
+      continue
+    }
+
+    if (position.committed > position.onHand) {
+      addPositionRisk(
+        risks,
+        position,
+        totalValue,
+        'overcommitted',
+        80,
+        'Inventario sobrecomprometido',
+        'Las unidades comprometidas superan la existencia física.',
+      )
+    }
+
+    if (
+      position.onHand <= 0 &&
+      position.inTransit + position.onOrder <= 0
+    ) {
+      addPositionRisk(
+        risks,
+        position,
+        totalValue,
+        'out_of_stock',
+        82,
+        'Producto agotado',
+        'No hay existencia física, disponibilidad ni entradas pendientes.',
+      )
+    } else if (position.onHand > 0 && position.available <= 0) {
+      addPositionRisk(
+        risks,
+        position,
+        totalValue,
+        'no_available_stock',
+        68,
+        'Existencia física sin disponibilidad',
+        'La sucursal tiene unidades en mano, pero el ERP reporta cero unidades disponibles para una nueva venta. Normalmente están comprometidas, reservadas o bloqueadas.',
+      )
+    }
+
+    if (ratio(position.inventoryValue, totalValue) >= 0.2) {
+      addPositionRisk(
+        risks,
+        position,
+        totalValue,
+        'value_concentration',
+        50,
+        'Concentración de valor',
+        'Una sola posición concentra al menos 20% del valor del inventario del corte.',
+      )
+    }
+  }
+
+  const groups = groupByProduct(selected)
+  const opportunities = [
+    ...buildTransferOpportunities(groups, snapshotDate),
+    ...buildPositionOpportunities(selected),
+  ]
+
+  risks.sort(
+    (left, right) =>
+      right.score - left.score ||
+      right.evidence.inventoryValue - left.evidence.inventoryValue ||
+      left.id.localeCompare(right.id),
+  )
+
+  opportunities.sort(
+    (left, right) =>
+      right.score - left.score ||
+      right.evidence.inventoryValue - left.evidence.inventoryValue ||
+      left.id.localeCompare(right.id),
+  )
+
+  const affectedProducts = new Set<string>()
+  let affectedInventoryValue = 0
+
+  for (const risk of risks) {
+    affectedProducts.add(risk.productId ?? risk.productName)
+    affectedInventoryValue += risk.evidence.inventoryValue
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    snapshotDate,
+    summary: {
+      risks: risks.length,
+      criticalRisks: risks.filter(
+        (risk) => risk.priority === 'critical',
+      ).length,
+      highRisks: risks.filter(
+        (risk) => risk.priority === 'high',
+      ).length,
+      opportunities: opportunities.length,
+      transferCandidates: opportunities.filter(
+        (opportunity) => opportunity.type === 'transfer_candidate',
+      ).length,
+      purchaseReviews: opportunities.filter(
+        (opportunity) => opportunity.type === 'purchase_review',
+      ).length,
+      affectedProducts: affectedProducts.size,
+      affectedInventoryValue,
+    },
+    risks,
+    opportunities,
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryAnalyticsQueries.test.ts
+============================================================
+import { describe, expect, it } from 'vitest'
+
+import { InventoryAnalyticsQueries } from './inventoryAnalyticsQueries'
+
+import type { BusinessDataModel } from '../models/businessDataModel'
+
+function model(): BusinessDataModel {
+  return {
+    generatedAt: '2026-07-30T00:00:00.000Z',
+    periodStart: null,
+    periodEnd: null,
+    totals: { revenue: 0, grossProfit: 0, quantity: 0, documents: 0 },
+    customers: new Map(),
+    customerPeriods: new Map(),
+    customerBrandPeriods: new Map(),
+    brands: new Map(),
+    brandPeriods: new Map(),
+    brandTargets: new Map(),
+    products: new Map(),
+    productPeriods: new Map(),
+    periods: new Map(),
+    documentNumbers: new Set(),
+    locations: new Set(),
+    salesRepresentatives: new Set(),
+    currencies: new Set(),
+    processedRows: 0,
+    ignoredRows: 0,
+    inventoryPositions: new Map([
+      ['2026-07-30::P-1::CDMX', {
+        id: '2026-07-30::P-1::CDMX',
+        snapshotDate: '2026-07-30',
+        productId: 'P-1',
+        productName: 'P-1',
+        productCode: null,
+        brandId: 'UNV',
+        model: 'IPC-A',
+        locationId: 'CDMX',
+        identityStatus: 'current_master',
+        onHand: 10,
+        available: 8,
+        committed: 2,
+        inTransit: 3,
+        onOrder: 4,
+        unitCost: 100,
+        inventoryValue: 1000,
+        currency: 'MXN',
+        sourceRows: 1,
+      }],
+      ['2026-07-30::P-2::QRO', {
+        id: '2026-07-30::P-2::QRO',
+        snapshotDate: '2026-07-30',
+        productId: 'P-2',
+        productName: 'P-2',
+        productCode: null,
+        brandId: 'ZKTECO',
+        model: 'AC-A',
+        locationId: 'QRO',
+        identityStatus: 'current_master',
+        onHand: 0,
+        available: 0,
+        committed: 0,
+        inTransit: 0,
+        onOrder: 0,
+        unitCost: 50,
+        inventoryValue: 0,
+        currency: 'MXN',
+        sourceRows: 1,
+      }],
+    ]),
+    inventorySnapshots: new Map([
+      ['2026-07-30', {
+        id: '2026-07-30',
+        snapshotDate: '2026-07-30',
+        positions: 2,
+        products: new Set(['P-1', 'P-2']),
+        unresolvedProducts: new Set(),
+        locations: new Set(['CDMX', 'QRO']),
+        onHand: 10,
+        available: 8,
+        committed: 2,
+        inTransit: 3,
+        onOrder: 4,
+        inventoryValue: 1000,
+      }],
+    ]),
+  }
+}
+
+describe('IW-003 InventoryAnalyticsQueries', () => {
+  it('expone resumen, rankings y estatus del ultimo corte', () => {
+    const queries = new InventoryAnalyticsQueries(model())
+
+    expect(queries.getReport().snapshotDate).toBe('2026-07-30')
+    expect(queries.getTotals().inventoryValue).toBe(1000)
+    expect(queries.getByBrand()[0]?.key).toBe('UNV')
+    expect(queries.getTopProducts(1)).toHaveLength(1)
+    expect(queries.findStockStatus('out_of_stock')?.positions).toBe(1)
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryAnalyticsQueries.ts
+============================================================
+import type {
+  BusinessDataModel,
+} from '../models/businessDataModel'
+
+import {
+  buildInventoryAnalytics,
+} from '../analytics/inventory'
+
+import type {
+  InventoryAnalyticsGroup,
+  InventoryAnalyticsReport,
+  InventoryStockStatus,
+  InventoryStockStatusSummary,
+} from '../analytics/inventory'
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return 0
+  }
+
+  return Math.floor(limit)
+}
+
+function getLatestSnapshotDate(model: BusinessDataModel): string | null {
+  return [...(model.inventorySnapshots ?? new Map()).values()]
+    .map((snapshot) => snapshot.snapshotDate)
+    .filter((date): date is string => Boolean(date))
+    .sort((left, right) => right.localeCompare(left))[0] ?? null
+}
+
+export class InventoryAnalyticsQueries {
+  private readonly report: InventoryAnalyticsReport
+
+  constructor(model: BusinessDataModel) {
+    const snapshotDate = getLatestSnapshotDate(model)
+
+    this.report = buildInventoryAnalytics(
+      [...(model.inventoryPositions ?? new Map()).values()],
+      snapshotDate,
+    )
+  }
+
+  getReport(): InventoryAnalyticsReport {
+    return {
+      ...this.report,
+      totals: { ...this.report.totals },
+      byBrand: this.report.byBrand.map((group) => ({ ...group })),
+      byLocation: this.report.byLocation.map((group) => ({ ...group })),
+      byProduct: this.report.byProduct.map((group) => ({ ...group })),
+      stockStatus: this.report.stockStatus.map((summary) => ({
+        ...summary,
+      })),
+    }
+  }
+
+  getTotals() {
+    return { ...this.report.totals }
+  }
+
+  getByBrand(): InventoryAnalyticsGroup[] {
+    return this.report.byBrand.map((group) => ({ ...group }))
+  }
+
+  getByLocation(): InventoryAnalyticsGroup[] {
+    return this.report.byLocation.map((group) => ({ ...group }))
+  }
+
+  getTopProducts(limit = 10): InventoryAnalyticsGroup[] {
+    return this.report.byProduct
+      .slice(0, normalizeLimit(limit))
+      .map((group) => ({ ...group }))
+  }
+
+  getStockStatus(): InventoryStockStatusSummary[] {
+    return this.report.stockStatus.map((summary) => ({ ...summary }))
+  }
+
+  findStockStatus(
+    status: InventoryStockStatus,
+  ): InventoryStockStatusSummary | undefined {
+    const summary = this.report.stockStatus.find(
+      (candidate) => candidate.status === status,
+    )
+
+    return summary ? { ...summary } : undefined
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryIndexes.ts
+============================================================
+import type {
+  BusinessInventoryPosition,
+} from '../entities/inventoryPosition'
+
+export interface InventoryIndexes {
+  byProduct: Map<string, BusinessInventoryPosition[]>
+  byLocation: Map<string, BusinessInventoryPosition[]>
+  bySnapshot: Map<string, BusinessInventoryPosition[]>
+  byProductAndLocation: Map<string, BusinessInventoryPosition[]>
+  byBrand: Map<string, BusinessInventoryPosition[]>
+  latestByProduct: Map<string, BusinessInventoryPosition[]>
+  latestSnapshotDate: string | null
+}
+
+function append(
+  index: Map<string, BusinessInventoryPosition[]>,
+  key: string | null,
+  position: BusinessInventoryPosition,
+): void {
+  if (!key) {
+    return
+  }
+
+  const values = index.get(key) ?? []
+  values.push(position)
+  index.set(key, values)
+}
+
+function cloneSorted(
+  values: readonly BusinessInventoryPosition[],
+): BusinessInventoryPosition[] {
+  return [...values].sort(
+    (left, right) =>
+      left.productName.localeCompare(right.productName) ||
+      left.locationId.localeCompare(right.locationId),
+  )
+}
+
+export function buildInventoryIndexes(
+  positions: ReadonlyMap<string, BusinessInventoryPosition>,
+): InventoryIndexes {
+  const byProduct = new Map<string, BusinessInventoryPosition[]>()
+  const byLocation = new Map<string, BusinessInventoryPosition[]>()
+  const bySnapshot = new Map<string, BusinessInventoryPosition[]>()
+  const byProductAndLocation =
+    new Map<string, BusinessInventoryPosition[]>()
+  const byBrand = new Map<string, BusinessInventoryPosition[]>()
+
+  let latestSnapshotDate: string | null = null
+
+  for (const position of positions.values()) {
+    const snapshotKey = position.snapshotDate ?? 'NO_DATE'
+
+    append(byProduct, position.productId ?? position.productName, position)
+    append(byLocation, position.locationId, position)
+    append(bySnapshot, snapshotKey, position)
+    append(
+      byProductAndLocation,
+      `${position.productId ?? position.productName}::${position.locationId}`,
+      position,
+    )
+    append(byBrand, position.brandId, position)
+
+    if (
+      position.snapshotDate &&
+      (!latestSnapshotDate || position.snapshotDate > latestSnapshotDate)
+    ) {
+      latestSnapshotDate = position.snapshotDate
+    }
+  }
+
+  const latestByProduct = new Map<string, BusinessInventoryPosition[]>()
+
+  if (latestSnapshotDate) {
+    for (const position of bySnapshot.get(latestSnapshotDate) ?? []) {
+      append(
+        latestByProduct,
+        position.productId ?? position.productName,
+        position,
+      )
+    }
+  }
+
+  for (const index of [
+    byProduct,
+    byLocation,
+    bySnapshot,
+    byProductAndLocation,
+    byBrand,
+    latestByProduct,
+  ]) {
+    for (const [key, values] of index) {
+      index.set(key, cloneSorted(values))
+    }
+  }
+
+  return {
+    byProduct,
+    byLocation,
+    bySnapshot,
+    byProductAndLocation,
+    byBrand,
+    latestByProduct,
+    latestSnapshotDate,
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryQueries.test.ts
+============================================================
+import { describe, expect, it } from 'vitest'
+
+import { InventoryQueries } from './inventoryQueries'
+
+import type { BusinessDataModel } from '../models/businessDataModel'
+
+function model(): BusinessDataModel {
+  return {
+    generatedAt: '2026-07-30T00:00:00.000Z',
+    periodStart: null,
+    periodEnd: null,
+    totals: { revenue: 0, grossProfit: 0, quantity: 0, documents: 0 },
+    customers: new Map(),
+    customerPeriods: new Map(),
+    customerBrandPeriods: new Map(),
+    brands: new Map(),
+    brandPeriods: new Map(),
+    brandTargets: new Map(),
+    products: new Map(),
+    productPeriods: new Map(),
+    periods: new Map(),
+    documentNumbers: new Set(),
+    locations: new Set(),
+    salesRepresentatives: new Set(),
+    currencies: new Set(),
+    processedRows: 0,
+    ignoredRows: 0,
+    inventoryPositions: new Map([
+      ['2026-07-30::P-1::CDMX', {
+        id: '2026-07-30::P-1::CDMX',
+        snapshotDate: '2026-07-30',
+        productId: 'P-1',
+        productName: 'P-1',
+        productCode: null,
+        brandId: 'UNV',
+        model: 'IPC-A',
+        locationId: 'CDMX',
+        identityStatus: 'current_master',
+        onHand: 10,
+        available: 8,
+        committed: 2,
+        inTransit: 3,
+        onOrder: 4,
+        unitCost: 100,
+        inventoryValue: 1000,
+        currency: 'MXN',
+        sourceRows: 1,
+      }],
+    ]),
+    inventorySnapshots: new Map([
+      ['2026-07-30', {
+        id: '2026-07-30',
+        snapshotDate: '2026-07-30',
+        positions: 1,
+        products: new Set(['P-1']),
+        unresolvedProducts: new Set(),
+        locations: new Set(['CDMX']),
+        onHand: 10,
+        available: 8,
+        committed: 2,
+        inTransit: 3,
+        onOrder: 4,
+        inventoryValue: 1000,
+      }],
+    ]),
+  }
+}
+
+describe('IW-002 InventoryQueries', () => {
+  it('consulta ultimo corte, producto, marca y ubicacion', () => {
+    const queries = new InventoryQueries(model())
+
+    expect(queries.getLatestSnapshotDate()).toBe('2026-07-30')
+    expect(queries.findLatestByProduct('p-1')).toHaveLength(1)
+    expect(queries.findByBrand('unv')).toHaveLength(1)
+    expect(queries.findByLocation('cdmx')).toHaveLength(1)
+    expect(queries.getLatestSnapshot()?.inventoryValue).toBe(1000)
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryQueries.ts
+============================================================
+import type {
+  BusinessDataModel,
+} from '../models/businessDataModel'
+
+import type {
+  BusinessInventoryPosition,
+} from '../entities/inventoryPosition'
+
+import type {
+  BusinessInventorySnapshot,
+} from '../entities/inventorySnapshot'
+
+import {
+  buildInventoryIndexes,
+} from './inventoryIndexes'
+
+function normalize(value: string): string {
+  return value
+    .trim()
+    .toLocaleUpperCase('es-MX')
+    .replace(/\s+/g, ' ')
+}
+
+export class InventoryQueries {
+  private readonly model: BusinessDataModel
+  private readonly indexes: ReturnType<typeof buildInventoryIndexes>
+
+  constructor(model: BusinessDataModel) {
+    this.model = model
+    this.indexes = buildInventoryIndexes(
+      model.inventoryPositions ?? new Map(),
+    )
+  }
+
+  getAll(): BusinessInventoryPosition[] {
+    return [...(this.model.inventoryPositions ?? new Map()).values()]
+  }
+
+  getSnapshots(): BusinessInventorySnapshot[] {
+    return [...(this.model.inventorySnapshots ?? new Map()).values()].sort(
+      (left, right) =>
+        (left.snapshotDate ?? '').localeCompare(right.snapshotDate ?? ''),
+    )
+  }
+
+  getLatestSnapshotDate(): string | null {
+    return this.indexes.latestSnapshotDate
+  }
+
+  /**
+   * Returns the positions that represent the active inventory cut.
+   *
+   * Some NetSuite inventory exports do not contain a snapshot date. Those
+   * rows are intentionally materialized with snapshotDate = null and indexed
+   * under the internal NO_DATE key. They still represent a valid current cut
+   * and must remain available to Inventory Workspace.
+   */
+  getLatestPositions(): BusinessInventoryPosition[] {
+    const date = this.getLatestSnapshotDate()
+
+    if (date) {
+      return this.findBySnapshot(date)
+    }
+
+    return this.getAll().filter(
+      (position) => position.snapshotDate === null,
+    )
+  }
+
+  getLatestSnapshot(): BusinessInventorySnapshot | undefined {
+    const date = this.getLatestSnapshotDate()
+
+    if (date) {
+      return this.model.inventorySnapshots?.get(date)
+    }
+
+    return this.model.inventorySnapshots?.get('NO_DATE')
+  }
+
+  findByProduct(productIdOrName: string): BusinessInventoryPosition[] {
+    return [
+      ...(this.indexes.byProduct.get(normalize(productIdOrName)) ?? []),
+    ]
+  }
+
+  findLatestByProduct(productIdOrName: string): BusinessInventoryPosition[] {
+    const normalizedIdentity = normalize(productIdOrName)
+    const indexed = this.indexes.latestByProduct.get(normalizedIdentity)
+
+    if (indexed) {
+      return [...indexed]
+    }
+
+    return this.getLatestPositions().filter(
+      (position) =>
+        normalize(position.productId ?? position.productName) ===
+          normalizedIdentity,
+    )
+  }
+
+  findByLocation(locationId: string): BusinessInventoryPosition[] {
+    return [
+      ...(this.indexes.byLocation.get(normalize(locationId)) ?? []),
+    ]
+  }
+
+  findByBrand(brandId: string): BusinessInventoryPosition[] {
+    return [
+      ...(this.indexes.byBrand.get(normalize(brandId)) ?? []),
+    ]
+  }
+
+  findBySnapshot(snapshotDate: string): BusinessInventoryPosition[] {
+    return [
+      ...(this.indexes.bySnapshot.get(snapshotDate) ?? []),
+    ]
+  }
+
+  findByProductAndLocation(
+    productIdOrName: string,
+    locationId: string,
+  ): BusinessInventoryPosition[] {
+    return [
+      ...(this.indexes.byProductAndLocation.get(
+        `${normalize(productIdOrName)}::${normalize(locationId)}`,
+      ) ?? []),
+    ]
+  }
+
+  getUnresolved(): BusinessInventoryPosition[] {
+    return this.getAll().filter(
+      (position) => position.identityStatus === 'unresolved',
+    )
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryQueries.undated.test.ts
+============================================================
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest'
+
+import {
+  InventoryQueries,
+} from './inventoryQueries'
+
+import type {
+  BusinessDataModel,
+} from '../models/businessDataModel'
+
+import type {
+  BusinessInventoryPosition,
+} from '../entities/inventoryPosition'
+
+const position: BusinessInventoryPosition = {
+  id: 'NO_DATE::P-1::CDMX',
+  snapshotDate: null,
+  productId: 'P-1',
+  productName: 'P-1',
+  productCode: null,
+  brandId: 'BELDEN',
+  model: 'CB02BBEL05',
+  locationId: 'CDMX',
+  identityStatus: 'current_master',
+  onHand: 10,
+  available: 8,
+  committed: 2,
+  inTransit: 3,
+  onOrder: 4,
+  unitCost: 100,
+  inventoryValue: 1000,
+  currency: 'MXN',
+  sourceRows: 1,
+}
+
+function undatedModel(): BusinessDataModel {
+  return {
+    inventoryPositions: new Map([
+      [position.id, position],
+    ]),
+    inventorySnapshots: new Map([
+      ['NO_DATE', {
+        id: 'NO_DATE',
+        snapshotDate: null,
+        positions: 1,
+        products: new Set(['P-1']),
+        unresolvedProducts: new Set(),
+        locations: new Set(['CDMX']),
+        onHand: 10,
+        available: 8,
+        committed: 2,
+        inTransit: 3,
+        onOrder: 4,
+        inventoryValue: 1000,
+      }],
+    ]),
+  } as unknown as BusinessDataModel
+}
+
+describe('IW-005 undated inventory snapshot', () => {
+  it('expone como corte activo el inventario sin fecha de snapshot', () => {
+    const queries = new InventoryQueries(undatedModel())
+
+    expect(queries.getLatestSnapshotDate()).toBeNull()
+    expect(queries.getLatestPositions()).toEqual([position])
+    expect(queries.getLatestSnapshot()?.id).toBe('NO_DATE')
+    expect(queries.findLatestByProduct('p-1')).toEqual([position])
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryRiskOpportunityQueries.test.ts
+============================================================
+import { describe, expect, it } from 'vitest'
+
+import { InventoryRiskOpportunityQueries } from './inventoryRiskOpportunityQueries'
+
+import type { BusinessDataModel } from '../models/businessDataModel'
+
+const model = {
+  generatedAt: '2026-07-30T00:00:00.000Z',
+  periodStart: null,
+  periodEnd: null,
+  periods: new Map(),
+  brands: new Map(),
+  customers: new Map(),
+  products: new Map(),
+  inventoryPositions: new Map([
+    [
+      'I-1',
+      {
+        id: 'I-1',
+        snapshotDate: '2026-07-30',
+        productId: 'P-1',
+        productName: 'P-1',
+        productCode: 'P-1',
+        brandId: 'UNV',
+        model: 'IPC-A',
+        locationId: 'CDMX',
+        identityStatus: 'current_master',
+        onHand: 0,
+        available: 0,
+        committed: 2,
+        inTransit: 0,
+        onOrder: 0,
+        unitCost: 100,
+        inventoryValue: 0,
+        currency: 'MXN',
+        sourceRows: 1,
+      },
+    ],
+  ]),
+  inventorySnapshots: new Map([
+    [
+      '2026-07-30',
+      {
+        snapshotDate: '2026-07-30',
+      },
+    ],
+  ]),
+} as unknown as BusinessDataModel
+
+describe('InventoryRiskOpportunityQueries', () => {
+  it('expone riesgos y oportunidades priorizadas', () => {
+    const queries = new InventoryRiskOpportunityQueries(model)
+
+    expect(queries.getTopRisks(1)[0]?.type).toBe('out_of_stock')
+    expect(
+      queries.findOpportunitiesByType('purchase_review'),
+    ).toHaveLength(1)
+  })
+})
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\repository\inventoryRiskOpportunityQueries.ts
+============================================================
+import type {
+  BusinessDataModel,
+} from '../models/businessDataModel'
+
+import {
+  buildInventoryRiskOpportunityReport,
+} from '../analytics/inventory'
+
+import type {
+  InventoryActionPriority,
+  InventoryOpportunitySignal,
+  InventoryOpportunityType,
+  InventoryRiskOpportunityReport,
+  InventoryRiskSignal,
+  InventoryRiskType,
+} from '../analytics/inventory'
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isFinite(limit) || limit <= 0) return 0
+  return Math.floor(limit)
+}
+
+function latestSnapshotDate(model: BusinessDataModel): string | null {
+  return [...(model.inventorySnapshots ?? new Map()).values()]
+    .map((snapshot) => snapshot.snapshotDate)
+    .filter((date): date is string => Boolean(date))
+    .sort((left, right) => right.localeCompare(left))[0] ?? null
+}
+
+function cloneRisk(risk: InventoryRiskSignal): InventoryRiskSignal {
+  return { ...risk, evidence: { ...risk.evidence } }
+}
+
+function cloneOpportunity(
+  opportunity: InventoryOpportunitySignal,
+): InventoryOpportunitySignal {
+  return { ...opportunity, evidence: { ...opportunity.evidence } }
+}
+
+export class InventoryRiskOpportunityQueries {
+  private readonly report: InventoryRiskOpportunityReport
+
+  constructor(model: BusinessDataModel) {
+    const snapshotDate = latestSnapshotDate(model)
+    this.report = buildInventoryRiskOpportunityReport(
+      [...(model.inventoryPositions ?? new Map()).values()],
+      snapshotDate,
+    )
+  }
+
+  getReport(): InventoryRiskOpportunityReport {
+    return {
+      ...this.report,
+      summary: { ...this.report.summary },
+      risks: this.report.risks.map(cloneRisk),
+      opportunities: this.report.opportunities.map(cloneOpportunity),
+    }
+  }
+
+  getTopRisks(limit = 10): InventoryRiskSignal[] {
+    return this.report.risks
+      .slice(0, normalizeLimit(limit))
+      .map(cloneRisk)
+  }
+
+  getTopOpportunities(limit = 10): InventoryOpportunitySignal[] {
+    return this.report.opportunities
+      .slice(0, normalizeLimit(limit))
+      .map(cloneOpportunity)
+  }
+
+  findRisksByType(type: InventoryRiskType): InventoryRiskSignal[] {
+    return this.report.risks
+      .filter((risk) => risk.type === type)
+      .map(cloneRisk)
+  }
+
+  findRisksByPriority(
+    priority: InventoryActionPriority,
+  ): InventoryRiskSignal[] {
+    return this.report.risks
+      .filter((risk) => risk.priority === priority)
+      .map(cloneRisk)
+  }
+
+  findOpportunitiesByType(
+    type: InventoryOpportunityType,
+  ): InventoryOpportunitySignal[] {
+    return this.report.opportunities
+      .filter((opportunity) => opportunity.type === type)
+      .map(cloneOpportunity)
+  }
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\entities\inventoryPosition.ts
+============================================================
+export type BusinessInventoryIdentityStatus =
+  | 'current_master'
+  | 'unresolved'
+
+export interface BusinessInventoryPosition {
+  id: string
+
+  snapshotDate: string | null
+  productId: string | null
+  productName: string
+  productCode: string | null
+  brandId: string | null
+  model: string | null
+  locationId: string
+
+  identityStatus: BusinessInventoryIdentityStatus
+
+  onHand: number
+  available: number
+  committed: number
+  inTransit: number
+  onOrder: number
+
+  unitCost: number | null
+  inventoryValue: number
+  currency: string | null
+
+  sourceRows: number
+}
+
+
+============================================================
+FILE: C:\Users\Tecnosinergia\Documents\PM-Intelligence-Workspace\src\core\business\entities\inventorySnapshot.ts
+============================================================
+export interface BusinessInventorySnapshot {
+  id: string
+  snapshotDate: string | null
+
+  positions: number
+  products: Set<string>
+  unresolvedProducts: Set<string>
+  locations: Set<string>
+
+  onHand: number
+  available: number
+  committed: number
+  inTransit: number
+  onOrder: number
+  inventoryValue: number
+}
+
+
+============================================================
+FILE: src\features\sales-workspace\export\buildSalesExecutiveExport.ts
+============================================================
+import type {
+  SalesContributionItem,
+  SalesWorkspaceViewModel,
+} from '../types'
+
+export type SalesExportCell =
+  | string
+  | number
+  | boolean
+  | null
+
+export interface SalesExportSheet {
+  name: string
+  rows: SalesExportCell[][]
+  columnWidths?: number[]
+}
+
+export interface SalesExecutiveExportPayload {
+  fileName: string
+  sheets: SalesExportSheet[]
+}
+
+function sanitizeFilePart(
+  value: string,
+): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function metricRows(
+  workspace: SalesWorkspaceViewModel,
+): SalesExportCell[][] {
+  const current = workspace.current
+
+  return [
+    ['Métrica', 'Valor actual', 'Objetivo', 'Cumplimiento', 'Variación comparable'],
+    [
+      'Venta',
+      current?.revenue ?? 0,
+      workspace.performance.revenue.target,
+      workspace.performance.revenue.attainment,
+      workspace.comparison.revenueVariation,
+    ],
+    [
+      'Gross Profit',
+      current?.grossProfit ?? 0,
+      workspace.performance.grossProfit.target,
+      workspace.performance.grossProfit.attainment,
+      workspace.comparison.grossProfitVariation,
+    ],
+    [
+      'Margen bruto',
+      current?.grossMargin ?? 0,
+      workspace.performance.grossMargin.target,
+      workspace.performance.grossMargin.attainment,
+      workspace.comparison.marginPointVariation,
+    ],
+    [
+      'Cantidad',
+      current?.quantity ?? 0,
+      null,
+      null,
+      workspace.comparison.quantityVariation,
+    ],
+    [
+      'Documentos',
+      current?.documents ?? 0,
+      null,
+      null,
+      null,
+    ],
+    [
+      'Clientes activos',
+      current?.customerCount ?? 0,
+      null,
+      null,
+      null,
+    ],
+    [
+      'Productos activos',
+      current?.productCount ?? 0,
+      null,
+      null,
+      null,
+    ],
+  ]
+}
+
+function summaryRows(
+  workspace: SalesWorkspaceViewModel,
+  generatedAt: Date,
+): SalesExportCell[][] {
+  const summary =
+    workspace.executiveSummary
+
+  return [
+    ['PM Intelligence Workspace'],
+    ['Sales Workspace · Reporte ejecutivo'],
+    ['Periodo', workspace.selectedPeriodLabel],
+    ['Periodo comparable', workspace.comparison.previousPeriodLabel],
+    ['Generado', generatedAt.toISOString()],
+    ['Contexto', summary.filterContext],
+    [],
+    ['Resumen ejecutivo'],
+    [summary.overview],
+    [],
+    ['Proyección y perspectiva'],
+    [summary.outlook],
+    [],
+    ['Hallazgo', 'Valor', 'Detalle', 'Tono'],
+    ...summary.findings.map(
+      (finding) => [
+        finding.label,
+        finding.value,
+        finding.detail,
+        finding.tone,
+      ],
+    ),
+  ]
+}
+
+function brandPerformanceRows(
+  workspace: SalesWorkspaceViewModel,
+): SalesExportCell[][] {
+  return [
+    [
+      'Marca',
+      'Venta actual',
+      'Objetivo',
+      'Cumplimiento %',
+      'Esperado al corte',
+      'Brecha contra ritmo',
+      'Proyección',
+      'Cumplimiento proyectado %',
+      'Margen actual %',
+      'Margen objetivo %',
+      'Variación margen pp',
+      'Estado',
+    ],
+    ...workspace.brandPerformance.map(
+      (item) => [
+        item.brandName,
+        item.actualRevenue,
+        item.targetRevenue,
+        item.attainment,
+        item.expectedToDate,
+        item.varianceToPlan,
+        item.projectedRevenue,
+        item.projectedAttainment,
+        item.currentGrossMargin,
+        item.targetGrossMargin,
+        item.marginVariancePoints,
+        item.status,
+      ],
+    ),
+  ]
+}
+
+function opportunityRows(
+  workspace: SalesWorkspaceViewModel,
+): SalesExportCell[][] {
+  return [
+    [
+      'Prioridad',
+      'Tipo',
+      'Entidad',
+      'Título',
+      'Descripción',
+      'Acción recomendada',
+      'Impacto estimado',
+      'Score',
+      'Confianza',
+      'Esfuerzo',
+      'Venta diaria requerida',
+    ],
+    ...workspace.commercialOpportunities.opportunities.map(
+      (item) => [
+        item.priority,
+        item.type,
+        item.entityLabel,
+        item.title,
+        item.description,
+        item.recommendedAction,
+        item.impact,
+        item.score,
+        item.confidence,
+        item.effort,
+        item.dailyRevenueRequired,
+      ],
+    ),
+  ]
+}
+
+function contributionRows(
+  dimension: string,
+  direction: string,
+  items: SalesContributionItem[],
+): SalesExportCell[][] {
+  return items.map(
+    (item) => [
+      dimension,
+      direction,
+      item.label,
+      item.currentRevenue,
+      item.comparisonRevenue,
+      item.revenueVariation,
+      item.revenueVariationPercentage,
+      item.grossProfitVariation,
+      item.quantityVariation,
+      item.documentsVariation,
+      item.currentParticipation,
+      item.comparisonParticipation,
+      item.mixVariationPoints,
+      item.movementShare,
+    ],
+  )
+}
+
+function varianceRows(
+  workspace: SalesWorkspaceViewModel,
+): SalesExportCell[][] {
+  const analysis =
+    workspace.varianceContribution
+
+  return [
+    [
+      'Dimensión',
+      'Dirección',
+      'Entidad',
+      'Venta actual',
+      'Venta comparable',
+      'Variación venta',
+      'Variación venta %',
+      'Variación GP',
+      'Variación cantidad',
+      'Variación documentos',
+      'Participación actual %',
+      'Participación comparable %',
+      'Variación mezcla pp',
+      'Peso del movimiento %',
+    ],
+    ...contributionRows(
+      'Marca',
+      'Positiva',
+      analysis.brands.positive,
+    ),
+    ...contributionRows(
+      'Marca',
+      'Negativa',
+      analysis.brands.negative,
+    ),
+    ...contributionRows(
+      'Cliente',
+      'Positiva',
+      analysis.customers.positive,
+    ),
+    ...contributionRows(
+      'Cliente',
+      'Negativa',
+      analysis.customers.negative,
+    ),
+    ...contributionRows(
+      'Producto',
+      'Positiva',
+      analysis.products.positive,
+    ),
+    ...contributionRows(
+      'Producto',
+      'Negativa',
+      analysis.products.negative,
+    ),
+  ]
+}
+
+function detailRows(
+  workspace: SalesWorkspaceViewModel,
+): SalesExportCell[][] {
+  return [
+    [
+      'Periodo',
+      'Marca',
+      'Cliente ID',
+      'Cliente',
+      'Producto ID',
+      'Producto',
+      'Ubicación',
+      'Vendedor',
+      'Venta',
+      'Gross Profit',
+      'Margen %',
+      'Cantidad',
+      'Documentos',
+      'Filas origen',
+    ],
+    ...workspace.detailRows.map(
+      (item) => [
+        item.periodId,
+        item.brandLabel,
+        item.customerId,
+        item.customerLabel,
+        item.productId,
+        item.productLabel,
+        item.locationLabel,
+        item.salesRepresentativeLabel,
+        item.revenue,
+        item.grossProfit,
+        item.grossMargin,
+        item.quantity,
+        item.documents,
+        item.rowCount,
+      ],
+    ),
+  ]
+}
+
+function reconciliationRows(
+  workspace: SalesWorkspaceViewModel,
+): SalesExportCell[][] {
+  return [
+    ['Métrica', 'Valor'],
+    ['Filas evaluadas', workspace.reconciliation.totalRows],
+    ['Filas conciliadas', workspace.reconciliation.matchedRows],
+    ['Filas ambiguas', workspace.reconciliation.ambiguousRows],
+    ['Filas sin correspondencia', workspace.reconciliation.unmatchedRows],
+    ['Tasa de conciliación %', workspace.reconciliation.matchRate],
+  ]
+}
+
+export function buildSalesExecutiveExport(
+  workspace: SalesWorkspaceViewModel,
+  generatedAt: Date = new Date(),
+): SalesExecutiveExportPayload {
+  const periodPart =
+    sanitizeFilePart(
+      workspace.selectedPeriodId ??
+        workspace.selectedPeriodLabel,
+    ) || 'sin-periodo'
+
+  return {
+    fileName:
+      `PM-Intelligence-Sales-${periodPart}.xlsx`,
+    sheets: [
+      {
+        name: 'Resumen ejecutivo',
+        rows: summaryRows(
+          workspace,
+          generatedAt,
+        ),
+        columnWidths: [28, 24, 72, 18],
+      },
+      {
+        name: 'KPIs',
+        rows: metricRows(workspace),
+        columnWidths: [28, 18, 18, 18, 22],
+      },
+      {
+        name: 'Desempeño marcas',
+        rows: brandPerformanceRows(workspace),
+        columnWidths: [24, 16, 16, 18, 18, 20, 16, 24, 18, 18, 20, 18],
+      },
+      {
+        name: 'Oportunidades',
+        rows: opportunityRows(workspace),
+        columnWidths: [14, 20, 24, 42, 58, 58, 18, 12, 12, 12, 22],
+      },
+      {
+        name: 'Contribuciones',
+        rows: varianceRows(workspace),
+        columnWidths: [14, 14, 30, 16, 18, 16, 18, 16, 18, 20, 22, 26, 20, 22],
+      },
+      {
+        name: 'Detalle',
+        rows: detailRows(workspace),
+        columnWidths: [12, 20, 16, 34, 16, 30, 18, 24, 16, 16, 14, 14, 14, 14],
+      },
+      {
+        name: 'Conciliación',
+        rows: reconciliationRows(workspace),
+        columnWidths: [32, 18],
+      },
+    ],
+  }
+}
+
+
+============================================================
+FILE: src\features\sales-workspace\export\buildSalesExecutiveExport.test.ts
+============================================================
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest'
+
+import type {
+  SalesWorkspaceViewModel,
+} from '../types'
+
+import {
+  buildSalesExecutiveExport,
+} from './buildSalesExecutiveExport'
+
+function createWorkspace(): SalesWorkspaceViewModel {
+  return {
+    available: true,
+    periodOptions: [],
+    selectedPeriodId: '2026-03',
+    selectedPeriodLabel: 'Marzo de 2026',
+    current: {
+      periodId: '2026-03',
+      periodLabel: 'Marzo de 2026',
+      revenue: 1000,
+      grossProfit: 250,
+      grossMargin: 25,
+      quantity: 10,
+      documents: 5,
+      customerCount: 2,
+      brandCount: 1,
+      productCount: 2,
+    },
+    comparison: {
+      mode: 'previous-period',
+      label: 'Periodo anterior',
+      previousPeriodId: '2026-02',
+      previousPeriodLabel: 'Febrero de 2026',
+      revenueVariation: 10,
+      grossProfitVariation: 5,
+      quantityVariation: 0,
+      marginPointVariation: -1,
+    },
+    performance: {
+      available: false,
+      unavailableReason: null,
+      revenue: {
+        actual: 1000,
+        target: null,
+        variance: null,
+        attainment: null,
+      },
+      grossProfit: {
+        actual: 250,
+        target: null,
+        variance: null,
+        attainment: null,
+      },
+      grossMargin: {
+        actual: 25,
+        target: null,
+        variance: null,
+        attainment: null,
+      },
+      pace: {
+        status: 'not-evaluable',
+        dataCutoff: null,
+        workingDays: null,
+        elapsedWorkingDays: null,
+        remainingWorkingDays: null,
+        currentDailyRevenue: null,
+        requiredDailyRevenue: null,
+        expectedToDate: null,
+        varianceToPlan: null,
+        attainmentToPlan: null,
+        projectedPeriodEnd: null,
+        projectedAttainment: null,
+      },
+      coverage: {
+        targetedBrands: 0,
+        activeBrands: 1,
+        coveredActiveBrands: 0,
+        activeBrandsWithoutTarget: 1,
+        coveragePercentage: 0,
+      },
+    },
+    brandPerformance: [],
+    commercialOpportunities: {
+      available: false,
+      unavailableReason: null,
+      totalImpact: 0,
+      totalCount: 0,
+      criticalCount: 0,
+      highCount: 0,
+      requiredDailyRevenue: null,
+      opportunities: [],
+    },
+    varianceContribution: {
+      available: false,
+      unavailableReason: null,
+      comparisonPeriodId: null,
+      comparisonLabel: 'Periodo anterior',
+      revenue: {
+        current: 0,
+        comparison: 0,
+        absoluteVariation: 0,
+        percentageVariation: null,
+      },
+      grossProfit: {
+        current: 0,
+        comparison: 0,
+        absoluteVariation: 0,
+        percentageVariation: null,
+      },
+      quantity: {
+        current: 0,
+        comparison: 0,
+        absoluteVariation: 0,
+        percentageVariation: null,
+      },
+      documents: {
+        current: 0,
+        comparison: 0,
+        absoluteVariation: 0,
+        percentageVariation: null,
+      },
+      grossMargin: {
+        current: 0,
+        comparison: 0,
+        pointVariation: 0,
+      },
+      netRevenueVariation: 0,
+      positiveRevenueContribution: 0,
+      negativeRevenueContribution: 0,
+      brands: {
+        dimension: 'brand',
+        positiveContribution: 0,
+        negativeContribution: 0,
+        stableCount: 0,
+        positive: [],
+        negative: [],
+      },
+      customers: {
+        dimension: 'customer',
+        positiveContribution: 0,
+        negativeContribution: 0,
+        stableCount: 0,
+        positive: [],
+        negative: [],
+      },
+      products: {
+        dimension: 'product',
+        positiveContribution: 0,
+        negativeContribution: 0,
+        stableCount: 0,
+        positive: [],
+        negative: [],
+      },
+      customerMovements: {
+        newCount: 0,
+        recoveredCount: 0,
+        growingCount: 0,
+        decliningCount: 0,
+        lostCount: 0,
+        stableCount: 0,
+        newRevenue: 0,
+        recoveredRevenue: 0,
+        lostRevenue: 0,
+        decliningRevenue: 0,
+        items: [],
+      },
+    },
+    executiveSummary: {
+      available: true,
+      title: 'Resumen ejecutivo · Marzo de 2026',
+      overview: 'Venta y margen del periodo.',
+      outlook: 'Sin proyección disponible.',
+      filterContext: 'Vista consolidada.',
+      findings: [],
+    },
+    trend: [],
+    topBrands: [],
+    topCustomers: [],
+    topProducts: [],
+    reconciliation: {
+      totalRows: 10,
+      matchedRows: 10,
+      ambiguousRows: 0,
+      unmatchedRows: 0,
+      matchRate: 100,
+    },
+    filterOptions: {
+      brands: [],
+      customers: [],
+      products: [],
+      locations: [],
+      salesRepresentatives: [],
+    },
+    activeFilters: [],
+    hasActiveSegmentationFilters: false,
+    detailRows: [],
+    detailTotalRows: 0,
+    detailSourceRows: 0,
+  }
+}
+
+describe('SW-006 Sales executive export', () => {
+  it('construye un libro con resumen, KPIs y detalle', () => {
+    const payload =
+      buildSalesExecutiveExport(
+        createWorkspace(),
+        new Date('2026-03-31T12:00:00.000Z'),
+      )
+
+    expect(payload.fileName).toBe(
+      'PM-Intelligence-Sales-2026-03.xlsx',
+    )
+    expect(payload.sheets.map((sheet) => sheet.name)).toEqual([
+      'Resumen ejecutivo',
+      'KPIs',
+      'Desempeño marcas',
+      'Oportunidades',
+      'Contribuciones',
+      'Detalle',
+      'Conciliación',
+    ])
+    expect(payload.sheets[0]?.rows).toContainEqual([
+      'Periodo',
+      'Marzo de 2026',
+    ])
+  })
+})
+
+
+============================================================
+FILE: docs\ROADMAP.md
+============================================================
+# PM Intelligence Workspace — Roadmap
+
+## Estado actual
+
+```text
+Versión: v0.9.6
+Sprint: Architecture Sprint A-002
+Último commit: A-002.9
+```
+
+## Architecture Sprint A-002
+
+| Commit | Alcance | Estado |
+|---|---|---|
+| A-002.1 | Business Cube Metrics Foundation | Completado |
+| A-002.2 | Business Cube Engine Consolidation | Completado |
+| A-002.3 | Business Targets Domain | Completado |
+| A-002.4 | CommercialTargetQueries | Completado |
+| A-002.5 | Target Attainment Engine | Completado |
+| A-002.6 | Business Snapshot | Completado |
+| A-002.7 | Health Score Engine | Completado |
+| A-002.8 | Narrative Engine & Executive Brief | Completado |
+| A-002.9 | Architecture Hardening | Completado |
+
+## Architecture Sprint A-002 — CERRADO
+
+El Core dispone de fachada pública, formatos compartidos y pruebas de límites arquitectónicos.
+
+## Sprint B-001 — Brand Workspace
+
+Después del cierre de A-002 se construirá la primera interfaz conectada al Core:
+
+- Resumen Ejecutivo.
+- Ventas.
+- Objetivos.
+- Health.
+- Clientes.
+- Productos.
+- Tendencias.
+- Alertas.
+- Copilot.
+
+## Criterio para v1.0.0
+
+- Data Center con dominios prioritarios operativos.
+- Business Model estable.
+- Business Repository y Business Cube completos.
+- Business Snapshot implementado.
+- Brand, Customer y Product Intelligence sobre el modelo central.
+- Executive Workspace conectado al Business Core.
+- Copilot consumiendo contratos de negocio y no estructuras de UI.
+
+## Restricciones vigentes
+
+- Las entidades almacenan hechos, objetivos e identificadores; no KPIs derivados.
+- Los Workspaces no duplican fórmulas del Business Core.
+- La UI representa Snapshots y resultados derivados; no interpreta el negocio.
+- Health Score no inventa benchmarks ausentes.
+- Cada cambio se entrega como commit completo, compilable y documentado.
+
+### A-002.9.1 - Architecture Test Isolation
+
+Status: completed. Corrective hardening release separating Node-based architecture tests from production application compilation.
+
+
+============================================================
+FILE: docs\CHANGELOG.md
+============================================================
+# 0.27.0-IQ-002
+
+- `Name` adoptado como identidad primaria y unica del producto.
+- `Marca` y `Modelo` usados para validacion y fallback controlado.
+- Nuevo indice por Name, deteccion de duplicados y advertencias de atributos.
+- Quality Gate ampliado con cobertura primaria por Name.
+- Migracion compatible con Product Master persistido en IQ-001.
+
+# 0.27.0-IQ-001
+
+- Product Master registrado como dataset persistente del Data Center.
+- Product Identity Quality Gate con cobertura por filas y valor de venta.
+- Excepciones agrupadas y priorizadas por impacto comercial.
+- Nueva ruta `/data-quality/products` y exportacion CSV.
+- Integracion del Product Master persistido con BusinessRepository.
+
+# 0.21.0-C001.1
+
+- Customer Core Migration sobre `customerPeriods` y `BusinessRepository`.
+- Índices temporales por cliente y periodo.
+- Cobertura de periodos activos y ubicaciones por periodo.
+
+# Changelog
+
+## 0.18.0-UX002.4-P3
+
+- Integración visible del Executive Brief en Brand Workspace.
+- Generación determinística desde el Business Core mediante Workspace Context.
+- Renderizado debajo del Executive Hero y antes de los KPI secundarios.
+
+# PM Intelligence Workspace — Changelog
+
+## 0.18.0-UX002.4-P2 — Executive Brief Atlas Widgets
+
+- Añade la capa visual reusable del Executive Brief determinístico.
+- Incorpora explainability, confianza, riesgos, oportunidades y recomendaciones.
+- Mantiene la integración con Brand Workspace fuera de esta parte.
+
+
+## 2026-07-25 — Commit A-002.1: Business Cube Metrics Foundation
+
+### Added
+
+- `BusinessCubeMetrics` con contratos para margen, ticket promedio y variación entre periodos.
+- Implementaciones puras y reutilizables de las tres métricas.
+- Pruebas unitarias de resultados válidos, valores negativos y divisores sin base válida.
+- `docs/ARCHITECTURE_DECISIONS.md` con ADR-008 a ADR-011.
+
+### Changed
+
+- `buildBusinessCube()` ahora construye métricas reales mediante `buildBusinessCubeMetrics()`.
+
+### Compatibility
+
+- Sin cambios en `BusinessDataModel`, `BusinessRepository`, Intelligence o UI.
+- Sin breaking changes en las consultas existentes del Business Cube.
+
+## 2026-07-26 — Commit A-002.2: Business Cube Engine Consolidation
+
+### Added
+
+- Registro central de métricas mensuales para las nueve métricas oficiales del Cube.
+- Totales agregados correctos para `grossMargin` y `averageTicket`.
+- Pruebas de integración para métricas aditivas y derivadas.
+
+### Changed
+
+- `GenericCubeQueryEngine` ahora resuelve ejecutores mediante el registro de métricas.
+- `PeriodMetricExecutor` consume `BusinessCubeMetrics` y definiciones registradas.
+- `buildBusinessCube()` comparte una única instancia de métricas entre todos los motores.
+- El modelo mínimo de pruebas ahora contiene hechos representativos.
+- `tsconfig.json` dejó de referenciar un `tsconfig.node.json` inexistente.
+
+### Compatibility
+
+- Sin cambios en `BusinessDataModel`, `BusinessRepository`, Intelligence o UI.
+- Las consultas existentes de `revenue` y `grossProfit` conservan su contrato.
+
+## 2026-07-26 — Commit A-002.3: Business Targets Domain
+
+### Added
+
+- Entidad pura `BusinessBrandTarget`.
+- Índice `brandTargets` dentro de `BusinessDataModel`.
+- Contrato `BusinessBrandTargetInput` para entradas normalizadas.
+- Builder `buildBusinessBrandTargets()` con validación estructurada.
+- Convención reutilizable para claves `PERIOD::BRAND`.
+- Pruebas unitarias e integración con `buildBusinessDataModel()`.
+- `ADR-013` para formalizar los objetivos comerciales como entidades de primer nivel.
+- `docs/RELEASE_NOTES.md` con el historial de la versión `v0.9.0`.
+
+### Changed
+
+- `buildBusinessDataModel()` acepta opcionalmente objetivos de marca sin romper las llamadas existentes.
+- El modelo mínimo de pruebas incorpora un índice vacío de objetivos.
+- La versión del paquete avanza a `0.9.0`.
+
+### Compatibility
+
+- Las llamadas existentes a `buildBusinessDataModel(rows)` conservan su comportamiento.
+- No se modifica Business Repository, Business Cube, Intelligence ni UI.
+- No se calculan todavía cumplimiento, run rate, forecast o health score.
+
+## 2026-07-26 — Commit A-002.4: CommercialTargetQueries
+
+### Added
+
+- Query Object `CommercialTargetQueries` para objetivos comerciales de marca.
+- Consulta directa por marca y periodo mediante la clave canónica `PERIOD::BRAND`.
+- Índices de objetivos por marca y por periodo construidos al inicializar el Repository.
+- Consultas de periodos disponibles, marcas con objetivo y existencia de objetivo.
+- Pruebas unitarias de normalización, orden, aislamiento de colecciones y casos inexistentes.
+- `ADR-014` y documento técnico `docs/COMMIT_A-002.4.md`.
+
+### Changed
+
+- `BusinessRepository` expone `repository.targets` como API oficial de consulta.
+- El paquete avanza a la versión `0.9.1`.
+- Release Notes y Roadmap reflejan el cierre de A-002.4.
+
+### Compatibility
+
+- Sin cambios en `BusinessDataModel`, Business Cube, Intelligence o UI.
+- Las APIs existentes de `brand`, `customer` y `revenue` mantienen su contrato.
+- No se calculan todavía cumplimiento, run rate, forecast o health score.
+
+## 2026-07-26 — Commit A-002.5: Target Attainment Engine
+
+### Added
+
+- Motor `TargetAttainmentEngine` para comparar hechos y objetivos por marca y periodo.
+- Contratos `BusinessTargetAttainment`, `BusinessMetricAttainment`,
+  `BusinessRevenuePace` y `BusinessPerformanceStatus`.
+- Cálculos reutilizables de cumplimiento, variación, ritmo esperado y proyección lineal.
+- Opciones explícitas para días laborales transcurridos.
+- Pruebas unitarias del motor, divisiones entre cero, estados y periodos sin hechos.
+- `ADR-015` y documento técnico `docs/COMMIT_A-002.5.md`.
+
+### Changed
+
+- El paquete avanza a la versión `0.9.2`.
+- Release Notes y Roadmap reflejan el cierre de A-002.5.
+
+### Compatibility
+
+- Sin cambios en `BusinessDataModel`, Business Repository, Business Cube o UI.
+- Las APIs existentes mantienen su contrato.
+- No se implementan todavía Business Snapshot, Health Score ni Executive Brief.
+
+## 2026-07-26 — Commit A-002.6: Business Snapshot
+
+### Added
+
+- `BusinessSnapshotEngine` y contrato `BusinessBrandSnapshot`.
+- Consolidación de hechos, objetivos y Target Attainment por marca y periodo.
+- Métricas de margen y ticket promedio reutilizadas desde Business Cube.
+- Opciones explícitas para días laborales transcurridos.
+- Pruebas para periodos con hechos y objetivo, sólo objetivo, sólo hechos y datos inexistentes.
+- `ADR-016` y documento técnico `docs/COMMIT_A-002.6.md`.
+
+### Changed
+
+- `BusinessRepository` expone `getGeneratedAt()` para metadatos deterministas.
+- El paquete avanza a la versión `0.9.3`.
+- Release Notes y Roadmap reflejan el cierre de A-002.6.
+
+### Compatibility
+
+- Sin cambios incompatibles en BusinessDataModel, Cube, Targets, Attainment o UI.
+- La interfaz web todavía no consume el Snapshot.
+
+## 2026-07-26 — Commit A-002.7: Business Health Score Engine
+
+### Added
+
+- `BusinessHealthScoreEngine` basado exclusivamente en `BusinessBrandSnapshot`.
+- Ocho componentes configurables: venta, GP, margen, forecast, ritmo, clientes,
+  productos y tendencia.
+- Pesos predeterminados y validación de configuraciones personalizadas.
+- Clasificación ejecutiva de Excelente a Crítico, incluyendo No evaluable.
+- Componentes explicables con valor real, benchmark, score, peso e impacto.
+- Recomendaciones estructuradas para dimensiones en atención o riesgo.
+- Benchmarks opcionales para amplitud de clientes, productos y tendencia.
+- Pruebas unitarias de clasificación, ponderación, renormalización y configuración.
+- `ADR-017` y documento técnico `docs/COMMIT_A-002.7.md`.
+
+### Changed
+
+- El paquete avanza a la versión `0.9.4`.
+- Release Notes y Roadmap reflejan el cierre de A-002.7.
+
+### Compatibility
+
+- Sin cambios incompatibles en Snapshot, Attainment, Repository, Cube o UI.
+- La interfaz web todavía no representa el Health Score.
+
+## 2026-07-26 — Commit A-002.8: Narrative Engine & Executive Brief
+
+### Added
+
+- `BusinessNarrativeEngine` como fachada pública de narrativa determinística.
+- `BusinessExecutiveBrief` con resumen, fortalezas, riesgos, oportunidades y recomendaciones.
+- Builders especializados por sección y reglas de lenguaje `es-MX`.
+- Validación de correspondencia entre Snapshot y Health Score.
+- Pruebas de narrativa favorable, ausencia de objetivos y contratos incompatibles.
+- `ADR-018` y documento técnico `docs/COMMIT_A-002.8.md`.
+
+### Changed
+
+- La versión del paquete avanza a `0.9.5`.
+
+### Compatibility
+
+- Sin cambios en UI, Repository, Cube, Snapshot, Attainment o Health Score.
+- El nuevo módulo es aditivo y se consume mediante su barrel export local.
+
+## 2026-07-26 — Commit A-002.9: Architecture Hardening
+
+### Added
+
+- Fachada pública `src/core/business/index.ts`.
+- Formateadores compartidos para números, porcentajes y moneda.
+- Pruebas de formateadores y límites arquitectónicos.
+- Documentación de API pública, Contribution Guide y Architecture Review.
+- `ADR-019` para formalizar contratos y dependencias permitidas.
+
+### Changed
+
+- Narrative Engine reutiliza los formateadores centrales.
+- La versión del paquete avanza a `0.9.6`.
+- Architecture Sprint A-002 queda cerrado.
+
+### Compatibility
+
+- Sin breaking changes en Snapshot, Health, Narrative, Repository, Cube o UI.
+- La fachada pública es aditiva y los exports locales permanecen disponibles.
+
+## 0.9.7 - A-002.9.1
+
+### Fixed
+
+- Isolated the Node-based architecture-boundary test from the browser production source tree.
+- Updated Vitest test discovery for the external `tests/` directory.
+- Removed the TypeScript build errors caused by `node:fs`, `node:path`, and `node:url` imports under `src/`.
+
+## 0.17.1-UX002.2
+
+- Añade Intelligent KPI Cards y un registro declarativo reutilizable de indicadores.
+- Migra los KPI secundarios de Brand Intelligence al nuevo sistema Atlas.
+- Mantiene toda la lógica de negocio fuera de React.
+
+## 0.17.2-UX002.3
+
+- Executive Workspace Refinement.
+- Executive Hero v2, KPI Cards v2, Executive Panels, Workspace Themes and Motion System.
+
+## 0.18.0-UX002.4-P1
+
+- Executive Brief Core determinístico para Brand Workspace.
+- Reglas, explicabilidad, confianza y pruebas unitarias.
+- Sin cambios de UI en esta parte.
+
+## 0.19.0-UX002.5-P2
+
+- Añade los widgets Atlas reutilizables para Opportunity Radar.
+- Incorpora matriz impacto/urgencia y explicabilidad visual.
+- Mantiene la integración con Brand Workspace fuera de esta parte.
+
+## 0.19.0-UX002.5-P3
+
+- Integración de Opportunity Radar en Brand Workspace.
+- Conexión de Opportunity Engine con Workspace Context.
+- Visualización priorizada entre Executive Brief y KPI Cards.
+
+## 0.19.1-UX002.5-P3.1
+
+- Corrige el recorte de tooltips en los bordes de Opportunity Matrix.
+- Orienta cada tooltip hacia el espacio disponible y añade soporte de teclado.
+- Mantiene intactos Opportunity Engine, scores y reglas de negocio.
+
+## 0.20.0-UX002.6
+
+- Smart Brand Directory integrado en Brand Workspace.
+- Navegación contextual por marca, filtros y ordenamiento ejecutivo.
+
+## 0.26.0 — SW-001 Sales Workspace Foundation
+
+- Sales Workspace reemplaza el placeholder de `/sales`.
+- Se incorpora contexto comercial por periodo, comparación temporal, KPIs, tendencia y rankings.
+- La calidad de conciliación de Product Master se expone dentro del Workspace.
+- El módulo consume BusinessRepository sin depender de filas normalizadas.
+
+## 0.26.0 — SW-002 Sales Performance Analytics
+
+- Consolida objetivos mensuales de venta, Gross Profit y margen dentro de Sales Workspace.
+- Incorpora cumplimiento, esperado al corte, ritmo diario laboral y proyección de cierre.
+- Añade cobertura de objetivos y una tabla priorizada de brechas por marca.
+- Mantiene el Business Core congelado y consume únicamente BusinessRepository y Attainment.
+
+## 0.26.0 — SW-003 Sales Segmentation & Drill-down
+
+- Añade segmentación combinable por marca, cliente, producto, ubicación y vendedor.
+- Incorpora búsqueda por ID o nombre y chips de filtros activos.
+- Recalcula KPIs, comparación, tendencia y rankings sobre el segmento exacto.
+- Permite profundizar desde rankings y presenta una tabla detallada agregada.
+- Añade `SalesSegmentationQueries` y un grano analítico aditivo al Business Repository.
+- Protege la integridad de cuotas desactivando objetivos cuando el filtro no puede atribuirse por marca.
+
+## 2026-07-28 — SW-005: Commercial Opportunity Engine
+
+### Added
+
+- Motor comercial determinístico para convertir señales de ventas en prioridades accionables.
+- Brechas de cuota, recuperación y crecimiento de clientes, crecimiento de productos y protección de margen.
+- Score, prioridad, confianza, esfuerzo, impacto estimado y evidencia por oportunidad.
+- Panel ejecutivo y navegación directa al segmento de marca, cliente o producto.
+
+### Architecture
+
+- Implementación aditiva dentro de Sales Workspace.
+- Sin cambios en entidades, builders o repositorios del Business Core.
+- SW-004 permanece pendiente como bloque independiente de Variance & Contribution Analysis.
+
+## 2026-07-28 — SW-004: Variance & Contribution Analysis
+
+### Added
+
+- Explicación determinística de la variación comercial contra el periodo comparable.
+- Contribuciones positivas y negativas por marca, cliente y producto.
+- Cambios de mezcla, participación y peso relativo del movimiento.
+- Clasificación de clientes nuevos, recuperados, crecientes, en baja, perdidos y estables.
+- Panel ejecutivo integrado antes del Commercial Opportunity Engine.
+
+### Architecture
+
+- Implementación aditiva dentro de Sales Workspace.
+- Consume exclusivamente BusinessRepository y Sales Segmentation Queries.
+- Sin cambios en entidades, builders o repositorios del Business Core.
+
+## 2026-07-28 — SW-006: Executive Export & Closure
+
+### Added
+
+- Resumen ejecutivo determinístico con lectura del periodo, perspectiva de cierre y hallazgos prioritarios.
+- Exportación Excel bajo demanda con hojas de resumen, KPIs, desempeño por marca, oportunidades, contribuciones, detalle y conciliación.
+- Vista de impresión optimizada para generar PDF desde el navegador.
+- Acciones ejecutivas de impresión y exportación dentro de Sales Workspace.
+
+### Performance
+
+- Carga diferida por ruta para los principales Workspaces y Data Center.
+- `xlsx` se carga dinámicamente únicamente al solicitar una exportación.
+- Se elimina la dependencia estática de Data Center desde el router principal.
+
+### Closure
+
+- Completa los bloques SW-001 a SW-006 de Sales Workspace v0.26.0.
+- Mantiene el Business Core congelado y sin cambios de contrato.
+
+
+============================================================
+PRUEBA DIRIGIDA - INVENTORY IMPORT PLUGIN
+============================================================
+
+> pm-intelligence-workspace@0.27.0 test
+> vitest run src/features/data-center/importers/inventory/inventoryPlugin.test.ts
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90mC:/Users/Tecnosinergia/Documents/PM-Intelligence-Workspace[39m
+
+ [32m✓[39m src/features/data-center/importers/inventory/inventoryPlugin.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m   Start at [22m 10:57:32
+[2m   Duration [22m 276ms[2m (transform 67ms, setup 0ms, import 96ms, tests 5ms, environment 0ms)[22m
+
+
+============================================================
+FIN DEL CONTEXTO IW-006
+============================================================
