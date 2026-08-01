@@ -217,6 +217,45 @@ PL-005 does not rank scenarios, calculate a recommended winner, approve a
 commercial condition, persist a simulation or write to any other Workspace.
 Every result preserves the `simulation-only` isolation contract.
 
+### New Product and Brand Price Design
+
+PL-008 publishes a catalog-independent inverse-pricing engine through the
+public `pricing` module:
+
+```ts
+evaluatePriceDesign({
+  id: 'NEW-PRODUCT-1',
+  identity: {
+    brandName: 'Nueva Marca',
+    model: 'NP-001',
+    sku: null,
+  },
+  currency: 'MXN',
+  cost: 100,
+  discountRate: 0.34,
+  objective: {
+    type: 'target_gross_margin',
+    grossMargin: 0.24,
+  },
+})
+```
+
+The engine can derive list price and list factor from target Gross Margin,
+target unit GP or a target net selling price. It can also evaluate an explicit
+list factor, net selling factor or known list price at the supplied discount.
+
+The result distinguishes:
+
+```text
+listPriceFactor = listPrice / cost
+sellingPriceFactor = sellingPrice / cost
+```
+
+A valid result contains a transient manual `BusinessPrice` for interoperability
+with future laboratory orchestration. That object is never inserted into
+Product Master, Business Repository, Data Center or persistence. PL-008 embeds
+no commercial defaults and performs no recommendation or publication.
+
 ## Forecast API
 
 `BusinessRepository` expone el baseline oficial mediante:

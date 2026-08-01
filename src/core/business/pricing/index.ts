@@ -5,3 +5,6 @@ export * from './pricingMath'
 export * from './pricingTemplateCatalog'
 export * from './pricingTemplateContracts'
 export * from './pricingTemplateEngine'
+
+export * from './priceDesignContracts'
+export * from './priceDesignEngine'

@@ -1,3 +1,16 @@
+# 0.46.0-PL-008
+
+- Reopens Pricing Laboratory to correct the catalog-only source limitation identified after PL-007.
+- Adds `price-design-v1` for products and brands that do not yet exist in Product Master or Business Repository.
+- Calculates price list, net selling price, list factor, net factor, unit GP and Gross Margin from an explicit cost and discount.
+- Supports six explicit design objectives: target margin, target GP, target net selling price, list factor, net factor and known list price.
+- Distinguishes `Factor de lista = Precio de lista / Costo` from `Factor neto = Precio de venta / Costo` to prevent ambiguous commercial interpretation.
+- Adds a new `/pricing` source mode: `Nuevo producto / marca`, independent from catalog price availability.
+- Adds an in-memory matrix to compare 32%, 34% or any other user-supplied discount as separate designs.
+- Produces a transient `BusinessPrice` only as an isolated calculation artifact; it is not inserted into Product Master, Business Repository, Data Center or IndexedDB.
+- Embeds no default discount, margin, GP, factor or list price. All numeric assumptions remain explicit.
+- Adds automated coverage for every inverse calculation route, validation, isolation, negative-GP warnings, visual rendering and draft conversion.
+
 # 0.45.0-PL-007
 
 - Adds `pricing-executive-comparison-v1` to build an explicit documentary selection of calculable Pricing Laboratory scenarios.

@@ -159,7 +159,7 @@ Exportar o imprimir no:
 
 ## Cierre funcional
 
-Con PL-007, Pricing Laboratory queda cerrado de PL-001 a PL-007:
+PL-007 cierra la ruta documental basada en un precio existente:
 
 - Data Foundation;
 - importación y conciliación;
@@ -169,5 +169,6 @@ Con PL-007, Pricing Laboratory queda cerrado de PL-001 a PL-007:
 - interfaz y constructor;
 - comparación ejecutiva, Excel e impresión/PDF.
 
-Cualquier evolución posterior requiere un sprint independiente y deberá
-preservar el carácter de laboratorio temporal sin publicación de precios.
+PL-008 amplía posteriormente el laboratorio con diseño desde costo para productos
+y marcas que todavía no existen en catálogo. Esta ampliación no modifica el
+contrato documental de PL-007 ni permite publicar precios.

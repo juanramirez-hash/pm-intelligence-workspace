@@ -8,6 +8,7 @@ import {
   Home,
   Layers3,
   LockKeyhole,
+  PackagePlus,
   Printer,
   RotateCcw,
   ShieldCheck,
@@ -51,6 +52,7 @@ import type {
 
 import {
   PricingLaboratorySelectionPanel,
+  PricingNewProductDesigner,
   PricingScenarioBuilder,
   PricingScenarioDetail,
   PricingScenarioExecutiveComparison,
@@ -121,7 +123,11 @@ function workspaceStatusPresentation(
   }
 }
 
+type PricingLaboratorySourceMode = 'catalog' | 'new_product'
+
 export function PricingLaboratoryPage() {
+  const [sourceMode, setSourceMode] = useState<PricingLaboratorySourceMode>('catalog')
+  const [manualDesignerVersion, setManualDesignerVersion] = useState(1)
   const [productId, setProductId] = useState('')
   const [currency, setCurrency] = useState<string | null>(null)
   const [templates, setTemplates] = useState<PricingLaboratoryTemplateInput[]>([])
@@ -152,10 +158,18 @@ export function PricingLaboratoryPage() {
   )
 
   const workspace = usePricingLaboratoryWorkspace(request)
-  const status = workspaceStatusPresentation(workspace.status)
+  const status = sourceMode === 'catalog'
+    ? workspaceStatusPresentation(workspace.status)
+    : {
+      label: 'Diseño desde costo',
+      className: 'bg-sky-100 text-sky-700',
+      icon: <PackagePlus size={13} />,
+    }
   const source = workspace.source
   const selectedCurrency = workspace.selection.selectedCurrency
   const sourceCurrency = source?.currency ?? selectedCurrency
+  const heroSource = sourceMode === 'catalog' ? source : null
+  const heroCurrency = sourceMode === 'catalog' ? sourceCurrency : null
   const executiveComparison = useMemo(
     () => buildPricingScenarioExecutiveComparison(
       workspace,
@@ -254,6 +268,7 @@ export function PricingLaboratoryPage() {
   }
 
   const resetLaboratory = () => {
+    setManualDesignerVersion((current) => current + 1)
     setProductId('')
     setCurrency(null)
     setTemplates([])
@@ -288,11 +303,10 @@ export function PricingLaboratoryPage() {
                 <ShellActionsGroup label="Gestión del laboratorio">
                   <button
                     className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={
+                    disabled={sourceMode === 'catalog' &&
                       !productId &&
                       templates.length === 0 &&
-                      selectedScenarioKey === null
-                    }
+                      selectedScenarioKey === null}
                     onClick={resetLaboratory}
                     type="button"
                   >
@@ -300,16 +314,19 @@ export function PricingLaboratoryPage() {
                     Reiniciar laboratorio
                   </button>
 
-                  <Link
-                    className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
-                    to="/data-center"
-                  >
-                    <Database size={16} />
-                    Importar Pricing
-                  </Link>
+                  {sourceMode === 'catalog' && (
+                    <Link
+                      className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+                      to="/data-center"
+                    >
+                      <Database size={16} />
+                      Importar Pricing
+                    </Link>
+                  )}
                 </ShellActionsGroup>
 
-                <ShellActionsGroup label="Salida ejecutiva">
+                {sourceMode === 'catalog' && (
+                  <ShellActionsGroup label="Salida ejecutiva">
                   <button
                     className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!executiveComparison.available || isExporting}
@@ -329,61 +346,93 @@ export function PricingLaboratoryPage() {
                     <Printer size={16} />
                     Imprimir / PDF
                   </button>
-                </ShellActionsGroup>
+                  </ShellActionsGroup>
+                )}
               </ShellActions>
             </div>
           )}
-          description="Evalúa precios, descuentos, margen, GP y factores mediante escenarios temporales. Ningún resultado se guarda, aprueba o publica como precio comercial."
+          description={sourceMode === 'catalog'
+            ? 'Evalúa precios, descuentos, margen, GP y factores mediante escenarios temporales. Ningún resultado se guarda, aprueba o publica como precio comercial.'
+            : 'Diseña precio de lista, factor y precio neto desde el costo de productos o marcas que todavía no existen en catálogo.'}
           eyebrow="Price Engineering"
           icon={<FlaskConical size={22} />}
           metadata={(
             <>
-              <span>Metodología: {workspace.methodology.workspace}</span>
-              <span>Generado: {formatPricingDate(workspace.generatedAt)}</span>
-              <span>Modo: simulation-only</span>
+              <span>Metodología: {sourceMode === 'catalog' ? workspace.methodology.workspace : 'price-design-v1'}</span>
+              <span>Generado: {sourceMode === 'catalog' ? formatPricingDate(workspace.generatedAt) : 'En memoria durante la sesión'}</span>
+              <span>Modo: {sourceMode === 'catalog' ? 'catálogo / simulation-only' : 'nuevo producto / simulation-only'}</span>
             </>
           )}
-          metrics={[
-            {
-              label: 'Precio vigente',
-              value: formatPricingMoney(
-                source?.metrics.sellingPrice,
-                sourceCurrency,
-              ),
-              helper: source ? `${source.currency} · solo lectura` : 'Selecciona una fuente',
-              icon: <BadgeDollarSign size={17} />,
-            },
-            {
-              label: 'Costo vigente',
-              value: formatPricingMoney(
-                source?.metrics.cost,
-                sourceCurrency,
-              ),
-              helper: 'Hecho fuente no modificable',
-              icon: <Layers3 size={17} />,
-            },
-            {
-              label: 'GP unitario actual',
-              value: formatPricingMoney(
-                source?.metrics.grossProfit,
-                sourceCurrency,
-              ),
-              helper: 'Base de comparación',
-              icon: <Target size={17} />,
-              tone: 'positive',
-            },
-            {
-              label: 'Margen actual',
-              value: formatPricingPercentage(
-                source?.metrics.grossMargin,
-              ),
-              helper: source
-                ? source.metrics.marginBand.replace(/_/g, ' ')
-                : 'Sin fuente',
-              icon: <Sparkles size={17} />,
-              tone: 'intelligence',
-            },
-          ]}
+          metrics={sourceMode === 'catalog'
+            ? [
+              {
+                label: 'Precio vigente',
+                value: formatPricingMoney(
+                  heroSource?.metrics.sellingPrice,
+                  heroCurrency,
+                ),
+                helper: heroSource ? `${heroSource.currency} · solo lectura` : 'Selecciona una fuente',
+                icon: <BadgeDollarSign size={17} />,
+              },
+              {
+                label: 'Costo vigente',
+                value: formatPricingMoney(
+                  heroSource?.metrics.cost,
+                  heroCurrency,
+                ),
+                helper: 'Hecho fuente no modificable',
+                icon: <Layers3 size={17} />,
+              },
+              {
+                label: 'GP unitario actual',
+                value: formatPricingMoney(
+                  heroSource?.metrics.grossProfit,
+                  heroCurrency,
+                ),
+                helper: 'Base de comparación',
+                icon: <Target size={17} />,
+                tone: 'positive',
+              },
+              {
+                label: 'Margen actual',
+                value: formatPricingPercentage(
+                  heroSource?.metrics.grossMargin,
+                ),
+                helper: heroSource
+                  ? heroSource.metrics.marginBand.replace(/_/g, ' ')
+                  : 'Sin fuente',
+                icon: <Sparkles size={17} />,
+                tone: 'intelligence',
+              },
+            ]
+            : [
+              {
+                label: 'Fuente',
+                value: 'Costo manual',
+                helper: 'No requiere producto existente',
+                icon: <PackagePlus size={17} />,
+              },
+              {
+                label: 'Descuento',
+                value: 'Explícito',
+                helper: '32%, 34% o cualquier otro',
+                icon: <SlidersHorizontal size={17} />,
+              },
+              {
+                label: 'Parámetros',
+                value: 'Lista + factores',
+                helper: 'Factor de lista y factor neto',
+                icon: <Target size={17} />,
+                tone: 'positive',
+              },
+              {
+                label: 'Persistencia',
+                value: 'Ninguna',
+                helper: 'Solo memoria de la sesión',
+                icon: <ShieldCheck size={17} />,
+                tone: 'intelligence',
+              },
+            ]}
           score={{
             score: 100,
             caption: 'Aislamiento',
@@ -402,28 +451,91 @@ export function PricingLaboratoryPage() {
           summaryItems={[
             {
               label: 'Producto',
-              value: source?.model ?? source?.productName ?? 'Pendiente',
+              value: heroSource?.model ?? heroSource?.productName ?? (sourceMode === 'new_product' ? 'Captura manual' : 'Pendiente'),
             },
             {
               label: 'Marca',
-              value: source?.brandName ?? '—',
+              value: heroSource?.brandName ?? (sourceMode === 'new_product' ? 'Provisional' : '—'),
             },
             {
               label: 'Moneda',
-              value: sourceCurrency ?? 'Pendiente',
+              value: heroCurrency ?? (sourceMode === 'new_product' ? 'Captura explícita' : 'Pendiente'),
             },
             {
               label: 'Comparaciones',
-              value: workspace.summary.totalRows.toLocaleString('es-MX'),
+              value: sourceMode === 'new_product'
+                ? 'Matriz temporal'
+                : workspace.summary.totalRows.toLocaleString('es-MX'),
             },
           ]}
           theme="pricing"
-          title={source
-            ? `Laboratorio · ${source.model ?? source.productName}`
-            : 'Pricing Laboratory'}
+          title={sourceMode === 'new_product'
+            ? 'Pricing Laboratory · Nuevo producto / marca'
+            : source
+              ? `Laboratorio · ${source.model ?? source.productName}`
+              : 'Pricing Laboratory'}
         />
       )}
     >
+      <ExecutivePanel
+        icon={<SlidersHorizontal size={19} />}
+        subtitle="Elige si la simulación parte de un precio existente o únicamente del costo de un producto nuevo."
+        title="Modo del laboratorio"
+        tone="intelligence"
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            className={[
+              'rounded-2xl border p-4 text-left transition',
+              sourceMode === 'catalog'
+                ? 'border-rose-200 bg-rose-50 shadow-sm'
+                : 'border-slate-200 bg-white hover:bg-slate-50',
+            ].join(' ')}
+            onClick={() => setSourceMode('catalog')}
+            type="button"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Database size={17} />
+              Producto existente
+            </div>
+            <p className="mt-2 text-xs leading-5 text-slate-600">
+              Usa precio, costo y moneda disponibles en Business Repository.
+            </p>
+          </button>
+
+          <button
+            className={[
+              'rounded-2xl border p-4 text-left transition',
+              sourceMode === 'new_product'
+                ? 'border-sky-200 bg-sky-50 shadow-sm'
+                : 'border-slate-200 bg-white hover:bg-slate-50',
+            ].join(' ')}
+            onClick={() => setSourceMode('new_product')}
+            type="button"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <PackagePlus size={17} />
+              Nuevo producto / marca
+            </div>
+            <p className="mt-2 text-xs leading-5 text-slate-600">
+              Parte del costo y calcula lista, factor, venta neta, GP y margen sin requerir catálogo.
+            </p>
+          </button>
+        </div>
+      </ExecutivePanel>
+
+      {sourceMode === 'new_product' && (
+        <ExecutivePanel
+          icon={<PackagePlus size={19} />}
+          subtitle="Calcula parámetros para altas futuras sin crear ni modificar registros comerciales."
+          title="Diseño de precio para producto o marca nueva"
+          tone="intelligence"
+        >
+          <PricingNewProductDesigner key={manualDesignerVersion} />
+        </ExecutivePanel>
+      )}
+
+      <div className={sourceMode === 'catalog' ? 'contents' : 'hidden'}>
       {(workspace.issues.length > 0 || workspace.templateIssues.length > 0) && (
         <div className="grid gap-3">
           {[...workspace.issues, ...workspace.templateIssues].map((issue, index) => (
@@ -657,6 +769,7 @@ export function PricingLaboratoryPage() {
             </ul>
           </div>
         </ExecutivePanel>
+      </div>
       </div>
     </ExecutiveShell>
   )
