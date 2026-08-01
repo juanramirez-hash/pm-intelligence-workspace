@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Version: v0.41.0
-Sprint: PL-003 - Price Engineering Engine & Scenario Evaluation
+Version: v0.43.0
+Sprint: PL-005 - Pricing Laboratory Workspace Model & Scenario Orchestration
 Estado: Completado
 ```
 
@@ -68,8 +68,8 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-002 | Pricing Data Center Import & Reconciliation | Completado |
 | PL-003 | Price Engineering Engine & Scenario Evaluation | Completado |
 | PL-004 | Pricing Group Templates & Commercial Guardrails | Completado · Hotfix 1 |
-| PL-005 | Price DNA & Recommendations | Siguiente |
-| PL-006 | Pricing Laboratory Workspace UI | Planeado |
+| PL-005 | Pricing Laboratory Workspace Model & Scenario Orchestration | Completado |
+| PL-006 | Pricing Laboratory Workspace UI | Siguiente |
 | PL-007 | Executive Export & Closure | Planeado |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
@@ -84,7 +84,11 @@ PL-004 incorpora un catálogo de plantillas Silver, Gold, Platinum, promoción, 
 
 PL-004 Hotfix 1 elimina una advertencia de análisis estático en la prueba de aislamiento del catálogo. No altera contratos, plantillas, guardrails ni comportamiento productivo.
 
-**Siguiente sprint:** PL-005 - Price DNA & Recommendations.
+PL-005 incorpora `pricing-workspace-v1` como modelo único para la futura interfaz. Selecciona el precio vigente por producto y moneda, publica opciones de selección, orquesta plantillas y escenarios almacenados, conserva el orden de comparación y centraliza métricas, deltas, señales, guardrails, issues y explainability. El modelo nunca recomienda ni selecciona automáticamente un precio, no persiste resultados y no escribe fuera del laboratorio.
+
+Price DNA y recomendaciones automáticas quedan fuera del alcance vigente. Cualquier evolución futura deberá permanecer explicable, temporal y sin capacidad de publicar precios.
+
+**Siguiente sprint:** PL-006 - Pricing Laboratory Workspace UI.
 
 ## Inventory Workspace — CERRADO
 

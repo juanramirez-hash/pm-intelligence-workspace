@@ -1,3 +1,18 @@
+# 0.43.0-PL-005
+
+- Adds `pricing-workspace-v1` as the UI-independent model for Pricing Laboratory.
+- Selects the current `BusinessPrice` by product and explicit currency through `BusinessRepository.prices`.
+- Publishes product and currency options without reading normalized import rows directly.
+- Orchestrates PL-004 template configurations and read-only stored scenarios in one ordered comparison model.
+- Keeps current metrics, scenario metrics, deltas, guardrails, signals, template issues, explainability and selection state in a single contract for the future `/pricing` UI.
+- Requires explicit currency selection when a product has more than one monetary channel; no cross-currency fallback or conversion is performed.
+- Preserves disabled, not-applicable, invalid, valid, warning and blocked scenario classifications without choosing a commercial winner.
+- Adds explicit `awaiting_selection`, `ready`, `partial` and `unavailable` Workspace states.
+- A requested scenario is selected only when its key exists; PL-005 never auto-selects a recommended price.
+- Re-evaluates stored scenarios in memory and never writes changes back to `BusinessPriceScenario`.
+- Declares the same `simulation-only` isolation contract and documents that PL-005 does not recommend, approve, persist or publish prices.
+- Adds automated tests for selection, multi-currency isolation, template/stored orchestration, invalid configurations, blocking guardrails, missing selections and output immutability.
+
 # 0.42.1-PL-004-HOTFIX1
 
 - Corrige la prueba de aislamiento del catálogo de plantillas para evitar optional chaining inseguro antes de mutar la copia de prueba.

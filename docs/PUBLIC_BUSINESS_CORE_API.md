@@ -174,6 +174,49 @@ or `invalid`. The adapter delegates calculations to `price-engineering-v1` and
 preserves the same `simulation-only` isolation contract. PL-004 does not
 persist templates or results and cannot update any price or Workspace.
 
+### Pricing Laboratory Workspace Model
+
+PL-005 publishes the UI-independent orchestration model from the feature
+boundary:
+
+```ts
+import {
+  buildPricingLaboratoryWorkspace,
+} from '@/features/pricing-laboratory'
+
+const workspace = buildPricingLaboratoryWorkspace(
+  repository,
+  {
+    productId: 'P-1',
+    currency: 'MXN',
+    templates,
+    guardrailProfiles,
+    defaultGuardrails,
+    includeStoredScenarios: true,
+    selectedScenarioKey: 'TEMPLATE:SILVER-MXN',
+  },
+)
+```
+
+The builder consumes `BusinessRepository.prices`; it never consumes
+`NormalizedPricingRow[]`. When a product has multiple currencies, the caller
+must select one explicitly. A single available currency may be resolved
+without conversion because no monetary channel is mixed.
+
+The model exposes product and currency options, the source-price context,
+ordered template and stored-scenario rows, explicit selection, summary counts,
+issues, signals, explainability and limitations. Stored scenarios are read and
+re-evaluated in memory only.
+
+Workspace statuses are `awaiting_selection`, `ready`, `partial` and
+`unavailable`. Scenario evaluation statuses remain `valid`, `warning`,
+`blocked` and `invalid`; blocked scenarios are comparable results and do not
+become price changes.
+
+PL-005 does not rank scenarios, calculate a recommended winner, approve a
+commercial condition, persist a simulation or write to any other Workspace.
+Every result preserves the `simulation-only` isolation contract.
+
 ## Forecast API
 
 `BusinessRepository` expone el baseline oficial mediante:

@@ -132,6 +132,7 @@ PL-004 no incluye:
 
 ## Siguiente entrega
 
-`PL-005 — Price DNA & Recommendations` deberá consumir resultados de laboratorio
-sin convertirlos en cambios de precio. Cualquier recomendación futura deberá
-permanecer explicable, simulada y separada de la ejecución comercial.
+`PL-005 — Pricing Laboratory Workspace Model & Scenario Orchestration` consume
+resultados del laboratorio y los organiza para la futura interfaz sin
+convertirlos en cambios de precio. Price DNA y recomendaciones automáticas
+permanecen fuera del alcance vigente.
