@@ -1,3 +1,16 @@
+# 0.39.0-PL-001
+
+- Pricing becomes a first-class Business Core domain through `BusinessPrice` and `BusinessPriceScenario`.
+- Defines explicit semantics for cost, list price, selling price, unit Gross Profit, gross margin, discount rate and pricing factor.
+- Adds stored comparison scenarios that never mutate the base price fact.
+- Publishes standard scenario and Pricing Group identifiers for current, promotion, Silver, Gold, Platinum, project and custom cases.
+- Adds `buildBusinessPrices()` with deterministic normalization, basic derivations, duplicate handling and auditable quality issues.
+- Integrates prices, scenarios, summary and quality metadata into `BusinessDataModel`.
+- Adds prebuilt indexes by product, brand, currency, margin band, Pricing Group, Gross Margin, unit Gross Profit, current product/currency price and price scenarios.
+- Adds `repository.prices` queries and BusinessRepository facade methods.
+- Adds unit and integration tests for math contracts, builder validation, scenario isolation, indexes and repository queries.
+- PL-001 does not include Data Center import, Price Engineering Engine, recommendations, Price DNA, UI or export.
+
 # 0.38.3-FW-010-HOTFIX3
 
 - Corrige la cobertura del periodo actual cuando todos los documentos pendientes se encuentran despues del corte de Ventas.

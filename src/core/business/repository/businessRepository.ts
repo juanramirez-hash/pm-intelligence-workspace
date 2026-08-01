@@ -82,6 +82,10 @@ import {
   ProjectBillingReconciliationQueries,
 } from './projectBillingReconciliationQueries'
 
+import {
+  PriceQueries,
+} from './priceQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -137,6 +141,9 @@ export class BusinessRepository {
 
   readonly projectBillingReconciliation:
     ProjectBillingReconciliationQueries
+
+  readonly prices:
+    PriceQueries
 
   constructor(
     model: BusinessDataModel,
@@ -210,6 +217,9 @@ export class BusinessRepository {
 
     this.projectBillingReconciliation =
       new ProjectBillingReconciliationQueries(model)
+
+    this.prices =
+      new PriceQueries(model)
   }
 
   getCustomers():
@@ -273,6 +283,24 @@ export class BusinessRepository {
 
   getProjectAwareForecastReport() {
     return this.forecast.getProjectAwareReport()
+  }
+
+  getPrices() {
+    return this.prices.getAll()
+  }
+
+  getPricingSummary() {
+    return this.prices.getSummary()
+  }
+
+  findCurrentPriceByProduct(
+    productId: string,
+    currency = 'MXN',
+  ) {
+    return this.prices.findCurrentByProduct(
+      productId,
+      currency,
+    )
   }
 
   findCustomer(

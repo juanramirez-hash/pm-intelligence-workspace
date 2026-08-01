@@ -121,3 +121,10 @@ export type {
 export {
   ProjectBillingReconciliationQueries,
 } from './projectBillingReconciliationQueries'
+
+export { PriceQueries } from './priceQueries'
+export {
+  buildPriceIndexes,
+  buildPriceProductCurrencyKey,
+} from './priceIndexes'
+export type { PriceIndexes } from './priceIndexes'

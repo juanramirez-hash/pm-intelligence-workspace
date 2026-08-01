@@ -25,9 +25,49 @@ Los siguientes módulos forman la API pública del Core:
 - `metrics`
 - `models`
 - `narrative`
+- `pricing`
 - `repository`
 - `snapshots`
 - `targets`
+
+## Pricing API
+
+PL-001 publishes the Price Core through:
+
+```ts
+repository.prices.getAll()
+repository.prices.findById(priceId)
+repository.prices.getByProduct(productId)
+repository.prices.findCurrentByProduct(productId, currency)
+repository.prices.getByBrand(brandId)
+repository.prices.getByCurrency(currency)
+repository.prices.getByMarginBand(marginBand)
+repository.prices.getByPricingGroup(groupId)
+repository.prices.findByMargin(minimum, maximum)
+repository.prices.findByGrossProfit(minimum, maximum)
+repository.prices.getScenarios(priceId)
+repository.prices.findScenario(scenarioId)
+repository.prices.getScenariosByPricingGroup(groupId)
+repository.prices.getSummary()
+repository.prices.getQualityIssues()
+```
+
+BusinessRepository facade methods:
+
+```ts
+repository.getPrices()
+repository.getPricingSummary()
+repository.findCurrentPriceByProduct(productId, currency)
+```
+
+Rates are decimal fractions. Gross Margin uses selling price as denominator,
+Gross Profit is a unit amount, Discount Rate is measured from List Price and
+Pricing Factor is List Price divided by Cost. Scenario records are independent
+from their base price and cannot mutate it through repository results.
+
+PL-001 does not publish recommendations, minimum price, target price or
+commercial Pricing Group policies. Those contracts belong to later Pricing
+Laboratory sprints.
 
 ## Forecast API
 

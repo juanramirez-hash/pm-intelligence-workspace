@@ -23,6 +23,11 @@ import type {
 } from '../../../features/data-center/importers/exchange-rates/exchangeRateTypes'
 
 import type {
+  BusinessPriceInput,
+  BusinessPriceScenarioInput,
+} from '../pricing'
+
+import type {
   BusinessBrand,
 } from '../entities/brand'
 
@@ -99,6 +104,10 @@ import {
 import {
   buildBusinessExchangeRates,
 } from './buildBusinessExchangeRates'
+
+import {
+  buildBusinessPrices,
+} from './buildBusinessPrices'
 
 import {
   createProductIdentityQualityAccumulator,
@@ -699,6 +708,8 @@ export interface BuildBusinessDataModelOptions {
   projects?: readonly NormalizedProjectRow[]
   projectBillings?: readonly NormalizedProjectBillingRow[]
   exchangeRates?: readonly NormalizedExchangeRateRow[]
+  prices?: readonly BusinessPriceInput[]
+  priceScenarios?: readonly BusinessPriceScenarioInput[]
 }
 
 export function buildBusinessDataModel(
@@ -807,6 +818,31 @@ export function buildBusinessDataModel(
 
     exchangeRates:
       new Map(),
+
+    prices:
+      new Map(),
+
+    priceScenarios:
+      new Map(),
+
+    pricingSummary: {
+      totalPrices: 0,
+      totalScenarios: 0,
+      uniqueProducts: 0,
+      uniqueBrands: 0,
+      uniqueCurrencies: 0,
+      pricesWithNegativeMargin: 0,
+      pricesWithoutEffectiveDate: 0,
+      invalidPriceInputs: 0,
+      invalidScenarioInputs: 0,
+      duplicatePriceRecords: 0,
+      duplicateScenarioRecords: 0,
+      blockingIssues: 0,
+      warningIssues: 0,
+    },
+
+    pricingQualityIssues:
+      [],
 
     periods:
       new Map<
@@ -1849,6 +1885,17 @@ export function buildBusinessDataModel(
       productPeriod.documents = documents.size
     }
   }
+
+  const pricing = buildBusinessPrices(
+    options.prices ?? [],
+    options.priceScenarios ?? [],
+    model.products,
+  )
+
+  model.prices = pricing.prices
+  model.priceScenarios = pricing.scenarios
+  model.pricingSummary = pricing.summary
+  model.pricingQualityIssues = pricing.qualityIssues
 
   model.productIdentityQuality =
     finalizeProductIdentityQualityReport(

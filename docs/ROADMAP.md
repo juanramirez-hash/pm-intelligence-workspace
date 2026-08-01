@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.38.3
-Sprint: FW-010 Hotfix 3 - Cobertura elegible del periodo actual
+Version: v0.39.0
+Sprint: PL-001 - Pricing Laboratory Data Foundation & Contract Definition
 Estado: Completado
 ```
 
@@ -60,7 +60,23 @@ FW-010 Hotfix 2 separa la conciliación del periodo actual de la calidad histór
 
 FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen documentos elegibles para conciliación. Los pendientes posteriores al corte permanecen auditables, pero no reducen artificialmente la cobertura ni bloquean el Forecast oficial.
 
-**Siguiente dominio:** Pricing Laboratory Workspace — definición de contratos, escenarios y Price Engineering Engine.
+## Pricing Laboratory Workspace
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| PL-001 | Data Foundation, contratos, Price Repository, indices y calidad | Completado |
+| PL-002 | Pricing Data Center Import & Reconciliation | Siguiente |
+| PL-003 | Price Engineering Engine | Planeado |
+| PL-004 | Scenario Engine & Pricing Groups | Planeado |
+| PL-005 | Price DNA & Recommendations | Planeado |
+| PL-006 | Pricing Laboratory Workspace UI | Planeado |
+| PL-007 | Executive Export & Closure | Planeado |
+
+PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
+
+PL-001 agrega indices por producto, marca, moneda, banda de margen, Gross Margin, Gross Profit, precio vigente y Pricing Group. `repository.prices` devuelve copias aisladas y publica resumen y calidad de datos. No existe todavia importador de Data Center, politica comercial, recomendacion, simulador o interfaz.
+
+**Siguiente sprint:** PL-002 - Pricing Data Center Import & Reconciliation.
 
 ## Inventory Workspace — CERRADO
 

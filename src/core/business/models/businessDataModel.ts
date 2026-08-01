@@ -68,6 +68,13 @@ import type {
   BusinessSalesTransactionLine,
 } from '../entities/salesTransaction'
 
+import type {
+  BusinessPrice,
+  BusinessPriceScenario,
+  BusinessPricingQualityIssue,
+  BusinessPricingSummary,
+} from '../entities/price'
+
 export interface BusinessDataTotals {
   revenue: number
   grossProfit: number
@@ -169,6 +176,22 @@ export interface BusinessDataModel {
   /** Monthly exchange rates used for open pipeline conversion. */
   exchangeRates?:
     Map<string, BusinessExchangeRate>
+
+  /** Auditable price facts materialized by PL-001. */
+  prices?:
+    Map<string, BusinessPrice>
+
+  /** Stored comparison scenarios that never mutate base prices. */
+  priceScenarios?:
+    Map<string, BusinessPriceScenario>
+
+  /** Pricing data quality and coverage summary. */
+  pricingSummary?:
+    BusinessPricingSummary
+
+  /** Pricing data quality issues produced during materialization. */
+  pricingQualityIssues?:
+    BusinessPricingQualityIssue[]
 
   periods:
     Map<string, BusinessPeriod>
