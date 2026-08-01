@@ -65,9 +65,11 @@ describe('PricingScenarioTable', () => {
   it('renders comparison metrics and temporary-only actions', () => {
     const markup = renderToStaticMarkup(
       <PricingScenarioTable
+        comparisonScenarioKeys={[row.key]}
         currency="MXN"
         onRemove={vi.fn()}
         onSelect={vi.fn()}
+        onToggleComparison={vi.fn()}
         rows={[row]}
       />,
     )
@@ -77,5 +79,7 @@ describe('PricingScenarioTable', () => {
     expect(markup).toContain('Advertencia')
     expect(markup).toContain('Temporal')
     expect(markup).toContain('Quitar Silver 1')
+    expect(markup).toContain('Incluir Silver 1 en reporte ejecutivo')
+    expect(markup).toContain('data-report-selected="true"')
   })
 })

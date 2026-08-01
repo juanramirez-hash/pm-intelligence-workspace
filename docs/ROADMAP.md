@@ -3,9 +3,9 @@
 ## Estado actual
 
 ```text
-Version: v0.44.0
-Sprint: PL-006 - Pricing Laboratory UI & Interactive Scenario Builder
-Estado: Completado
+Version: v0.45.0
+Sprint: PL-007 - Pricing Scenario Executive Comparison & Export
+Estado: Pricing Laboratory cerrado funcionalmente
 ```
 
 ## Orden estratégico de ejecución
@@ -70,7 +70,7 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-004 | Pricing Group Templates & Commercial Guardrails | Completado · Hotfix 1 |
 | PL-005 | Pricing Laboratory Workspace Model & Scenario Orchestration | Completado |
 | PL-006 | Pricing Laboratory UI & Interactive Scenario Builder | Completado |
-| PL-007 | Executive Export & Functional Closure | Siguiente |
+| PL-007 | Pricing Scenario Executive Comparison & Export | Completado |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
@@ -88,9 +88,9 @@ PL-005 incorpora `pricing-workspace-v1` como modelo único para la interfaz. Sel
 
 PL-006 conecta `/pricing` con ese modelo e incorpora selección de producto y moneda, constructor de escenarios, guardrails explícitos, comparación, selección visual y explainability. Todo el estado nuevo vive en memoria y las referencias almacenadas permanecen de solo lectura.
 
-Price DNA y recomendaciones automáticas quedan fuera del alcance vigente. Cualquier evolución futura deberá permanecer explicable, temporal y sin capacidad de publicar precios.
+PL-007 incorpora `pricing-executive-comparison-v1`, selección documental de escenarios calculables, matriz contra precio vigente, exportación Excel de cinco hojas e impresión/PDF enfocada. Toda salida declara `SIMULACIÓN SIN EFECTO COMERCIAL`, conserva bloqueos y advertencias, y no persiste ni publica precios.
 
-**Siguiente sprint:** PL-007 - Pricing Laboratory Executive Export & Functional Closure.
+Pricing Laboratory queda cerrado funcionalmente de PL-001 a PL-007. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura requiere un sprint independiente y debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
 
 ## Inventory Workspace — CERRADO
 

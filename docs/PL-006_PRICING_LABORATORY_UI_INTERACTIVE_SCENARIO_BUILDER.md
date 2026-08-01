@@ -169,8 +169,8 @@ La cobertura añadida verifica:
 - formateo visual de bases;
 - render de comparación y acciones temporales.
 
-## Siguiente entrega
+## Integración posterior
 
-`PL-007 — Pricing Laboratory Executive Export & Functional Closure` podrá
-incorporar una salida ejecutiva de las simulaciones visibles, siempre bajo
-descarga bajo demanda y sin persistencia ni publicación de precios.
+PL-007 incorpora la selección documental de escenarios, la comparación
+ejecutiva, la descarga Excel y la vista imprimible/PDF. La salida continúa
+siendo bajo demanda, no persistente y sin efecto comercial.

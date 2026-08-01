@@ -1,3 +1,16 @@
+# 0.45.0-PL-007
+
+- Adds `pricing-executive-comparison-v1` to build an explicit documentary selection of calculable Pricing Laboratory scenarios.
+- Keeps the current price as the immutable baseline and preserves Workspace order without ranking or recommending a winner.
+- Adds a Report selector to each calculable temporary or stored scenario; invalid and non-calculable rows cannot enter the executive output.
+- Adds an on-screen executive matrix with current price, selected scenarios, deltas, discount, GP, margin, guardrails and signals.
+- Adds an Excel workbook with five sheets: Executive Summary, Comparison, Guardrails and Signals, Assumptions and Traceability, and Metadata.
+- Adds print/PDF behavior focused on the executive comparison and hides the interactive builder and scenario controls from the printed document.
+- Includes an obligatory `SIMULACIÓN SIN EFECTO COMERCIAL` disclaimer in the screen, workbook and print view.
+- Preserves the `simulation-only` isolation contract: exporting or printing does not mutate, approve, persist or publish prices.
+- Adds automated coverage for selection, ordering, blocked scenarios, invalid selections, immutability, workbook contents and executive rendering.
+- Closes Pricing Laboratory functionally from PL-001 through PL-007 without adding Price DNA or automatic recommendations.
+
 # 0.44.0-PL-006
 
 - Replaces the `/pricing` placeholder with the lazy-loaded Pricing Laboratory interface.

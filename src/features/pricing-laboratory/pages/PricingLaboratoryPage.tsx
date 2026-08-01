@@ -3,10 +3,12 @@ import {
   BadgeDollarSign,
   CheckCircle2,
   Database,
+  FileSpreadsheet,
   FlaskConical,
   Home,
   Layers3,
   LockKeyhole,
+  Printer,
   RotateCcw,
   ShieldCheck,
   SlidersHorizontal,
@@ -51,8 +53,18 @@ import {
   PricingLaboratorySelectionPanel,
   PricingScenarioBuilder,
   PricingScenarioDetail,
+  PricingScenarioExecutiveComparison,
   PricingScenarioTable,
 } from '../components'
+
+import {
+  buildPricingScenarioExecutiveComparison,
+} from '../engine'
+
+import {
+  buildPricingScenarioExecutiveExport,
+  downloadPricingScenarioExecutiveExport,
+} from '../export'
 
 import {
   usePricingLaboratoryWorkspace,
@@ -115,7 +127,10 @@ export function PricingLaboratoryPage() {
   const [templates, setTemplates] = useState<PricingLaboratoryTemplateInput[]>([])
   const [includeStoredScenarios, setIncludeStoredScenarios] = useState(true)
   const [selectedScenarioKey, setSelectedScenarioKey] = useState<string | null>(null)
+  const [comparisonScenarioKeys, setComparisonScenarioKeys] = useState<string[]>([])
   const [scenarioSequence, setScenarioSequence] = useState(1)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportStatus, setExportStatus] = useState<string | null>(null)
 
   const request = useMemo(
     () => ({
@@ -141,6 +156,13 @@ export function PricingLaboratoryPage() {
   const source = workspace.source
   const selectedCurrency = workspace.selection.selectedCurrency
   const sourceCurrency = source?.currency ?? selectedCurrency
+  const executiveComparison = useMemo(
+    () => buildPricingScenarioExecutiveComparison(
+      workspace,
+      comparisonScenarioKeys,
+    ),
+    [workspace, comparisonScenarioKeys],
+  )
   const scenarioScope = source
     ? {
       productId: source.productId,
@@ -153,6 +175,8 @@ export function PricingLaboratoryPage() {
     setCurrency(null)
     setTemplates([])
     setSelectedScenarioKey(null)
+    setComparisonScenarioKeys([])
+    setExportStatus(null)
     setScenarioSequence(1)
   }
 
@@ -160,12 +184,18 @@ export function PricingLaboratoryPage() {
     setCurrency(nextCurrency)
     setTemplates([])
     setSelectedScenarioKey(null)
+    setComparisonScenarioKeys([])
+    setExportStatus(null)
     setScenarioSequence(1)
   }
 
   const handleCreateScenario = (input: PricingLaboratoryTemplateInput) => {
+    const scenarioKey = `TEMPLATE:${normalizeIdentifier(input.id)}`
+
     setTemplates((current) => [...current, input])
-    setSelectedScenarioKey(`TEMPLATE:${normalizeIdentifier(input.id)}`)
+    setSelectedScenarioKey(scenarioKey)
+    setComparisonScenarioKeys((current) => [...current, scenarioKey])
+    setExportStatus(null)
     setScenarioSequence((current) => current + 1)
   }
 
@@ -179,6 +209,48 @@ export function PricingLaboratoryPage() {
     if (selectedScenarioKey === scenarioKey) {
       setSelectedScenarioKey(null)
     }
+
+    setComparisonScenarioKeys((current) => current.filter(
+      (key) => key !== scenarioKey,
+    ))
+    setExportStatus(null)
+  }
+
+  const handleToggleComparison = (scenarioKey: string) => {
+    setComparisonScenarioKeys((current) => current.includes(scenarioKey)
+      ? current.filter((key) => key !== scenarioKey)
+      : [...current, scenarioKey])
+    setExportStatus(null)
+  }
+
+  const handleExecutiveExport = async () => {
+    if (!executiveComparison.available || isExporting) {
+      return
+    }
+
+    setIsExporting(true)
+    setExportStatus(null)
+
+    try {
+      const payload = buildPricingScenarioExecutiveExport(
+        executiveComparison,
+      )
+
+      await downloadPricingScenarioExecutiveExport(payload)
+      setExportStatus(`Exportación generada: ${payload.fileName}`)
+    } catch {
+      setExportStatus('No fue posible generar el archivo ejecutivo de Pricing Laboratory.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handlePrint = () => {
+    if (!executiveComparison.available) {
+      return
+    }
+
+    window.print()
   }
 
   const resetLaboratory = () => {
@@ -187,6 +259,8 @@ export function PricingLaboratoryPage() {
     setTemplates([])
     setIncludeStoredScenarios(true)
     setSelectedScenarioKey(null)
+    setComparisonScenarioKeys([])
+    setExportStatus(null)
     setScenarioSequence(1)
   }
 
@@ -209,31 +283,55 @@ export function PricingLaboratoryPage() {
       header={(
         <ExecutiveHero
           actions={(
-            <ShellActions ariaLabel="Acciones de Pricing Laboratory">
-              <ShellActionsGroup label="Gestión del laboratorio">
-                <button
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={
-                    !productId &&
-                    templates.length === 0 &&
-                    selectedScenarioKey === null
-                  }
-                  onClick={resetLaboratory}
-                  type="button"
-                >
-                  <RotateCcw size={16} />
-                  Reiniciar laboratorio
-                </button>
+            <div data-print-hidden="true">
+              <ShellActions ariaLabel="Acciones de Pricing Laboratory">
+                <ShellActionsGroup label="Gestión del laboratorio">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={
+                      !productId &&
+                      templates.length === 0 &&
+                      selectedScenarioKey === null
+                    }
+                    onClick={resetLaboratory}
+                    type="button"
+                  >
+                    <RotateCcw size={16} />
+                    Reiniciar laboratorio
+                  </button>
 
-                <Link
-                  className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
-                  to="/data-center"
-                >
-                  <Database size={16} />
-                  Importar Pricing
-                </Link>
-              </ShellActionsGroup>
-            </ShellActions>
+                  <Link
+                    className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+                    to="/data-center"
+                  >
+                    <Database size={16} />
+                    Importar Pricing
+                  </Link>
+                </ShellActionsGroup>
+
+                <ShellActionsGroup label="Salida ejecutiva">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!executiveComparison.available || isExporting}
+                    onClick={handleExecutiveExport}
+                    type="button"
+                  >
+                    <FileSpreadsheet size={16} />
+                    {isExporting ? 'Generando Excel...' : 'Exportar selección'}
+                  </button>
+
+                  <button
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!executiveComparison.available}
+                    onClick={handlePrint}
+                    type="button"
+                  >
+                    <Printer size={16} />
+                    Imprimir / PDF
+                  </button>
+                </ShellActionsGroup>
+              </ShellActions>
+            </div>
           )}
           description="Evalúa precios, descuentos, margen, GP y factores mediante escenarios temporales. Ningún resultado se guarda, aprueba o publica como precio comercial."
           eyebrow="Price Engineering"
@@ -346,112 +444,154 @@ export function PricingLaboratoryPage() {
         </div>
       )}
 
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.05fr)_minmax(26rem,0.95fr)]">
-        <ExecutivePanel
-          icon={<SlidersHorizontal size={19} />}
-          subtitle="Define la fuente exacta que será evaluada."
-          title="1. Producto y moneda"
-          tone="intelligence"
+      {exportStatus && (
+        <div
+          className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700"
+          data-pricing-print-hidden="true"
         >
-          <PricingLaboratorySelectionPanel
-            currencies={workspace.selection.currencies}
-            onCurrencyChange={handleCurrencyChange}
-            onProductChange={handleProductChange}
-            products={workspace.selection.products}
-            selectedCurrency={selectedCurrency}
-            selectedProductId={productId}
+          {exportStatus}
+        </div>
+      )}
+
+      <div className="contents" data-pricing-print-hidden="true">
+        <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.05fr)_minmax(26rem,0.95fr)]">
+          <ExecutivePanel
+            icon={<SlidersHorizontal size={19} />}
+            subtitle="Define la fuente exacta que será evaluada."
+            title="1. Producto y moneda"
+            tone="intelligence"
+          >
+            <PricingLaboratorySelectionPanel
+              currencies={workspace.selection.currencies}
+              onCurrencyChange={handleCurrencyChange}
+              onProductChange={handleProductChange}
+              products={workspace.selection.products}
+              selectedCurrency={selectedCurrency}
+              selectedProductId={productId}
+            />
+          </ExecutivePanel>
+
+          <ExecutivePanel
+            icon={<FlaskConical size={19} />}
+            subtitle="Crea supuestos explícitos sin guardar ni publicar resultados."
+            title="2. Constructor de escenario"
+            tone="critical"
+          >
+            <PricingScenarioBuilder
+              key={`${source?.productId ?? 'none'}-${source?.currency ?? 'none'}`}
+              onCreate={handleCreateScenario}
+              scope={scenarioScope}
+              sequence={scenarioSequence}
+            />
+          </ExecutivePanel>
+        </div>
+
+        <KPIGrid columns={4}>
+          <IntelligentKpiCard
+            context="Configuraciones temporales y referencias almacenadas."
+            icon={<Layers3 size={19} />}
+            insight="El total no representa opciones aprobadas."
+            title="Escenarios"
+            tone="intelligence"
+            value={workspace.summary.totalRows.toLocaleString('es-MX')}
           />
-        </ExecutivePanel>
+          <IntelligentKpiCard
+            context="Cumplen los límites explícitos capturados."
+            icon={<CheckCircle2 size={19} />}
+            insight="Válido significa calculable, no recomendado."
+            title="Válidos"
+            tone="positive"
+            value={workspace.summary.validEvaluations.toLocaleString('es-MX')}
+          />
+          <IntelligentKpiCard
+            context="Requieren revisar señales antes de interpretar."
+            icon={<AlertTriangle size={19} />}
+            insight="Las advertencias permanecen visibles para análisis."
+            title="Advertencias"
+            tone="attention"
+            value={workspace.summary.warningEvaluations.toLocaleString('es-MX')}
+          />
+          <IntelligentKpiCard
+            context="Incumplen al menos un guardrail bloqueante suministrado."
+            icon={<ShieldCheck size={19} />}
+            insight="El bloqueo no modifica ni impide consultar el precio fuente."
+            title="Bloqueados"
+            tone="critical"
+            value={workspace.summary.blockedEvaluations.toLocaleString('es-MX')}
+          />
+        </KPIGrid>
 
         <ExecutivePanel
-          icon={<FlaskConical size={19} />}
-          subtitle="Crea supuestos explícitos sin guardar ni publicar resultados."
-          title="2. Constructor de escenario"
-          tone="critical"
+          count={workspace.summary.totalRows}
+          footer={(
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <input
+                  checked={includeStoredScenarios}
+                  className="size-4 rounded border-slate-300 text-rose-600 focus:ring-rose-200"
+                  onChange={(event) => {
+                    const includeStored = event.target.checked
+                    setIncludeStoredScenarios(includeStored)
+                    setSelectedScenarioKey(null)
+                    setExportStatus(null)
+
+                    if (!includeStored) {
+                      const templateKeys = new Set(
+                        workspace.scenarios
+                          .filter((row) => row.origin === 'template')
+                          .map((row) => row.key),
+                      )
+
+                      setComparisonScenarioKeys((current) => current.filter(
+                        (key) => templateKeys.has(key),
+                      ))
+                    }
+                  }}
+                  type="checkbox"
+                />
+                Incluir escenarios almacenados como referencia de solo lectura
+              </label>
+              <span>
+                Marca Reporte para incluir una comparación en Excel o PDF
+              </span>
+            </div>
+          )}
+          icon={<BadgeDollarSign size={19} />}
+          subtitle="Compara cada cálculo contra el precio vigente sin seleccionar un ganador automático."
+          title="3. Comparación de escenarios"
+          tone="intelligence"
         >
-          <PricingScenarioBuilder
-            key={`${source?.productId ?? 'none'}-${source?.currency ?? 'none'}`}
-            onCreate={handleCreateScenario}
-            scope={scenarioScope}
-            sequence={scenarioSequence}
+          <PricingScenarioTable
+            comparisonScenarioKeys={comparisonScenarioKeys}
+            currency={sourceCurrency}
+            onRemove={handleRemoveScenario}
+            onSelect={setSelectedScenarioKey}
+            onToggleComparison={handleToggleComparison}
+            rows={workspace.scenarios}
           />
         </ExecutivePanel>
       </div>
 
-      <KPIGrid columns={4}>
-        <IntelligentKpiCard
-          context="Configuraciones temporales y referencias almacenadas."
-          icon={<Layers3 size={19} />}
-          insight="El total no representa opciones aprobadas."
-          title="Escenarios"
-          tone="intelligence"
-          value={workspace.summary.totalRows.toLocaleString('es-MX')}
-        />
-        <IntelligentKpiCard
-          context="Cumplen los límites explícitos capturados."
-          icon={<CheckCircle2 size={19} />}
-          insight="Válido significa calculable, no recomendado."
-          title="Válidos"
-          tone="positive"
-          value={workspace.summary.validEvaluations.toLocaleString('es-MX')}
-        />
-        <IntelligentKpiCard
-          context="Requieren revisar señales antes de interpretar."
-          icon={<AlertTriangle size={19} />}
-          insight="Las advertencias permanecen visibles para análisis."
-          title="Advertencias"
-          tone="attention"
-          value={workspace.summary.warningEvaluations.toLocaleString('es-MX')}
-        />
-        <IntelligentKpiCard
-          context="Incumplen al menos un guardrail bloqueante suministrado."
-          icon={<ShieldCheck size={19} />}
-          insight="El bloqueo no modifica ni impide consultar el precio fuente."
-          title="Bloqueados"
-          tone="critical"
-          value={workspace.summary.blockedEvaluations.toLocaleString('es-MX')}
-        />
-      </KPIGrid>
-
       <ExecutivePanel
-        count={workspace.summary.totalRows}
-        footer={(
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
-              <input
-                checked={includeStoredScenarios}
-                className="size-4 rounded border-slate-300 text-rose-600 focus:ring-rose-200"
-                onChange={(event) => {
-                  setIncludeStoredScenarios(event.target.checked)
-                  setSelectedScenarioKey(null)
-                }}
-                type="checkbox"
-              />
-              Incluir escenarios almacenados como referencia de solo lectura
-            </label>
-            <span>
-              Orden: temporales capturados → almacenados del Repository
-            </span>
-          </div>
-        )}
-        icon={<BadgeDollarSign size={19} />}
-        subtitle="Compara cada cálculo contra el precio vigente sin seleccionar un ganador automático."
-        title="3. Comparación de escenarios"
+        count={executiveComparison.summary.selectedRows}
+        icon={<FileSpreadsheet size={19} />}
+        subtitle="Documento bajo demanda con precio vigente, escenarios elegidos, supuestos, guardrails y trazabilidad."
+        title="4. Comparación ejecutiva seleccionada"
         tone="intelligence"
       >
-        <PricingScenarioTable
-          currency={sourceCurrency}
-          onRemove={handleRemoveScenario}
-          onSelect={setSelectedScenarioKey}
-          rows={workspace.scenarios}
+        <PricingScenarioExecutiveComparison
+          comparison={executiveComparison}
         />
       </ExecutivePanel>
 
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+      <div
+        className="grid gap-6 2xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]"
+        data-pricing-print-hidden="true"
+      >
         <ExecutivePanel
           icon={<Target size={19} />}
           subtitle="La selección solo abre el detalle; no constituye recomendación."
-          title="4. Lectura del escenario"
+          title="5. Lectura del escenario"
           tone="critical"
         >
           <PricingScenarioDetail
@@ -462,7 +602,7 @@ export function PricingLaboratoryPage() {
 
         <ExecutivePanel
           icon={<LockKeyhole size={19} />}
-          subtitle="Fronteras obligatorias de PL-006."
+          subtitle="Fronteras obligatorias de PL-007."
           title="Aislamiento y metodología"
           tone="positive"
         >
@@ -472,7 +612,7 @@ export function PricingLaboratoryPage() {
               Contrato de solo simulación
             </div>
             <p className="mt-2 text-xs leading-5">
-              La interfaz administra únicamente estado React en memoria y consume métricas calculadas por Business Core.
+              La interfaz y la exportación consumen resultados en memoria. Descargar o imprimir no crea ni modifica registros comerciales.
             </p>
           </div>
 
@@ -493,9 +633,13 @@ export function PricingLaboratoryPage() {
               <dt className="text-slate-500">Escribe otros Workspaces</dt>
               <dd className="font-semibold text-emerald-700">No</dd>
             </div>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <dt className="text-slate-500">Recomendación automática</dt>
               <dd className="font-semibold text-emerald-700">No</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-slate-500">Efecto comercial del archivo</dt>
+              <dd className="font-semibold text-emerald-700">Ninguno</dd>
             </div>
           </dl>
 

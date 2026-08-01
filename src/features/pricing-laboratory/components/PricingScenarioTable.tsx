@@ -17,7 +17,9 @@ import {
 export interface PricingScenarioTableProps {
   rows: readonly PricingLaboratoryWorkspaceScenarioRow[]
   currency: string | null
+  comparisonScenarioKeys: readonly string[]
   onSelect: (scenarioKey: string) => void
+  onToggleComparison: (scenarioKey: string) => void
   onRemove: (configurationId: string) => void
 }
 
@@ -84,10 +86,22 @@ function deltaClassName(value: number | null | undefined): string {
     : 'text-rose-700'
 }
 
+function isComparisonEligible(
+  row: PricingLaboratoryWorkspaceScenarioRow,
+): boolean {
+  return row.orchestrationStatus === 'evaluated' &&
+    row.evaluationStatus !== null &&
+    row.basis !== null &&
+    row.metrics !== null &&
+    row.delta !== null
+}
+
 export function PricingScenarioTable({
   rows,
   currency,
+  comparisonScenarioKeys,
   onSelect,
+  onToggleComparison,
   onRemove,
 }: PricingScenarioTableProps) {
   if (rows.length === 0) {
@@ -106,14 +120,17 @@ export function PricingScenarioTable({
     )
   }
 
+  const comparisonSet = new Set(comparisonScenarioKeys)
+
   return (
     <div
       className="overflow-x-auto"
       data-pricing-component="scenario-table"
     >
-      <table className="min-w-[1120px] w-full border-separate border-spacing-0 text-left text-sm">
+      <table className="min-w-[1200px] w-full border-separate border-spacing-0 text-left text-sm">
         <thead>
           <tr className="text-xs uppercase tracking-[0.1em] text-slate-500">
+            <th className="border-b border-slate-200 px-3 py-3 text-center font-semibold">Reporte</th>
             <th className="border-b border-slate-200 px-3 py-3 font-semibold">Escenario</th>
             <th className="border-b border-slate-200 px-3 py-3 font-semibold">Estado</th>
             <th className="border-b border-slate-200 px-3 py-3 font-semibold">Base</th>
@@ -127,99 +144,118 @@ export function PricingScenarioTable({
         </thead>
 
         <tbody>
-          {rows.map((row) => (
-            <tr
-              className={[
-                'transition',
-                row.selected
-                  ? 'bg-rose-50/80'
-                  : 'hover:bg-slate-50/80',
-              ].join(' ')}
-              data-selected={row.selected}
-              key={row.key}
-            >
-              <td className="border-b border-slate-100 px-3 py-3.5 align-top">
-                <div className="font-semibold text-slate-900">
-                  {row.name}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                  <span className="rounded-full bg-slate-100 px-2 py-1">
-                    {row.origin === 'template' ? 'Temporal' : 'Almacenado · lectura'}
-                  </span>
-                  {row.pricingGroupId && (
-                    <span className="rounded-full bg-violet-50 px-2 py-1 text-violet-700">
-                      {row.pricingGroupId}
+          {rows.map((row) => {
+            const comparisonEligible = isComparisonEligible(row)
+            const includedInComparison = comparisonSet.has(row.key)
+
+            return (
+              <tr
+                className={[
+                  'transition',
+                  row.selected
+                    ? 'bg-rose-50/80'
+                    : includedInComparison
+                      ? 'bg-sky-50/60'
+                      : 'hover:bg-slate-50/80',
+                ].join(' ')}
+                data-report-selected={includedInComparison}
+                data-selected={row.selected}
+                key={row.key}
+              >
+                <td className="border-b border-slate-100 px-3 py-3.5 text-center align-top">
+                  <input
+                    aria-label={`Incluir ${row.name} en reporte ejecutivo`}
+                    checked={includedInComparison}
+                    className="size-4 rounded border-slate-300 text-rose-600 focus:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={!comparisonEligible}
+                    onChange={() => onToggleComparison(row.key)}
+                    type="checkbox"
+                  />
+                </td>
+
+                <td className="border-b border-slate-100 px-3 py-3.5 align-top">
+                  <div className="font-semibold text-slate-900">
+                    {row.name}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-2 py-1">
+                      {row.origin === 'template' ? 'Temporal' : 'Almacenado · lectura'}
                     </span>
-                  )}
-                </div>
-              </td>
+                    {row.pricingGroupId && (
+                      <span className="rounded-full bg-violet-50 px-2 py-1 text-violet-700">
+                        {row.pricingGroupId}
+                      </span>
+                    )}
+                  </div>
+                </td>
 
-              <td className="border-b border-slate-100 px-3 py-3.5 align-top">
-                <span className={[
-                  'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
-                  statusClassName(row),
+                <td className="border-b border-slate-100 px-3 py-3.5 align-top">
+                  <span className={[
+                    'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
+                    statusClassName(row),
+                  ].join(' ')}>
+                    {statusLabel(row)}
+                  </span>
+                </td>
+
+                <td className="max-w-64 border-b border-slate-100 px-3 py-3.5 align-top text-xs leading-5 text-slate-600">
+                  {formatPricingBasis(row.basis, currency)}
+                </td>
+
+                <td className="border-b border-slate-100 px-3 py-3.5 text-right font-semibold text-slate-900">
+                  {formatPricingMoney(row.metrics?.sellingPrice, currency)}
+                </td>
+
+                <td className="border-b border-slate-100 px-3 py-3.5 text-right text-slate-700">
+                  {formatPricingPercentage(row.metrics?.discountRate)}
+                </td>
+
+                <td className="border-b border-slate-100 px-3 py-3.5 text-right text-slate-700">
+                  {formatPricingMoney(row.metrics?.grossProfit, currency)}
+                </td>
+
+                <td className="border-b border-slate-100 px-3 py-3.5 text-right text-slate-700">
+                  {formatPricingPercentage(row.metrics?.grossMargin)}
+                </td>
+
+                <td className={[
+                  'border-b border-slate-100 px-3 py-3.5 text-right font-semibold',
+                  deltaClassName(row.delta?.sellingPrice),
                 ].join(' ')}>
-                  {statusLabel(row)}
-                </span>
-              </td>
+                  {formatPricingDeltaMoney(row.delta?.sellingPrice, currency)}
+                </td>
 
-              <td className="max-w-64 border-b border-slate-100 px-3 py-3.5 align-top text-xs leading-5 text-slate-600">
-                {formatPricingBasis(row.basis, currency)}
-              </td>
-
-              <td className="border-b border-slate-100 px-3 py-3.5 text-right font-semibold text-slate-900">
-                {formatPricingMoney(row.metrics?.sellingPrice, currency)}
-              </td>
-
-              <td className="border-b border-slate-100 px-3 py-3.5 text-right text-slate-700">
-                {formatPricingPercentage(row.metrics?.discountRate)}
-              </td>
-
-              <td className="border-b border-slate-100 px-3 py-3.5 text-right text-slate-700">
-                {formatPricingMoney(row.metrics?.grossProfit, currency)}
-              </td>
-
-              <td className="border-b border-slate-100 px-3 py-3.5 text-right text-slate-700">
-                {formatPricingPercentage(row.metrics?.grossMargin)}
-              </td>
-
-              <td className={[
-                'border-b border-slate-100 px-3 py-3.5 text-right font-semibold',
-                deltaClassName(row.delta?.sellingPrice),
-              ].join(' ')}>
-                {formatPricingDeltaMoney(row.delta?.sellingPrice, currency)}
-              </td>
-
-              <td className="border-b border-slate-100 px-3 py-3.5 align-top">
-                <div className="flex justify-end gap-2">
-                  <button
-                    aria-label={`Revisar ${row.name}`}
-                    className={[
-                      'inline-flex size-9 items-center justify-center rounded-lg border transition',
-                      row.selected
-                        ? 'border-rose-300 bg-rose-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-700',
-                    ].join(' ')}
-                    onClick={() => onSelect(row.key)}
-                    type="button"
-                  >
-                    <Eye size={16} />
-                  </button>
-
-                  {row.origin === 'template' && (
+                <td className="border-b border-slate-100 px-3 py-3.5 align-top">
+                  <div className="flex justify-end gap-2">
                     <button
-                      aria-label={`Quitar ${row.name}`}
-                      className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
-                      onClick={() => onRemove(row.configurationId)}
+                      aria-label={`Revisar ${row.name}`}
+                      className={[
+                        'inline-flex size-9 items-center justify-center rounded-lg border transition',
+                        row.selected
+                          ? 'border-rose-300 bg-rose-600 text-white'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-700',
+                      ].join(' ')}
+                      onClick={() => onSelect(row.key)}
                       type="button"
                     >
-                      <Trash2 size={16} />
+                      <Eye size={16} />
                     </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
+
+                    {row.origin === 'template' && (
+                      <button
+                        aria-label={`Quitar ${row.name}`}
+                        className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                        onClick={() => onRemove(row.configurationId)}
+                        type="button"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
