@@ -145,7 +145,9 @@ export function DataCenterImportPanel({
                               ? 'Facturación de proyectos'
                               : activeReportType === 'exchange-rates'
                                 ? 'Tipos de cambio'
-                                : activeReportType}
+                                : activeReportType === 'pricing'
+                                  ? 'Pricing'
+                                  : activeReportType}
                 </div>
               )}
             </div>

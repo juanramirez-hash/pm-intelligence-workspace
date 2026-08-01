@@ -57,6 +57,10 @@ import {
 } from './components/ExchangeRateImportSummary'
 
 import {
+  PricingImportSummary,
+} from './components/PricingImportSummary'
+
+import {
   ExchangeRateEditor,
 } from './components/ExchangeRateEditor'
 
@@ -416,6 +420,8 @@ export function DataCenterPage() {
               <ProjectBillingImportSummary />
 
               <ExchangeRateImportSummary />
+
+              <PricingImportSummary />
             </>
           )}
         </>

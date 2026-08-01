@@ -58,6 +58,10 @@ type WorkspaceContextState =
       | 'normalizedExchangeRates'
       | 'exchangeRateLastImportedAt'
       | 'exchangeRateLastImportedFile'
+      | 'pricingSummary'
+      | 'normalizedPricing'
+      | 'pricingLastImportedAt'
+      | 'pricingLastImportedFile'
     >
   >
 
@@ -108,13 +112,17 @@ export function buildWorkspaceContext(
       exchangeRateSummary: state.exchangeRateSummary ?? null,
       exchangeRateLastImportedAt: state.exchangeRateLastImportedAt ?? null,
       exchangeRateLastImportedFile: state.exchangeRateLastImportedFile ?? null,
+      pricingSummary: state.pricingSummary ?? null,
+      pricingLastImportedAt: state.pricingLastImportedAt ?? null,
+      pricingLastImportedFile: state.pricingLastImportedFile ?? null,
     })
 
   const hasBusinessData =
     state.normalizedSales.length > 0 ||
     (state.normalizedProjects?.length ?? 0) > 0 ||
     (state.normalizedProjectBillings?.length ?? 0) > 0 ||
-    (state.normalizedExchangeRates?.length ?? 0) > 0
+    (state.normalizedExchangeRates?.length ?? 0) > 0 ||
+    (state.normalizedPricing?.length ?? 0) > 0
 
   const business =
     hasBusinessData
@@ -127,6 +135,7 @@ export function buildWorkspaceContext(
             projects: state.normalizedProjects ?? [],
             projectBillings: state.normalizedProjectBillings ?? [],
             exchangeRates: state.normalizedExchangeRates ?? [],
+            prices: state.normalizedPricing ?? [],
           },
         )
       : null

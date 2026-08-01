@@ -36,6 +36,11 @@ import type {
   NormalizedExchangeRateRow,
 } from '../importers/exchange-rates/exchangeRateTypes'
 import type { ExchangeRateBusinessModel } from '../importers/exchange-rates/exchangeRateBusinessModel'
+import type { PricingBusinessModel } from '../importers/pricing/pricingBusinessModel'
+import type {
+  NormalizedPricingRow,
+  PricingDatasetSummary,
+} from '../importers/pricing/pricingTypes'
 import { salesImportPlugin } from '../importers/sales/salesPlugin'
 import { targetImportPlugin } from '../importers/targets/targetPlugin'
 import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
@@ -43,6 +48,7 @@ import { inventoryImportPlugin } from '../importers/inventory/inventoryPlugin'
 import { projectImportPlugin } from '../importers/projects/projectPlugin'
 import { projectBillingImportPlugin } from '../importers/project-billings/projectBillingPlugin'
 import { exchangeRateImportPlugin } from '../importers/exchange-rates/exchangeRatePlugin'
+import { pricingImportPlugin } from '../importers/pricing/pricingPlugin'
 
 import { runImportEngine } from '../engine/importEngine'
 import { importPluginRegistry } from '../engine/importPluginRegistry'
@@ -90,6 +96,12 @@ export type ExchangeRateImportResult = ImportEngineResult<
   ExchangeRateBusinessModel
 > & { reportType: 'exchange-rates' }
 
+export type PricingImportResult = ImportEngineResult<
+  PricingDatasetSummary,
+  NormalizedPricingRow,
+  PricingBusinessModel
+> & { reportType: 'pricing' }
+
 export type DataCenterImportResult =
   | SalesImportResult
   | TargetImportResult
@@ -98,6 +110,7 @@ export type DataCenterImportResult =
   | ProjectImportResult
   | ProjectBillingImportResult
   | ExchangeRateImportResult
+  | PricingImportResult
 
 function extractSpreadsheetHeaders(
   rows: SpreadsheetRow[],
@@ -212,6 +225,13 @@ export function runDataCenterImport(
         rows,
         headers,
       ) as ExchangeRateImportResult
+
+    case 'pricing':
+      return runImportEngine(
+        pricingImportPlugin,
+        rows,
+        headers,
+      ) as PricingImportResult
 
     default:
       throw new Error(

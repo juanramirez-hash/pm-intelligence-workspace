@@ -35,6 +35,10 @@ import type {
 } from '../../features/data-center/importers/exchange-rates/exchangeRateTypes'
 
 import type {
+  NormalizedPricingRow,
+} from '../../features/data-center/importers/pricing/pricingTypes'
+
+import type {
   BusinessIntelligenceModel,
 } from './businessIntelligenceModel'
 
@@ -59,6 +63,7 @@ export interface BuildBusinessIntelligenceOptions {
   projects?: readonly NormalizedProjectRow[]
   projectBillings?: readonly NormalizedProjectBillingRow[]
   exchangeRates?: readonly NormalizedExchangeRateRow[]
+  prices?: readonly NormalizedPricingRow[]
 }
 
 export function buildBusinessIntelligence(
@@ -77,6 +82,7 @@ export function buildBusinessIntelligence(
         projects: options.projects,
         projectBillings: options.projectBillings,
         exchangeRates: options.exchangeRates,
+        prices: options.prices,
       },
     )
 

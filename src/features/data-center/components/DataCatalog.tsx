@@ -375,6 +375,18 @@ export function DataCatalog() {
     (state) => state.exchangeRateLastImportedAt,
   )
 
+  const pricingSummary = useDataCenterStore(
+    (state) => state.pricingSummary,
+  )
+
+  const pricingLastImportedFile = useDataCenterStore(
+    (state) => state.pricingLastImportedFile,
+  )
+
+  const pricingLastImportedAt = useDataCenterStore(
+    (state) => state.pricingLastImportedAt,
+  )
+
   const datasets =
     useMemo(
       () =>
@@ -400,6 +412,9 @@ export function DataCatalog() {
           exchangeRateSummary,
           exchangeRateLastImportedFile,
           exchangeRateLastImportedAt,
+          pricingSummary,
+          pricingLastImportedFile,
+          pricingLastImportedAt,
         }),
       [
         salesSummary,
@@ -423,6 +438,9 @@ export function DataCatalog() {
         exchangeRateSummary,
         exchangeRateLastImportedFile,
         exchangeRateLastImportedAt,
+        pricingSummary,
+        pricingLastImportedFile,
+        pricingLastImportedAt,
       ],
     )
 

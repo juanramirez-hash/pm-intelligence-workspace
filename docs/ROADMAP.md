@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Version: v0.39.0
-Sprint: PL-001 - Pricing Laboratory Data Foundation & Contract Definition
+Version: v0.40.0
+Sprint: PL-002 - Pricing Data Center Importer & Source Integration
 Estado: Completado
 ```
 
@@ -65,8 +65,8 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | Entrega | Alcance | Estado |
 |---|---|---|
 | PL-001 | Data Foundation, contratos, Price Repository, indices y calidad | Completado |
-| PL-002 | Pricing Data Center Import & Reconciliation | Siguiente |
-| PL-003 | Price Engineering Engine | Planeado |
+| PL-002 | Pricing Data Center Import & Reconciliation | Completado |
+| PL-003 | Price Engineering Engine | Siguiente |
 | PL-004 | Scenario Engine & Pricing Groups | Planeado |
 | PL-005 | Price DNA & Recommendations | Planeado |
 | PL-006 | Pricing Laboratory Workspace UI | Planeado |
@@ -74,9 +74,11 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
-PL-001 agrega indices por producto, marca, moneda, banda de margen, Gross Margin, Gross Profit, precio vigente y Pricing Group. `repository.prices` devuelve copias aisladas y publica resumen y calidad de datos. No existe todavia importador de Data Center, politica comercial, recomendacion, simulador o interfaz.
+PL-001 agrega indices por producto, marca, moneda, banda de margen, Gross Margin, Gross Profit, precio vigente y Pricing Group. `repository.prices` devuelve copias aisladas y publica resumen y calidad de datos.
 
-**Siguiente sprint:** PL-002 - Pricing Data Center Import & Reconciliation.
+PL-002 conecta Data Center con fuentes canonicas y con el reporte ERP de costos y precios. Separa hechos MXN y USD, impide cruces de moneda, conserva trazabilidad, persiste Pricing en IndexedDB v8 y recalcula la conciliacion contra Product Master. La importacion no infiere promociones ni politicas comerciales.
+
+**Siguiente sprint:** PL-003 - Price Engineering Engine.
 
 ## Inventory Workspace — CERRADO
 

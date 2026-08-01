@@ -28,6 +28,10 @@ import type {
   ExchangeRateDatasetSummary,
   NormalizedExchangeRateRow,
 } from '../importers/exchange-rates/exchangeRateTypes'
+import type {
+  NormalizedPricingRow,
+  PricingDatasetSummary,
+} from '../importers/pricing/pricingTypes'
 
 export interface PersistedSalesDataset {
   summary: SalesDatasetSummary
@@ -74,6 +78,13 @@ export interface PersistedProjectBillingDataset {
 export interface PersistedExchangeRateDataset {
   summary: ExchangeRateDatasetSummary
   normalizedRows: NormalizedExchangeRateRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedPricingDataset {
+  summary: PricingDatasetSummary
+  normalizedRows: NormalizedPricingRow[]
   lastImportedFile: string
   lastImportedAt: string
 }
@@ -127,6 +138,13 @@ export interface DataRepository {
 
   loadExchangeRateDataset: () =>
     Promise<PersistedExchangeRateDataset | null>
+
+  savePricingDataset: (
+    dataset: PersistedPricingDataset,
+  ) => Promise<void>
+
+  loadPricingDataset: () =>
+    Promise<PersistedPricingDataset | null>
 
   clearAllData: () => Promise<void>
 }

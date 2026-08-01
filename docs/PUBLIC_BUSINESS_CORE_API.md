@@ -69,6 +69,30 @@ PL-001 does not publish recommendations, minimum price, target price or
 commercial Pricing Group policies. Those contracts belong to later Pricing
 Laboratory sprints.
 
+### Pricing source integration
+
+PL-002 feeds the same public contracts through Data Center:
+
+```ts
+buildBusinessIntelligence(rows, {
+  prices: normalizedPricing,
+})
+```
+
+The importer owns spreadsheet detection, aliases, source-currency isolation
+and persistence. Business Core continues to own all price mathematics and
+quality rules.
+
+For the ERP dual-currency source, MXN and USD are independent facts. A USD
+price is built only from an explicit foreign-currency cost when the purchase
+currency is USD; no hidden exchange rate or mixed-currency calculation is
+allowed. `Quantity Pricing Schedule` remains source metadata and does not
+become a commercial Pricing Group automatically.
+
+Pricing is persisted in Data Center IndexedDB and re-enters Core exclusively
+through `BuildBusinessIntelligenceOptions.prices`. Workspaces must consume
+`BusinessRepository.prices`, not `NormalizedPricingRow[]`.
+
 ## Forecast API
 
 `BusinessRepository` expone el baseline oficial mediante:

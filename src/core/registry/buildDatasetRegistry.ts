@@ -17,6 +17,9 @@ import type {
 import type {
   ExchangeRateDatasetSummary,
 } from '../../features/data-center/importers/exchange-rates/exchangeRateTypes'
+import type {
+  PricingDatasetSummary,
+} from '../../features/data-center/importers/pricing/pricingTypes'
 
 import {
   DATASET_DEFINITIONS,
@@ -49,6 +52,9 @@ export interface BuildDatasetRegistryInput {
   exchangeRateSummary?: ExchangeRateDatasetSummary | null
   exchangeRateLastImportedFile?: string | null
   exchangeRateLastImportedAt?: string | null
+  pricingSummary?: PricingDatasetSummary | null
+  pricingLastImportedFile?: string | null
+  pricingLastImportedAt?: string | null
 }
 
 function createEmptyRegistryItem(
@@ -183,6 +189,17 @@ export function buildDatasetRegistry(
       periodEnd: input.exchangeRateSummary.periodEnd,
       lastImportedFile: input.exchangeRateLastImportedFile ?? null,
       lastImportedAt: input.exchangeRateLastImportedAt ?? null,
+    })
+  }
+
+  if (input.pricingSummary) {
+    activateDataset(registry, 'pricing', {
+      totalRows: input.pricingSummary.processedRows,
+      ignoredRows: input.pricingSummary.ignoredRows,
+      periodStart: input.pricingSummary.periodStart,
+      periodEnd: input.pricingSummary.periodEnd,
+      lastImportedFile: input.pricingLastImportedFile ?? null,
+      lastImportedAt: input.pricingLastImportedAt ?? null,
     })
   }
 

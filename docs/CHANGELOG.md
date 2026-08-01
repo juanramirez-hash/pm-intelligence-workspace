@@ -1,3 +1,19 @@
+# 0.40.0-PL-002
+
+- Adds the Pricing import plugin for canonical and ERP dual-currency sources.
+- Normalizes independent MXN and USD price facts without hidden currency conversion.
+- Uses `Purchase Price` with `Precio Lista (MXN)` for MXN and gates the foreign-currency cost channel by the declared purchase currency.
+- Prevents MXN costs from being paired with USD list prices and reports skipped cross-currency rows.
+- Defaults Selling Price to List Price only when the source does not publish a current selling price; no promotion or Pricing Group is inferred.
+- Preserves effective-date, source-row, channel, model, purchase-currency and quantity-schedule traceability.
+- Reconciles Pricing against Product Master and publishes coverage, missing products and brand differences.
+- Recalculates Pricing reconciliation when Product Master changes and during local hydration.
+- Persists Pricing independently through IndexedDB schema version 8.
+- Activates Pricing in Data Catalog, Data Center summaries, Workspace Context and `BuildBusinessIntelligenceOptions`.
+- Adds import, detection, source-isolation, reconciliation and dataset-registry tests.
+- Validates the source contract against the real ERP cost and price workbook.
+- PL-002 does not include recommendations, commercial Pricing Group rules, simulator, Price DNA, Workspace UI or export.
+
 # 0.39.0-PL-001
 
 - Pricing becomes a first-class Business Core domain through `BusinessPrice` and `BusinessPriceScenario`.

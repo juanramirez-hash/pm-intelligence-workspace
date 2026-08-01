@@ -44,6 +44,10 @@ import type {
   ExchangeRateDatasetSummary,
   NormalizedExchangeRateRow,
 } from '../importers/exchange-rates/exchangeRateTypes'
+import type {
+  NormalizedPricingRow,
+  PricingDatasetSummary,
+} from '../importers/pricing/pricingTypes'
 import {
   buildProjectBusinessModel,
   upsertProjectRows,
@@ -56,6 +60,9 @@ import {
   buildExchangeRateBusinessModel,
   upsertExchangeRateRows,
 } from '../importers/exchange-rates/exchangeRateBusinessModel'
+import {
+  buildPricingBusinessModel,
+} from '../importers/pricing/pricingBusinessModel'
 
 import {
   runDataCenterImport,
@@ -137,11 +144,17 @@ export interface DataCenterState {
 
   exchangeRateLastImportedAt: string | null
 
+  pricingSummary: PricingDatasetSummary | null
+
+  normalizedPricing: NormalizedPricingRow[]
+
+  pricingLastImportedFile: string | null
+
+  pricingLastImportedAt: string | null
+
   forecastSummary: unknown | null
 
   quotaSummary: unknown | null
-
-  pricingSummary: unknown | null
 
   customersSummary: unknown | null
 
@@ -239,7 +252,11 @@ export interface DataCenterState {
   ) => void
 
   setPricingSummary: (
-    summary: unknown | null,
+    summary: PricingDatasetSummary | null,
+  ) => void
+
+  setNormalizedPricing: (
+    rows: NormalizedPricingRow[],
   ) => void
 
   setCustomersSummary: (
@@ -342,11 +359,17 @@ export const useDataCenterStore =
 
       exchangeRateLastImportedAt: null,
 
+      pricingSummary: null,
+
+      normalizedPricing: [],
+
+      pricingLastImportedFile: null,
+
+      pricingLastImportedAt: null,
+
       forecastSummary: null,
 
       quotaSummary: null,
-
-      pricingSummary: null,
 
       customersSummary: null,
 
@@ -494,12 +517,11 @@ export const useDataCenterStore =
           })
       },
 
-      setPricingSummary: (
-        summary,
-      ) =>
-        set({
-          pricingSummary: summary,
-        }),
+      setPricingSummary: (summary) =>
+        set({ pricingSummary: summary }),
+
+      setNormalizedPricing: (rows) =>
+        set({ normalizedPricing: rows }),
 
       setCustomersSummary: (
         summary,
@@ -705,24 +727,55 @@ export const useDataCenterStore =
 
             case 'products': {
               const importedAt = new Date().toISOString()
+              const currentPricingRows = get().normalizedPricing
+              const currentPricingSummary = get().pricingSummary
+              const pricingLastImportedFile = get().pricingLastImportedFile
+              const pricingLastImportedAt = get().pricingLastImportedAt
+              const pricingBusinessModel = currentPricingRows.length > 0
+                ? buildPricingBusinessModel(
+                    currentPricingRows,
+                    currentPricingSummary?.ignoredRows ?? 0,
+                    result.normalizedRows,
+                  )
+                : null
 
               set({
                 productMasterSummary: result.summary,
                 normalizedProductMaster: result.normalizedRows,
                 productMasterLastImportedFile: metadata.fileName,
                 productMasterLastImportedAt: importedAt,
+                pricingSummary:
+                  pricingBusinessModel?.summary ?? currentPricingSummary,
                 importStatus: 'completed',
                 importErrors: [],
                 isPersisting: true,
               })
 
-              void indexedDbDataRepository
-                .saveProductMasterDataset({
+              const persistenceOperations: Promise<void>[] = [
+                indexedDbDataRepository.saveProductMasterDataset({
                   summary: result.summary,
                   normalizedRows: result.normalizedRows,
                   lastImportedFile: metadata.fileName,
                   lastImportedAt: importedAt,
-                })
+                }),
+              ]
+
+              if (
+                pricingBusinessModel &&
+                pricingLastImportedFile &&
+                pricingLastImportedAt
+              ) {
+                persistenceOperations.push(
+                  indexedDbDataRepository.savePricingDataset({
+                    summary: pricingBusinessModel.summary,
+                    normalizedRows: pricingBusinessModel.inputs,
+                    lastImportedFile: pricingLastImportedFile,
+                    lastImportedAt: pricingLastImportedAt,
+                  }),
+                )
+              }
+
+              void Promise.all(persistenceOperations)
                 .then(() => {
                   set({
                     isPersisting: false,
@@ -734,7 +787,7 @@ export const useDataCenterStore =
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
-                      'No fue posible guardar el Product Master.',
+                      'No fue posible guardar el Product Master o actualizar la conciliación de Pricing.',
                     ),
                   })
                 })
@@ -883,6 +936,50 @@ export const useDataCenterStore =
               break
             }
 
+            case 'pricing': {
+              const importedAt = new Date().toISOString()
+              const businessModel = buildPricingBusinessModel(
+                result.normalizedRows,
+                result.ignoredRows,
+                get().normalizedProductMaster,
+              )
+
+              set({
+                pricingSummary: businessModel.summary,
+                normalizedPricing: businessModel.inputs,
+                pricingLastImportedFile: metadata.fileName,
+                pricingLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .savePricingDataset({
+                  summary: businessModel.summary,
+                  normalizedRows: businessModel.inputs,
+                  lastImportedFile: metadata.fileName,
+                  lastImportedAt: importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: getErrorMessage(
+                      persistenceError,
+                      'No fue posible guardar la fuente de Pricing.',
+                    ),
+                  })
+                })
+
+              break
+            }
+
             default:
               throw new Error(
                 'No existe un destino de almacenamiento para el reporte detectado.',
@@ -936,6 +1033,7 @@ export const useDataCenterStore =
               persistedProjects,
               persistedProjectBillings,
               persistedExchangeRates,
+              persistedPricing,
             ] = await Promise.all([
               indexedDbDataRepository.loadSalesDataset(),
               indexedDbDataRepository.loadTargetDataset(),
@@ -944,24 +1042,35 @@ export const useDataCenterStore =
               indexedDbDataRepository.loadProjectDataset(),
               indexedDbDataRepository.loadProjectBillingDataset(),
               indexedDbDataRepository.loadExchangeRateDataset(),
+              indexedDbDataRepository.loadPricingDataset(),
             ])
 
+            const hydratedPricing = persistedPricing
+              ? buildPricingBusinessModel(
+                  persistedPricing.normalizedRows,
+                  persistedPricing.summary.ignoredRows,
+                  persistedProductMaster?.normalizedRows ?? [],
+                )
+              : null
+
             set({
-              activeReportType: persistedExchangeRates
-                ? 'exchange-rates'
-                : persistedProjectBillings
-                  ? 'project-billing'
-                  : persistedProjects
-                    ? 'projects'
-                    : persistedInventory
-                      ? 'inventory'
-                      : persistedProductMaster
-                        ? 'products'
-                        : persistedTargets
-                          ? 'quota'
-                          : persistedSales
-                            ? 'sales'
-                            : null,
+              activeReportType: persistedPricing
+                ? 'pricing'
+                : persistedExchangeRates
+                  ? 'exchange-rates'
+                  : persistedProjectBillings
+                    ? 'project-billing'
+                    : persistedProjects
+                      ? 'projects'
+                      : persistedInventory
+                        ? 'inventory'
+                        : persistedProductMaster
+                          ? 'products'
+                          : persistedTargets
+                            ? 'quota'
+                            : persistedSales
+                              ? 'sales'
+                              : null,
               importStatus:
                 persistedSales ||
                 persistedTargets ||
@@ -969,7 +1078,8 @@ export const useDataCenterStore =
                 persistedInventory ||
                 persistedProjects ||
                 persistedProjectBillings ||
-                persistedExchangeRates
+                persistedExchangeRates ||
+                persistedPricing
                   ? 'completed'
                   : 'idle',
               fileMetadata: null,
@@ -1002,6 +1112,10 @@ export const useDataCenterStore =
               normalizedExchangeRates: persistedExchangeRates?.normalizedRows ?? [],
               exchangeRateLastImportedFile: persistedExchangeRates?.lastImportedFile ?? null,
               exchangeRateLastImportedAt: persistedExchangeRates?.lastImportedAt ?? null,
+              pricingSummary: hydratedPricing?.summary ?? null,
+              normalizedPricing: hydratedPricing?.inputs ?? [],
+              pricingLastImportedFile: persistedPricing?.lastImportedFile ?? null,
+              pricingLastImportedAt: persistedPricing?.lastImportedAt ?? null,
               isHydrating: false,
               isHydrated: true,
               persistenceError: null,
@@ -1167,6 +1281,12 @@ export const useDataCenterStore =
               quotaSummary: null,
 
               pricingSummary: null,
+
+              normalizedPricing: [],
+
+              pricingLastImportedFile: null,
+
+              pricingLastImportedAt: null,
 
               customersSummary:
                 null,

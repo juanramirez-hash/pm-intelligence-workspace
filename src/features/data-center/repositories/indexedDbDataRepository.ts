@@ -5,6 +5,7 @@ import type {
   PersistedProductMasterDataset,
   PersistedProjectBillingDataset,
   PersistedProjectDataset,
+  PersistedPricingDataset,
   PersistedSalesDataset,
   PersistedTargetDataset,
 } from './dataRepository'
@@ -17,6 +18,7 @@ import {
   PROJECT_BILLING_CHUNK_SIZE,
   PROJECT_BILLING_METADATA_KEY,
   PROJECT_METADATA_KEY,
+  PRICING_METADATA_KEY,
   SALES_CHUNK_SIZE,
   SALES_METADATA_KEY,
   TARGET_METADATA_KEY,
@@ -26,6 +28,7 @@ import {
   type PersistedProjectBillingChunk,
   type PersistedProjectBillingMetadata,
   type PersistedProjectMetadata,
+  type PersistedPricingMetadata,
   type PersistedSalesChunk,
   type PersistedSalesMetadata,
   type PersistedTargetMetadata,
@@ -406,6 +409,45 @@ export const indexedDbDataRepository:
     }
   },
 
+  async savePricingDataset(
+    dataset: PersistedPricingDataset,
+  ) {
+    const database = await getDataCenterDatabase()
+    const metadata: PersistedPricingMetadata = {
+      id: PRICING_METADATA_KEY,
+      summary: dataset.summary,
+      normalizedRows: dataset.normalizedRows,
+      lastImportedFile: dataset.lastImportedFile,
+      lastImportedAt: dataset.lastImportedAt,
+      persistenceVersion: 1,
+    }
+
+    await database.put(
+      'pricingMetadata',
+      metadata,
+      PRICING_METADATA_KEY,
+    )
+  },
+
+  async loadPricingDataset() {
+    const database = await getDataCenterDatabase()
+    const metadata = await database.get(
+      'pricingMetadata',
+      PRICING_METADATA_KEY,
+    )
+
+    if (!metadata) {
+      return null
+    }
+
+    return {
+      summary: metadata.summary,
+      normalizedRows: metadata.normalizedRows,
+      lastImportedFile: metadata.lastImportedFile,
+      lastImportedAt: metadata.lastImportedAt,
+    }
+  },
+
   async clearAllData() {
     const database = await getDataCenterDatabase()
     const transaction = database.transaction(
@@ -419,6 +461,7 @@ export const indexedDbDataRepository:
         'projectBillingMetadata',
         'projectBillingChunks',
         'exchangeRateMetadata',
+        'pricingMetadata',
       ],
       'readwrite',
     )
@@ -433,6 +476,7 @@ export const indexedDbDataRepository:
       transaction.objectStore('projectBillingMetadata').clear(),
       transaction.objectStore('projectBillingChunks').clear(),
       transaction.objectStore('exchangeRateMetadata').clear(),
+      transaction.objectStore('pricingMetadata').clear(),
     ])
 
     await transaction.done

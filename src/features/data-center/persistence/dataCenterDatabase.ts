@@ -34,11 +34,15 @@ import type {
   ExchangeRateDatasetSummary,
   NormalizedExchangeRateRow,
 } from '../importers/exchange-rates/exchangeRateTypes'
+import type {
+  NormalizedPricingRow,
+  PricingDatasetSummary,
+} from '../importers/pricing/pricingTypes'
 
 export const DATA_CENTER_DATABASE_NAME =
   'pm-intelligence-workspace'
 
-export const DATA_CENTER_DATABASE_VERSION = 7
+export const DATA_CENTER_DATABASE_VERSION = 8
 
 export const SALES_METADATA_KEY =
   'current-sales-dataset'
@@ -54,6 +58,8 @@ export const PROJECT_BILLING_METADATA_KEY =
   'current-project-billing-dataset'
 export const EXCHANGE_RATE_METADATA_KEY =
   'current-exchange-rate-dataset'
+export const PRICING_METADATA_KEY =
+  'current-pricing-dataset'
 
 export const SALES_CHUNK_SIZE = 5_000
 export const PROJECT_BILLING_CHUNK_SIZE = 2_500
@@ -133,6 +139,15 @@ export interface PersistedExchangeRateMetadata {
   persistenceVersion: number
 }
 
+export interface PersistedPricingMetadata {
+  id: string
+  summary: PricingDatasetSummary
+  normalizedRows: NormalizedPricingRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+  persistenceVersion: number
+}
+
 interface DataCenterDatabaseSchema
   extends DBSchema {
   salesMetadata: {
@@ -178,6 +193,11 @@ interface DataCenterDatabaseSchema
   exchangeRateMetadata: {
     key: string
     value: PersistedExchangeRateMetadata
+  }
+
+  pricingMetadata: {
+    key: string
+    value: PersistedPricingMetadata
   }
 }
 
@@ -231,6 +251,10 @@ export function getDataCenterDatabase():
 
             if (!database.objectStoreNames.contains('exchangeRateMetadata')) {
               database.createObjectStore('exchangeRateMetadata')
+            }
+
+            if (!database.objectStoreNames.contains('pricingMetadata')) {
+              database.createObjectStore('pricingMetadata')
             }
           },
         },
