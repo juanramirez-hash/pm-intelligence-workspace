@@ -68,7 +68,7 @@ Forecast total = Forecast transaccional + Facturación real de proyectos + Pipel
 
 El baseline transaccional reutiliza `baseline-v1`, pero consume series limpiadas por FW-008. La facturación real se incorpora con Revenue y GP provenientes de Ventas en MXN. El pipeline abierto utiliza `Monto por cerrar`, `Fecha estimada de facturación` y el tipo de cambio mensual registrado en Data Center.
 
-Los status 05–06 forman parte del cierre oficial. Los status 03–04 se publican como upside bruto y ponderado, pero no se agregan a los escenarios oficiales. Cuando existe una incidencia bloqueante, los valores provisionales siguen siendo auditables y `officialAvailable` queda en `false`.
+Los status 05–06 forman parte del cierre oficial. Los status 03–04 se publican como upside bruto y ponderado, pero no se agregan a los escenarios oficiales. Solo las incidencias materiales del periodo actual dejan `officialAvailable` en `false`. Las excepciones históricas reducen confianza y los documentos posteriores al corte de Ventas quedan pendientes de la siguiente carga.
 
 
 ## Project Billing Reconciliation API
@@ -92,7 +92,14 @@ repository.projectBillingReconciliation.findCustomer(customerId)
 
 La conciliación utiliza `Document Number` como vínculo y toma Revenue, GP, cantidad, periodo, cliente y marca de Sales Repository. El importe fuente del reporte de proyectos se conserva para auditoría, pero no sustituye los importes oficiales ya normalizados en MXN.
 
-Los documentos faltantes, anulados o conflictivos no se descuentan de la venta transaccional. Esta regla mantiene la identidad:
+La conciliación distingue cuatro tratamientos:
+
+- `matched`: se descuenta de la venta transaccional y se clasifica como facturación de proyectos.
+- `pending_cutoff`: el documento es posterior al corte de Ventas; permanece pendiente y no bloquea el cierre actual.
+- `missing_sales_document` o `conflict`: no se descuenta hasta resolver la conciliación. Solo bloquea cuando corresponde al periodo actual dentro del corte vigente.
+- `voided`: no se descuenta. Solo bloquea si el documento conserva Revenue, GP o cantidad material en Ventas; con contribución cero queda como información.
+
+Las diferencias históricas permanecen auditables y reducen confianza sin bloquear por sí solas. Esta regla mantiene la identidad:
 
 ```text
 Venta total = Venta transaccional + Facturación de proyectos conciliada

@@ -218,6 +218,12 @@ describe('FW-008 Project Billing Reconciliation', () => {
     expect(report.quality.voidedDocumentsPresentInSales).toEqual([
       'F-VOID',
     ])
+    expect(
+      report.quality.materialVoidedDocumentsPresentInSales,
+    ).toEqual(['F-VOID'])
+    expect(
+      report.quality.currentPeriodBlockingDocumentNumbers,
+    ).toEqual(['F-MISSING', 'F-VOID'])
 
     const july = report.periods.find(
       (period) => period.periodId === '2026-07',
@@ -325,4 +331,68 @@ describe('FW-008 Project Billing Reconciliation', () => {
       ),
     ).toHaveLength(2)
   })
+
+  it('separa pendientes posteriores al corte y anulados sin impacto financiero', () => {
+    const model = buildBusinessDataModel(
+      [
+        salesRow({
+          date: '2026-07-10',
+          documentNumber: 'F-BASE',
+          revenue: 500,
+          grossProfit: 150,
+        }),
+        salesRow({
+          date: '2026-07-10',
+          documentNumber: 'F-VOID-ZERO',
+          revenue: 0,
+          grossProfit: 0,
+          quantity: 0,
+        }),
+      ],
+      {
+        projects: [projectRow('PROY-005')],
+        projectBillings: [
+          billingRow({
+            internalId: 'B-8',
+            projectId: 'PROY-005',
+            documentNumber: 'F-AFTER-CUTOFF',
+            date: '2026-07-20',
+            periodId: '2026-07',
+          }),
+          billingRow({
+            internalId: 'B-9',
+            projectId: 'PROY-005',
+            documentNumber: 'F-VOID-ZERO',
+            date: '2026-07-10',
+            periodId: '2026-07',
+            isVoided: true,
+            documentStatus: 'Voided',
+          }),
+        ],
+      },
+    )
+
+    const report = buildProjectBillingReconciliation(model)
+
+    expect(report.quality.salesDataCutoff).toBe('2026-07-10')
+    expect(report.quality.projectBillingDataCutoff).toBe('2026-07-20')
+    expect(report.quality.missingBillingDocuments).toBe(0)
+    expect(report.quality.pendingCutoffBillingDocuments).toBe(1)
+    expect(report.quality.pendingCutoffDocumentNumbers).toEqual([
+      'F-AFTER-CUTOFF',
+    ])
+    expect(
+      report.quality.zeroValueVoidedDocumentsPresentInSales,
+    ).toEqual(['F-VOID-ZERO'])
+    expect(
+      report.quality.currentPeriodBlockingDocumentNumbers,
+    ).toEqual([])
+    expect(report.quality.currentPeriodCoverageRate).toBe(1)
+    expect(
+      report.documents.find(
+        (document) => document.documentNumber === 'F-AFTER-CUTOFF',
+      )?.status,
+    ).toBe('pending_cutoff')
+  })
+
 })

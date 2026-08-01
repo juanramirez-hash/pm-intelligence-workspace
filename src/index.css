@@ -136,10 +136,18 @@ a {
     display: none !important;
   }
 
+  [data-forecast-print-section="project-pipeline"],
+  [data-forecast-print-section="project-quality"],
+  [data-forecast-print-section="coverage"],
   [data-forecast-print-section="brands"],
   [data-forecast-print-section="priorities"],
   [data-forecast-print-section="methodology"] {
     break-before: page;
+  }
+
+  [data-forecast-print-section="origin-breakdown"] article,
+  [data-forecast-print-section="project-quality"] article {
+    break-inside: avoid;
   }
 
   [data-forecast-print-table="true"] {
@@ -153,8 +161,20 @@ a {
     font-size: 7pt !important;
   }
 
+  [data-forecast-print-table="true"] thead {
+    display: table-header-group;
+  }
+
+  [data-forecast-print-table="true"] tbody {
+    break-inside: auto;
+  }
+
   [data-forecast-print-table="true"] tr {
     break-inside: avoid;
     break-after: auto;
+  }
+
+  [data-forecast-component="project-pipeline"] table {
+    font-size: 6.5pt !important;
   }
 }

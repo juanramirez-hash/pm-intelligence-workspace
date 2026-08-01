@@ -12,6 +12,21 @@ function maximumColumnCount(
   )
 }
 
+function excelColumnName(
+  columnIndex: number,
+): string {
+  let index = columnIndex + 1
+  let result = ''
+
+  while (index > 0) {
+    const remainder = (index - 1) % 26
+    result = String.fromCharCode(65 + remainder) + result
+    index = Math.floor((index - 1) / 26)
+  }
+
+  return result
+}
+
 function applyColumnFormats(
   worksheet: Record<string, unknown>,
   sheet: ForecastExportSheet,
@@ -30,7 +45,7 @@ function applyColumnFormats(
     }
 
     for (let row = 1; row < sheet.rows.length; row += 1) {
-      const reference = String.fromCharCode(65 + column) + (row + 1)
+      const reference = `${excelColumnName(column)}${row + 1}`
       const cell = worksheet[reference]
 
       if (

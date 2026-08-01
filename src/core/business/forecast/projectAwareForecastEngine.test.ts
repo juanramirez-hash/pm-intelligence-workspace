@@ -148,7 +148,10 @@ function exchangeRate(): NormalizedExchangeRateRow {
   }
 }
 
-function createModel(includeExchangeRate = true) {
+function createModel(
+  includeExchangeRate = true,
+  includeCurrentMissingWithinCutoff = false,
+) {
   const sales: NormalizedSalesRow[] = [
     salesRow('2026-01-15', 'F-TX-01', 100, 25),
     salesRow('2026-01-20', 'F-PROJ-HIST', 50, 12.5),
@@ -210,6 +213,14 @@ function createModel(includeExchangeRate = true) {
       50,
     ),
     billingRow(
+      'LINE-HIST-MISSING',
+      'BILL-HIST-MISSING',
+      'PROY-HIST',
+      '2026-02-10',
+      'F-HIST-MISSING',
+      25,
+    ),
+    billingRow(
       'LINE-CURRENT',
       'BILL-CURRENT',
       'PROY-CURRENT',
@@ -217,7 +228,28 @@ function createModel(includeExchangeRate = true) {
       'F-PROJ-CURRENT',
       50,
     ),
+    billingRow(
+      'LINE-PENDING-CUTOFF',
+      'BILL-PENDING-CUTOFF',
+      'PROY-CURRENT',
+      '2026-07-25',
+      'F-PENDING-CUTOFF',
+      10,
+    ),
   ]
+
+  if (includeCurrentMissingWithinCutoff) {
+    billings.push(
+      billingRow(
+        'LINE-CURRENT-MISSING',
+        'BILL-CURRENT-MISSING',
+        'PROY-CURRENT',
+        '2026-07-10',
+        'F-CURRENT-MISSING',
+        10,
+      ),
+    )
+  }
 
   return buildBusinessDataModel(
     sales,
@@ -248,6 +280,22 @@ describe('FW-009 Project-Aware Forecast Engine', () => {
     expect(projection).toBeDefined()
     expect(projection?.methodologyVersion).toBe('project-aware-v1')
     expect(projection?.officialAvailable).toBe(true)
+    expect(projection?.quality.blockingIssues).toBe(0)
+    expect(projection?.quality.pendingCutoffDocuments).toBe(1)
+    expect(projection?.quality.reconciliationCoverage).toBe(1)
+    expect(
+      projection?.quality.historicalReconciliationCoverage,
+    ).toBeLessThan(1)
+    expect(
+      projection?.quality.issues.find(
+        (candidate) => candidate.documentNumber === 'F-HIST-MISSING',
+      )?.severity,
+    ).toBe('warning')
+    expect(
+      projection?.quality.issues.find(
+        (candidate) => candidate.documentNumber === 'F-PENDING-CUTOFF',
+      )?.severity,
+    ).toBe('information')
     expect(projection?.actualTotal.revenue).toBe(150)
     expect(projection?.actualTransactional.revenue).toBe(100)
     expect(projection?.actualProjectBilling.revenue).toBe(50)
@@ -297,6 +345,23 @@ describe('FW-009 Project-Aware Forecast Engine', () => {
         (candidate) => candidate.code === 'EXCHANGE_RATE_MISSING',
       ),
     ).toBe(true)
+  })
+
+  it('bloquea solo un faltante material del periodo actual dentro del corte de Ventas', () => {
+    const repository = new BusinessRepository(
+      createModel(true, true),
+    )
+    const projection =
+      repository.forecast.getProjectAwarePortfolioProjection()
+
+    expect(projection?.officialAvailable).toBe(false)
+    expect(projection?.status).toBe('blocked')
+    expect(
+      projection?.quality.issues.find(
+        (candidate) =>
+          candidate.documentNumber === 'F-CURRENT-MISSING',
+      )?.severity,
+    ).toBe('blocking')
   })
 
   it('publica proyecciones project-aware por marca desde BusinessRepository', () => {

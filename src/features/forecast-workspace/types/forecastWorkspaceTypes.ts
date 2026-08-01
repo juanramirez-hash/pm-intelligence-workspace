@@ -8,12 +8,18 @@ import type {
   ForecastMetricValues,
   ForecastScenarioId,
   ForecastTargetStatus,
+  ProjectAwareForecastComponentMetrics,
+  ProjectAwareForecastPipelineSummary,
+  ProjectAwareForecastProjectContribution,
+  ProjectAwareForecastQualityProfile,
+  ProjectAwareForecastStatus,
 } from '../../../core/business/forecast'
 
 export type ForecastWorkspaceStatus =
   | 'unavailable'
   | 'partial'
   | 'ready'
+  | 'blocked'
 
 export type ForecastWorkspacePriorityFilter =
   | ForecastInventoryPriority
@@ -51,6 +57,7 @@ export interface ForecastWorkspaceScenarioOption {
   portfolioQuantity: number | null
   portfolioGrossMargin: number | null
   targetAttainment: number | null
+  official: boolean
 }
 
 export interface ForecastWorkspaceNavigationTarget {
@@ -71,8 +78,19 @@ export interface ForecastWorkspacePeriodContext {
   progress: number | null
 }
 
+export interface ForecastWorkspaceOriginBreakdown {
+  actualTotal: ProjectAwareForecastComponentMetrics
+  actualTransactional: ProjectAwareForecastComponentMetrics
+  actualProjectBilling: ProjectAwareForecastComponentMetrics
+  projectedTransactional: ForecastMetricValues
+  projectBillingActual: ForecastMetricValues
+  maturePipeline: ForecastMetricValues
+  combined: ForecastMetricValues
+}
+
 export interface ForecastWorkspacePortfolioSummary {
   available: boolean
+  officialAvailable: boolean
   actual: ForecastMetricValues
   projected: ForecastMetricValues
   projectedGrossMargin: number | null
@@ -83,6 +101,7 @@ export interface ForecastWorkspacePortfolioSummary {
   targetStatus: ForecastTargetStatus
   confidenceScore: number | null
   confidenceLevel: ForecastConfidenceLevel | null
+  origin: ForecastWorkspaceOriginBreakdown
   explainability: string[]
   limitations: string[]
 }
@@ -121,8 +140,17 @@ export interface ForecastWorkspaceInventorySummary {
 export interface ForecastWorkspaceBrandRow {
   brandId: string
   label: string
+  officialAvailable: boolean
   actual: ForecastMetricValues
+  actualTransactional: ProjectAwareForecastComponentMetrics
+  actualProjectBilling: ProjectAwareForecastComponentMetrics
+  projectedTransactional: ForecastMetricValues
+  maturePipeline: ForecastMetricValues
   projected: ForecastMetricValues
+  potentialPipelineRevenue: number
+  potentialWeightedPipelineRevenue: number
+  matureProjects: number
+  potentialProjects: number
   projectedGrossMargin: number | null
   targetRevenue: number | null
   targetAttainment: number | null
@@ -179,14 +207,24 @@ export interface ForecastWorkspaceFilterOptions {
   confidenceLevels: ForecastConfidenceLevel[]
 }
 
+export interface ForecastWorkspaceProjectPipeline {
+  status: ProjectAwareForecastStatus
+  officialAvailable: boolean
+  summary: ProjectAwareForecastPipelineSummary
+  contributions: ProjectAwareForecastProjectContribution[]
+  quality: ProjectAwareForecastQualityProfile
+}
+
 export interface ForecastWorkspaceModel {
   available: boolean
+  officialAvailable: boolean
   status: ForecastWorkspaceStatus
   unavailableReason: string | null
   generatedAt: string | null
   methodology: {
     baseline: string
     inventory: string
+    projectAware: string
   }
   scenarioId: ForecastScenarioId
   scenarios: ForecastWorkspaceScenarioOption[]
@@ -194,6 +232,7 @@ export interface ForecastWorkspaceModel {
   filterOptions: ForecastWorkspaceFilterOptions
   period: ForecastWorkspacePeriodContext
   portfolio: ForecastWorkspacePortfolioSummary
+  projectPipeline: ForecastWorkspaceProjectPipeline
   inventory: ForecastWorkspaceInventorySummary
   brands: ForecastWorkspaceBrandRow[]
   riskRanking: ForecastWorkspacePriorityItem[]

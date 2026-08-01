@@ -69,6 +69,11 @@ export interface ProjectAwareForecastQualityProfile {
   warnings: number
   information: number
   reconciliationCoverage: number
+  historicalReconciliationCoverage: number
+  currentPeriodId: string | null
+  pendingCutoffDocuments: number
+  salesDataCutoff: string | null
+  projectBillingDataCutoff: string | null
   matureProjectsEvaluated: number
   matureProjectsIncluded: number
   matureProjectsBlocked: number

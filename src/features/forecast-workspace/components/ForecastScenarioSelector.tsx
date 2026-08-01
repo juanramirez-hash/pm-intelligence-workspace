@@ -33,7 +33,7 @@ export function ForecastScenarioSelector({
           Escenario de planeación
         </p>
         <p className="text-[11px] text-slate-500">
-          Cambia proyección y demanda; no modifica los datos base.
+          Cambia el componente transaccional; proyecto facturado y pipeline maduro conservan sus hechos base.
         </p>
       </div>
 
@@ -69,7 +69,7 @@ export function ForecastScenarioSelector({
 
               {option.selected && (
                 <span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
-                  Activo
+                  {option.official ? 'Activo · Oficial' : 'Activo · Provisional'}
                 </span>
               )}
             </div>

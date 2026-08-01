@@ -3,7 +3,6 @@ import type {
 } from '../../../core/business/repository'
 
 import type {
-  ForecastBaselineProjection,
   ForecastConfidenceLevel,
   ForecastCoverageStatus,
   ForecastInventoryPriority,
@@ -11,8 +10,10 @@ import type {
   ForecastMetricValues,
   ForecastProductInventoryInsight,
   ForecastScenarioId,
-  ForecastScenarioProjection,
   ForecastTargetStatus,
+  ProjectAwareForecastProjection,
+  ProjectAwareForecastReport,
+  ProjectAwareForecastScenarioProjection,
 } from '../../../core/business/forecast'
 
 import {
@@ -108,47 +109,12 @@ function normalizeRequest(
 }
 
 function scenarioById(
-  projection: ForecastBaselineProjection | undefined,
+  projection: ProjectAwareForecastProjection | undefined,
   scenarioId: ForecastScenarioId,
-): ForecastScenarioProjection | undefined {
+): ProjectAwareForecastScenarioProjection | undefined {
   return projection?.scenarios.find(
     (scenario) => scenario.id === scenarioId,
   )
-}
-
-function scenarioValues(
-  projection: ForecastBaselineProjection | undefined,
-  scenarioId: ForecastScenarioId,
-): ForecastMetricValues {
-  const scenario = scenarioById(projection, scenarioId)
-
-  if (scenario) {
-    return { ...scenario.values }
-  }
-
-  if (projection) {
-    return { ...projection.expected }
-  }
-
-  return { ...EMPTY_VALUES }
-}
-
-function scenarioGrossMargin(
-  projection: ForecastBaselineProjection | undefined,
-  scenarioId: ForecastScenarioId,
-): number | null {
-  return scenarioById(projection, scenarioId)?.grossMargin ??
-    projection?.expectedGrossMargin ??
-    null
-}
-
-function scenarioTargetAttainment(
-  projection: ForecastBaselineProjection | undefined,
-  scenarioId: ForecastScenarioId,
-): number | null {
-  return scenarioById(projection, scenarioId)?.targetAttainment ??
-    projection?.target.expectedAttainment ??
-    null
 }
 
 function resolveTargetStatus(
@@ -175,13 +141,33 @@ function resolveTargetStatus(
   return 'behind'
 }
 
+function componentValues(
+  component: ProjectAwareForecastProjection['actualTotal'],
+): ForecastMetricValues {
+  return {
+    revenue: component.revenue,
+    grossProfit: component.grossProfit,
+    quantity: component.quantity,
+  }
+}
+
+function emptyComponent() {
+  return {
+    revenue: 0,
+    grossProfit: 0,
+    quantity: 0,
+    documents: 0,
+  }
+}
+
 function buildPortfolioSummary(
-  projection: ForecastBaselineProjection | undefined,
+  projection: ProjectAwareForecastProjection | undefined,
   scenarioId: ForecastScenarioId,
 ): ForecastWorkspacePortfolioSummary {
   if (!projection) {
     return {
       available: false,
+      officialAvailable: false,
       actual: { ...EMPTY_VALUES },
       projected: { ...EMPTY_VALUES },
       projectedGrossMargin: null,
@@ -192,27 +178,37 @@ function buildPortfolioSummary(
       targetStatus: 'unavailable',
       confidenceScore: null,
       confidenceLevel: null,
+      origin: {
+        actualTotal: emptyComponent(),
+        actualTransactional: emptyComponent(),
+        actualProjectBilling: emptyComponent(),
+        projectedTransactional: { ...EMPTY_VALUES },
+        projectBillingActual: { ...EMPTY_VALUES },
+        maturePipeline: { ...EMPTY_VALUES },
+        combined: { ...EMPTY_VALUES },
+      },
       explainability: [],
       limitations: [
-        'No existe una proyección consolidada de portafolio.',
+        'No existe una proyección Project-Aware consolidada de portafolio.',
       ],
     }
   }
 
-  const projected = scenarioValues(projection, scenarioId)
-  const targetAttainment = scenarioTargetAttainment(
-    projection,
-    scenarioId,
-  )
+  const selectedScenario = scenarioById(projection, scenarioId)
+  const projected = selectedScenario
+    ? { ...selectedScenario.values }
+    : { ...projection.expected }
+  const targetAttainment = selectedScenario?.targetAttainment ??
+    projection.target.expectedAttainment
 
   return {
     available: true,
-    actual: { ...projection.actual },
+    officialAvailable: projection.officialAvailable,
+    actual: componentValues(projection.actualTotal),
     projected,
-    projectedGrossMargin: scenarioGrossMargin(
-      projection,
-      scenarioId,
-    ),
+    projectedGrossMargin:
+      selectedScenario?.grossMargin ??
+      projection.expectedGrossMargin,
     targetRevenue: projection.target.revenue,
     targetAttainment,
     revenueGap: projection.target.revenue === null
@@ -225,14 +221,37 @@ function buildPortfolioSummary(
         ),
     requiredDailyRevenue: projection.target.requiredDailyRevenue,
     targetStatus: resolveTargetStatus(
-      projection.actual.revenue,
+      projection.actualTotal.revenue,
       projection.target.revenue,
       targetAttainment,
     ),
     confidenceScore: projection.confidence.score,
     confidenceLevel: projection.confidence.level,
+    origin: {
+      actualTotal: { ...projection.actualTotal },
+      actualTransactional: { ...projection.actualTransactional },
+      actualProjectBilling: { ...projection.actualProjectBilling },
+      projectedTransactional: selectedScenario
+        ? { ...selectedScenario.transactional }
+        : { ...projection.transactionalBaseline.expected },
+      projectBillingActual: selectedScenario
+        ? { ...selectedScenario.projectBillingActual }
+        : componentValues(projection.actualProjectBilling),
+      maturePipeline: selectedScenario
+        ? { ...selectedScenario.maturePipeline }
+        : {
+            revenue: projection.pipeline.matureRevenueMxn,
+            grossProfit:
+              projection.pipeline.matureEstimatedGrossProfitMxn,
+            quantity: 0,
+          },
+      combined: projected,
+    },
     explainability: [...projection.explainability],
-    limitations: [...projection.confidence.limitations],
+    limitations: [
+      ...projection.limitations,
+      ...projection.confidence.limitations,
+    ],
   }
 }
 
@@ -240,7 +259,7 @@ function buildScenarioOptions(
   foundationScenarios: ReturnType<
     BusinessRepository['forecast']['getFoundation']
   >['scenarios'],
-  portfolioProjection: ForecastBaselineProjection | undefined,
+  portfolioProjection: ProjectAwareForecastProjection | undefined,
   selectedId: ForecastScenarioId,
 ): ForecastWorkspaceScenarioOption[] {
   return foundationScenarios.map((definition) => {
@@ -251,7 +270,7 @@ function buildScenarioOptions(
 
     return {
       id: definition.id,
-      label: definition.label,
+      label: scenario?.label ?? definition.label,
       purpose: definition.purpose,
       selected: definition.id === selectedId,
       portfolioRevenue: scenario?.values.revenue ?? null,
@@ -259,6 +278,7 @@ function buildScenarioOptions(
       portfolioQuantity: scenario?.values.quantity ?? null,
       portfolioGrossMargin: scenario?.grossMargin ?? null,
       targetAttainment: scenario?.targetAttainment ?? null,
+      official: scenario?.official ?? false,
     }
   })
 }
@@ -521,7 +541,7 @@ function averageCoverage(
 }
 
 function buildBrandRows(
-  projections: readonly ForecastBaselineProjection[],
+  projections: readonly ProjectAwareForecastProjection[],
   items: readonly ForecastProductInventoryInsight[],
   filters: ForecastWorkspaceFilters,
   scenarioId: ForecastScenarioId,
@@ -532,21 +552,45 @@ function buildBrandRows(
       const brandItems = items.filter(
         (item) => item.brandId === brandId,
       )
-      const projected = scenarioValues(projection, scenarioId)
-      const targetAttainment = scenarioTargetAttainment(
+      const selectedScenario = scenarioById(
         projection,
         scenarioId,
       )
+      const projected = selectedScenario
+        ? { ...selectedScenario.values }
+        : { ...projection.expected }
+      const targetAttainment = selectedScenario?.targetAttainment ??
+        projection.target.expectedAttainment
 
       return {
         brandId,
         label: projection.entityLabel,
-        actual: { ...projection.actual },
+        officialAvailable: projection.officialAvailable,
+        actual: componentValues(projection.actualTotal),
+        actualTransactional: { ...projection.actualTransactional },
+        actualProjectBilling: { ...projection.actualProjectBilling },
+        projectedTransactional: selectedScenario
+          ? { ...selectedScenario.transactional }
+          : { ...projection.transactionalBaseline.expected },
+        maturePipeline: selectedScenario
+          ? { ...selectedScenario.maturePipeline }
+          : {
+              revenue: projection.pipeline.matureRevenueMxn,
+              grossProfit:
+                projection.pipeline.matureEstimatedGrossProfitMxn,
+              quantity: 0,
+            },
         projected,
-        projectedGrossMargin: scenarioGrossMargin(
-          projection,
-          scenarioId,
-        ),
+        potentialPipelineRevenue:
+          projection.pipeline.potentialRevenueMxn,
+        potentialWeightedPipelineRevenue:
+          projection.pipeline.potentialWeightedRevenueMxn,
+        matureProjects: projection.pipeline.matureIncludedProjects,
+        potentialProjects:
+          projection.pipeline.potentialAvailableProjects,
+        projectedGrossMargin:
+          selectedScenario?.grossMargin ??
+          projection.expectedGrossMargin,
         targetRevenue: projection.target.revenue,
         targetAttainment,
         revenueGap: projection.target.revenue === null
@@ -558,7 +602,7 @@ function buildBrandRows(
               ),
             ),
         targetStatus: resolveTargetStatus(
-          projection.actual.revenue,
+          projection.actualTotal.revenue,
           projection.target.revenue,
           targetAttainment,
         ),
@@ -619,6 +663,8 @@ function buildBrandRows(
     })
     .sort(
       (left, right) =>
+        Number(left.officialAvailable) -
+          Number(right.officialAvailable) ||
         right.riskScore - left.riskScore ||
         right.projected.revenue - left.projected.revenue ||
         left.label.localeCompare(right.label),
@@ -715,8 +761,101 @@ function buildRanking(
     .slice(0, normalizeLimit(limit))
 }
 
+function contributionMatchesFilters(
+  contribution: ProjectAwareForecastProjection['projectContributions'][number],
+  filters: ForecastWorkspaceFilters,
+): boolean {
+  if (
+    filters.brandId !== 'all' &&
+    contribution.brandId !== filters.brandId
+  ) {
+    return false
+  }
+
+  const search = normalizeIdentifier(filters.search)
+
+  if (!search) {
+    return true
+  }
+
+  return normalizeIdentifier([
+    contribution.projectId,
+    contribution.projectName,
+    contribution.brandId ?? '',
+    contribution.statusCode,
+    contribution.statusLabel,
+    contribution.contributionStatus,
+    contribution.sourceCurrency ?? '',
+  ].join(' ')).includes(search)
+}
+
+function buildProjectContributions(
+  projection: ProjectAwareForecastProjection | undefined,
+  filters: ForecastWorkspaceFilters,
+) {
+  const order = new Map([
+    ['blocked', 0],
+    ['included', 1],
+    ['upside', 2],
+    ['excluded', 3],
+  ])
+
+  return (projection?.projectContributions ?? [])
+    .filter((contribution) =>
+      contributionMatchesFilters(contribution, filters),
+    )
+    .sort((left, right) =>
+      (order.get(left.contributionStatus) ?? 9) -
+        (order.get(right.contributionStatus) ?? 9) ||
+      (right.convertedAmountMxn ?? 0) -
+        (left.convertedAmountMxn ?? 0) ||
+      left.projectName.localeCompare(right.projectName),
+    )
+}
+
+function emptyProjectQuality() {
+  return {
+    issues: [],
+    blockingIssues: 0,
+    warnings: 0,
+    information: 0,
+    reconciliationCoverage: 0,
+    historicalReconciliationCoverage: 0,
+    currentPeriodId: null,
+    pendingCutoffDocuments: 0,
+    salesDataCutoff: null,
+    projectBillingDataCutoff: null,
+    matureProjectsEvaluated: 0,
+    matureProjectsIncluded: 0,
+    matureProjectsBlocked: 0,
+    potentialProjectsEvaluated: 0,
+    potentialProjectsAvailable: 0,
+    missingExchangeRates: 0,
+    grossProfitEstimateCoverage: 0,
+  }
+}
+
+function emptyPipelineSummary() {
+  return {
+    matureProjects: 0,
+    matureIncludedProjects: 0,
+    matureBlockedProjects: 0,
+    matureRevenueMxn: 0,
+    matureEstimatedGrossProfitMxn: 0,
+    potentialProjects: 0,
+    potentialAvailableProjects: 0,
+    potentialRevenueMxn: 0,
+    potentialWeightedRevenueMxn: 0,
+    potentialEstimatedGrossProfitMxn: 0,
+    missingExchangeRates: 0,
+    grossProfitEstimateCoverage: 0,
+    quantityAvailable: false as const,
+  }
+}
+
 function resolveWorkspaceStatus(
   portfolio: ForecastWorkspacePortfolioSummary,
+  projectAwareStatus: ProjectAwareForecastReport['status'],
   inventoryStatus: ForecastWorkspaceInventorySummary['reportStatus'],
 ): ForecastWorkspaceStatus {
   if (!portfolio.available) {
@@ -724,6 +863,14 @@ function resolveWorkspaceStatus(
   }
 
   if (
+    projectAwareStatus === 'blocked' ||
+    !portfolio.officialAvailable
+  ) {
+    return 'blocked'
+  }
+
+  if (
+    projectAwareStatus === 'partial' ||
     inventoryStatus !== 'ready' ||
     portfolio.confidenceLevel === 'low'
   ) {
@@ -746,8 +893,11 @@ export function buildForecastWorkspace(
   const normalizedRequest = normalizeRequest(request)
 
   if (!repository) {
+    const quality = emptyProjectQuality()
+
     return {
       available: false,
+      officialAvailable: false,
       status: 'unavailable',
       unavailableReason:
         'Forecast Workspace requiere ventas normalizadas y Business Repository disponible.',
@@ -755,6 +905,7 @@ export function buildForecastWorkspace(
       methodology: {
         baseline: 'baseline-v1',
         inventory: 'forecast-inventory-v1',
+        projectAware: 'project-aware-v1',
       },
       scenarioId: normalizedRequest.scenarioId,
       scenarios: [],
@@ -779,6 +930,13 @@ export function buildForecastWorkspace(
         undefined,
         normalizedRequest.scenarioId,
       ),
+      projectPipeline: {
+        status: 'unavailable',
+        officialAvailable: false,
+        summary: emptyPipelineSummary(),
+        contributions: [],
+        quality,
+      },
       inventory: {
         reportStatus: 'unavailable',
         productsAnalyzed: 0,
@@ -810,10 +968,11 @@ export function buildForecastWorkspace(
   }
 
   const foundation = repository.forecast.getFoundation()
+  const projectAwareReport =
+    repository.forecast.getProjectAwareReport()
   const portfolioProjection =
-    repository.forecast.getPortfolioBaselineProjection()
-  const brandProjections =
-    repository.forecast.getBaselineProjections('brand')
+    projectAwareReport.portfolio ?? undefined
+  const brandProjections = projectAwareReport.brands
   const inventoryReport =
     repository.forecast.getInventoryIntelligenceReport()
   const filteredItems = inventoryReport.items.filter(
@@ -833,34 +992,47 @@ export function buildForecastWorkspace(
   )
   const status = resolveWorkspaceStatus(
     portfolio,
+    projectAwareReport.status,
     inventory.reportStatus,
   )
 
   const explainability = uniqueStrings([
     `Escenario activo: ${normalizedRequest.scenarioId}.`,
-    'La proyección comercial consume exclusivamente Forecast Baseline Engine baseline-v1.',
-    'La cobertura consume Forecast Inventory Intelligence forecast-inventory-v1.',
-    'Los rankings se ordenan por score de señal y valor de inventario afectado.',
+    'El cierre Project-Aware separa Forecast transaccional, facturación real de proyectos y pipeline maduro pendiente.',
+    'La facturación real de proyectos se concilia por Document Number y conserva Revenue y GP oficiales de Ventas en MXN.',
+    'Los proyectos 05 Esperando OC y 06 Surtido parcialmente se incorporan por Monto por cerrar y fecha estimada de facturación.',
+    'Los proyectos 03 y 04 se publican como upside potencial y no forman parte del Forecast oficial.',
+    'La cobertura de inventario permanece a nivel producto; el pipeline sin SKU no genera demanda artificial.',
+    ...projectAwareReport.explainability,
     ...portfolio.explainability,
   ])
 
   const limitations = uniqueStrings([
     ...foundation.constraints,
+    ...projectAwareReport.limitations,
     ...portfolio.limitations,
     ...inventoryReport.quality.notes,
-    'Los filtros de cobertura y prioridad afectan los productos y KPIs de inventario; el resumen comercial de portafolio conserva la proyección consolidada oficial.',
+    'Los filtros de cobertura y prioridad afectan productos y KPIs de inventario; el cierre comercial conserva la proyección Project-Aware oficial.',
+    'El pipeline pendiente se asigna a la Marca principal porque el reporte de proyectos no contiene distribución confiable por SKU o marca secundaria.',
   ])
 
   return {
     available: portfolio.available,
+    officialAvailable: projectAwareReport.officialAvailable,
     status,
     unavailableReason: portfolio.available
       ? null
-      : 'No existe una proyección consolidada de portafolio.',
-    generatedAt: inventoryReport.generatedAt || foundation.generatedAt,
+      : 'No existe una proyección Project-Aware consolidada de portafolio.',
+    generatedAt:
+      projectAwareReport.generatedAt ||
+      inventoryReport.generatedAt ||
+      foundation.generatedAt,
     methodology: {
-      baseline: portfolioProjection?.methodologyVersion ?? 'baseline-v1',
+      baseline:
+        portfolioProjection?.transactionalBaseline.methodologyVersion ??
+        'baseline-v1',
       inventory: inventoryReport.methodologyVersion,
+      projectAware: projectAwareReport.methodologyVersion,
     },
     scenarioId: normalizedRequest.scenarioId,
     scenarios: buildScenarioOptions(
@@ -884,22 +1056,42 @@ export function buildForecastWorkspace(
     period: {
       currentPeriodId:
         portfolioProjection?.currentPeriodId ??
+        projectAwareReport.currentPeriodId ??
         foundation.currentPeriodId,
       dataCutoff:
         portfolioProjection?.dataCutoff ??
+        projectAwareReport.dataCutoff ??
         foundation.dataCutoff,
       snapshotDate: inventoryReport.snapshotDate,
       periodStatus:
-        portfolioProjection?.timing.periodStatus ?? null,
+        portfolioProjection?.transactionalBaseline.timing.periodStatus ??
+        null,
       totalWorkingDays:
-        portfolioProjection?.timing.totalWorkingDays ?? null,
+        portfolioProjection?.transactionalBaseline.timing.totalWorkingDays ??
+        null,
       elapsedWorkingDays:
-        portfolioProjection?.timing.elapsedWorkingDays ?? null,
+        portfolioProjection?.transactionalBaseline.timing.elapsedWorkingDays ??
+        null,
       remainingWorkingDays:
-        portfolioProjection?.timing.remainingWorkingDays ?? null,
-      progress: portfolioProjection?.timing.progress ?? null,
+        portfolioProjection?.transactionalBaseline.timing.remainingWorkingDays ??
+        null,
+      progress:
+        portfolioProjection?.transactionalBaseline.timing.progress ??
+        null,
     },
     portfolio,
+    projectPipeline: {
+      status: projectAwareReport.status,
+      officialAvailable: projectAwareReport.officialAvailable,
+      summary:
+        portfolioProjection?.pipeline ??
+        emptyPipelineSummary(),
+      contributions: buildProjectContributions(
+        portfolioProjection,
+        normalizedRequest.filters,
+      ),
+      quality: projectAwareReport.quality,
+    },
     inventory,
     brands: buildBrandRows(
       brandProjections,

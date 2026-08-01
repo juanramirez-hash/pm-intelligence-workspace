@@ -12,7 +12,7 @@ import {
   ForecastScenarioSelector,
 } from './ForecastScenarioSelector'
 
-describe('FW-005 ForecastScenarioSelector', () => {
+describe('FW-010 ForecastScenarioSelector', () => {
   it('identifica el escenario activo y expone las proyecciones', () => {
     const markup = renderToStaticMarkup(
       <ForecastScenarioSelector
@@ -28,6 +28,7 @@ describe('FW-005 ForecastScenarioSelector', () => {
             portfolioQuantity: 8,
             portfolioGrossMargin: 0.2444,
             targetAttainment: 0.9,
+            official: true,
           },
           {
             id: 'expected',
@@ -39,6 +40,7 @@ describe('FW-005 ForecastScenarioSelector', () => {
             portfolioQuantity: 10,
             portfolioGrossMargin: 0.25,
             targetAttainment: 1,
+            official: true,
           },
         ]}
       />,

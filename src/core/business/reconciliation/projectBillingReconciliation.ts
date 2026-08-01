@@ -14,6 +14,7 @@ import type {
 export type ProjectBillingReconciliationStatus =
   | 'matched'
   | 'missing_sales_document'
+  | 'pending_cutoff'
   | 'voided'
   | 'conflict'
 
@@ -51,6 +52,9 @@ export interface ProjectBillingReconciliationDocument {
   periodMismatch: boolean
   customerMismatch: boolean
   creditNoteSignAnomaly: boolean
+  salesDocumentPresent: boolean
+  salesDocumentFinanciallyMaterial: boolean
+  afterSalesCutoff: boolean
 }
 
 export interface ProjectBillingReconciliationPeriod {
@@ -64,7 +68,11 @@ export interface ProjectBillingReconciliationPeriod {
   reconciliationCoverage: number
   matchedBillingDocuments: number
   missingBillingDocuments: number
+  pendingCutoffBillingDocuments: number
+  conflictBillingDocuments: number
   voidedBillingDocuments: number
+  materialVoidedDocuments: number
+  zeroValueVoidedDocuments: number
   creditNoteDocuments: number
 }
 
@@ -112,6 +120,12 @@ export interface ProjectBillingReconciliationQuality {
   conflictBillingDocuments: number
   creditNoteDocuments: number
   coverageRate: number
+  currentPeriodId: string | null
+  currentPeriodCoverageRate: number
+  historicalCoverageRate: number
+  salesDataCutoff: string | null
+  projectBillingDataCutoff: string | null
+  pendingCutoffBillingDocuments: number
 
   missingSalesDocumentNumbers: string[]
   conflictDocumentNumbers: string[]
@@ -120,6 +134,11 @@ export interface ProjectBillingReconciliationQuality {
   customerMismatchDocuments: string[]
   creditNoteSignAnomalyDocuments: string[]
   voidedDocumentsPresentInSales: string[]
+  pendingCutoffDocumentNumbers: string[]
+  materialVoidedDocumentsPresentInSales: string[]
+  zeroValueVoidedDocumentsPresentInSales: string[]
+  currentPeriodBlockingDocumentNumbers: string[]
+  historicalExceptionDocumentNumbers: string[]
 }
 
 export interface ProjectBillingReconciliationReport {
@@ -212,6 +231,36 @@ function normalizeIdentifier(
     .replace(/\s+/g, ' ')
 }
 
+function isFinanciallyMaterial(
+  document: BusinessSalesTransactionDocument | undefined,
+): boolean {
+  if (!document) {
+    return false
+  }
+
+  const tolerance = 0.0001
+
+  return (
+    Math.abs(document.revenue) > tolerance ||
+    Math.abs(document.grossProfit) > tolerance ||
+    Math.abs(document.quantity) > tolerance
+  )
+}
+
+function maxDate(
+  dates: Iterable<string>,
+): string | null {
+  let latest: string | null = null
+
+  for (const date of dates) {
+    if (!latest || date > latest) {
+      latest = date
+    }
+  }
+
+  return latest
+}
+
 function push<T>(
   index: Map<string, T[]>,
   key: string,
@@ -253,6 +302,7 @@ function createDocumentResult(
   salesDocument: BusinessSalesTransactionDocument | undefined,
   salesLines: BusinessSalesTransactionLine[],
   projectIds: Set<string>,
+  salesDataCutoff: string | null,
 ): ProjectBillingReconciliationDocument {
   const customerMismatch = Boolean(
     projectBillingDocument.customerId &&
@@ -273,6 +323,14 @@ function createDocumentResult(
     salesDocument &&
     projectBillingDocument.documentType === 'credit_note' &&
     salesDocument.revenue > 0,
+  )
+
+  const salesDocumentFinanciallyMaterial =
+    isFinanciallyMaterial(salesDocument)
+
+  const afterSalesCutoff = Boolean(
+    salesDataCutoff &&
+    projectBillingDocument.date > salesDataCutoff,
   )
 
   return {
@@ -314,6 +372,9 @@ function createDocumentResult(
     periodMismatch,
     customerMismatch,
     creditNoteSignAnomaly,
+    salesDocumentPresent: Boolean(salesDocument),
+    salesDocumentFinanciallyMaterial,
+    afterSalesCutoff,
   }
 }
 
@@ -322,6 +383,16 @@ export function buildProjectBillingReconciliation(
 ): ProjectBillingReconciliationReport {
   const salesDocuments =
     model.salesDocuments ?? new Map()
+
+  const salesDataCutoff = maxDate(
+    [...(model.salesTransactionLines?.values() ?? [])]
+      .map((line) => line.date),
+  )
+
+  const projectBillingDataCutoff = maxDate(
+    [...(model.projectBillings?.values() ?? [])]
+      .map((document) => document.date),
+  )
 
   const salesLinesByDocument =
     new Map<string, BusinessSalesTransactionLine[]>()
@@ -377,6 +448,18 @@ export function buildProjectBillingReconciliation(
   const missingDocumentsByBillingPeriod =
     new Map<string, Set<string>>()
 
+  const pendingCutoffDocumentsByBillingPeriod =
+    new Map<string, Set<string>>()
+
+  const conflictDocumentsByBillingPeriod =
+    new Map<string, Set<string>>()
+
+  const materialVoidedDocumentsByBillingPeriod =
+    new Map<string, Set<string>>()
+
+  const zeroValueVoidedDocumentsByBillingPeriod =
+    new Map<string, Set<string>>()
+
   const voidedDocumentsByBillingPeriod =
     new Map<string, Set<string>>()
 
@@ -390,10 +473,14 @@ export function buildProjectBillingReconciliation(
   const customerMismatchDocuments = new Set<string>()
   const creditNoteSignAnomalyDocuments = new Set<string>()
   const voidedDocumentsPresentInSales = new Set<string>()
+  const pendingCutoffDocumentNumbers = new Set<string>()
+  const materialVoidedDocumentsPresentInSales = new Set<string>()
+  const zeroValueVoidedDocumentsPresentInSales = new Set<string>()
 
   let activeBillingDocuments = 0
   let matchedBillingDocuments = 0
   let missingBillingDocuments = 0
+  let pendingCutoffBillingDocuments = 0
   let voidedBillingDocuments = 0
   let conflictBillingDocuments = 0
   let creditNoteDocuments = 0
@@ -437,6 +524,25 @@ export function buildProjectBillingReconciliation(
 
       if (salesDocument) {
         voidedDocumentsPresentInSales.add(documentNumber)
+
+        const periodIndex = isFinanciallyMaterial(salesDocument)
+          ? materialVoidedDocumentsByBillingPeriod
+          : zeroValueVoidedDocumentsByBillingPeriod
+        const periodDocuments = periodIndex.get(
+          projectBillingDocument.periodId,
+        ) ?? new Set<string>()
+
+        periodDocuments.add(documentNumber)
+        periodIndex.set(
+          projectBillingDocument.periodId,
+          periodDocuments,
+        )
+
+        if (isFinanciallyMaterial(salesDocument)) {
+          materialVoidedDocumentsPresentInSales.add(documentNumber)
+        } else {
+          zeroValueVoidedDocumentsPresentInSales.add(documentNumber)
+        }
       }
 
       const result = createDocumentResult(
@@ -445,6 +551,7 @@ export function buildProjectBillingReconciliation(
         salesDocument,
         salesLines,
         projectIds,
+        salesDataCutoff,
       )
 
       documentResults.push(result)
@@ -484,12 +591,22 @@ export function buildProjectBillingReconciliation(
       conflictBillingDocuments += activeDocuments.length
 
       for (const projectBillingDocument of activeDocuments) {
+        const periodConflicts = conflictDocumentsByBillingPeriod.get(
+          projectBillingDocument.periodId,
+        ) ?? new Set<string>()
+
+        periodConflicts.add(documentNumber)
+        conflictDocumentsByBillingPeriod.set(
+          projectBillingDocument.periodId,
+          periodConflicts,
+        )
         const result = createDocumentResult(
           projectBillingDocument,
           'conflict',
           salesDocument,
           salesLines,
           projectIds,
+          salesDataCutoff,
         )
 
         documentResults.push(result)
@@ -509,26 +626,50 @@ export function buildProjectBillingReconciliation(
     }
 
     if (!salesDocument || salesLines.length === 0) {
-      missingBillingDocuments += 1
-      missingSalesDocumentNumbers.add(documentNumber)
-
-      const periodMissingDocuments =
-        missingDocumentsByBillingPeriod.get(
-          projectBillingDocument.periodId,
-        ) ?? new Set<string>()
-
-      periodMissingDocuments.add(documentNumber)
-      missingDocumentsByBillingPeriod.set(
-        projectBillingDocument.periodId,
-        periodMissingDocuments,
+      const afterSalesCutoff = Boolean(
+        salesDataCutoff &&
+        projectBillingDocument.date > salesDataCutoff,
       )
+
+      if (afterSalesCutoff) {
+        pendingCutoffBillingDocuments += 1
+        pendingCutoffDocumentNumbers.add(documentNumber)
+
+        const periodPendingDocuments =
+          pendingCutoffDocumentsByBillingPeriod.get(
+            projectBillingDocument.periodId,
+          ) ?? new Set<string>()
+
+        periodPendingDocuments.add(documentNumber)
+        pendingCutoffDocumentsByBillingPeriod.set(
+          projectBillingDocument.periodId,
+          periodPendingDocuments,
+        )
+      } else {
+        missingBillingDocuments += 1
+        missingSalesDocumentNumbers.add(documentNumber)
+
+        const periodMissingDocuments =
+          missingDocumentsByBillingPeriod.get(
+            projectBillingDocument.periodId,
+          ) ?? new Set<string>()
+
+        periodMissingDocuments.add(documentNumber)
+        missingDocumentsByBillingPeriod.set(
+          projectBillingDocument.periodId,
+          periodMissingDocuments,
+        )
+      }
 
       const result = createDocumentResult(
         projectBillingDocument,
-        'missing_sales_document',
+        afterSalesCutoff
+          ? 'pending_cutoff'
+          : 'missing_sales_document',
         undefined,
         [],
         projectIds,
+        salesDataCutoff,
       )
 
       documentResults.push(result)
@@ -559,6 +700,7 @@ export function buildProjectBillingReconciliation(
       salesDocument,
       salesLines,
       projectIds,
+      salesDataCutoff,
     )
 
     documentResults.push(result)
@@ -679,9 +821,13 @@ export function buildProjectBillingReconciliation(
         createMutableMetrics(),
       )
 
-      const activeForPeriod =
-        (matchedDocumentsByBillingPeriod.get(period.id)?.size ?? 0) +
-        (missingDocumentsByBillingPeriod.get(period.id)?.size ?? 0)
+      const matchedForPeriod =
+        matchedDocumentsByBillingPeriod.get(period.id)?.size ?? 0
+
+      const eligibleForPeriod =
+        matchedForPeriod +
+        (missingDocumentsByBillingPeriod.get(period.id)?.size ?? 0) +
+        (conflictDocumentsByBillingPeriod.get(period.id)?.size ?? 0)
 
       return {
         periodId: period.id,
@@ -692,16 +838,25 @@ export function buildProjectBillingReconciliation(
           project.revenue,
           total.revenue,
         ),
-        reconciliationCoverage: safeRatio(
-          matchedDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
-          activeForPeriod,
-        ),
-        matchedBillingDocuments:
-          matchedDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
+        reconciliationCoverage: eligibleForPeriod === 0
+          ? 1
+          : safeRatio(
+              matchedForPeriod,
+              eligibleForPeriod,
+            ),
+        matchedBillingDocuments: matchedForPeriod,
         missingBillingDocuments:
           missingDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
+        pendingCutoffBillingDocuments:
+          pendingCutoffDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
+        conflictBillingDocuments:
+          conflictDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
         voidedBillingDocuments:
           voidedDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
+        materialVoidedDocuments:
+          materialVoidedDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
+        zeroValueVoidedDocuments:
+          zeroValueVoidedDocumentsByBillingPeriod.get(period.id)?.size ?? 0,
         creditNoteDocuments:
           creditNotesByBillingPeriod.get(period.id)?.size ?? 0,
       }
@@ -804,6 +959,55 @@ export function buildProjectBillingReconciliation(
     documents: model.totals.documents,
   }
 
+  const currentPeriodId = periods.at(-1)?.periodId ?? null
+  const currentPeriod = currentPeriodId
+    ? periods.find((period) => period.periodId === currentPeriodId)
+    : undefined
+  const historicalPeriods = periods.filter(
+    (period) => period.periodId !== currentPeriodId,
+  )
+  const historicalMatched = historicalPeriods.reduce(
+    (sum, period) => sum + period.matchedBillingDocuments,
+    0,
+  )
+  const historicalEligible = historicalPeriods.reduce(
+    (sum, period) =>
+      sum +
+      period.matchedBillingDocuments +
+      period.missingBillingDocuments +
+      period.conflictBillingDocuments,
+    0,
+  )
+
+  const currentPeriodBlockingDocumentNumbers = new Set<string>()
+  const historicalExceptionDocumentNumbers = new Set<string>()
+
+  for (const document of documentResults) {
+    const materialException =
+      document.status === 'missing_sales_document' ||
+      document.status === 'conflict' ||
+      (
+        document.status === 'voided' &&
+        document.salesDocumentFinanciallyMaterial
+      ) ||
+      document.creditNoteSignAnomaly
+
+    if (!materialException) {
+      continue
+    }
+
+    if (document.projectBillingPeriodId === currentPeriodId) {
+      currentPeriodBlockingDocumentNumbers.add(document.documentNumber)
+    } else {
+      historicalExceptionDocumentNumbers.add(document.documentNumber)
+    }
+  }
+
+  const eligibleBillingDocuments =
+    matchedBillingDocuments +
+    missingBillingDocuments +
+    conflictDocumentNumbers.size
+
   return {
     generatedAt: model.generatedAt,
     total,
@@ -829,10 +1033,21 @@ export function buildProjectBillingReconciliation(
       voidedBillingDocuments,
       conflictBillingDocuments,
       creditNoteDocuments,
-      coverageRate: safeRatio(
-        matchedBillingDocuments,
-        activeBillingDocuments,
-      ),
+      coverageRate: eligibleBillingDocuments === 0
+        ? 1
+        : safeRatio(
+            matchedBillingDocuments,
+            eligibleBillingDocuments,
+          ),
+      currentPeriodId,
+      currentPeriodCoverageRate:
+        currentPeriod?.reconciliationCoverage ?? 1,
+      historicalCoverageRate: historicalEligible === 0
+        ? 1
+        : safeRatio(historicalMatched, historicalEligible),
+      salesDataCutoff,
+      projectBillingDataCutoff,
+      pendingCutoffBillingDocuments,
       missingSalesDocumentNumbers:
         [...missingSalesDocumentNumbers].sort(),
       conflictDocumentNumbers:
@@ -847,6 +1062,16 @@ export function buildProjectBillingReconciliation(
         [...creditNoteSignAnomalyDocuments].sort(),
       voidedDocumentsPresentInSales:
         [...voidedDocumentsPresentInSales].sort(),
+      pendingCutoffDocumentNumbers:
+        [...pendingCutoffDocumentNumbers].sort(),
+      materialVoidedDocumentsPresentInSales:
+        [...materialVoidedDocumentsPresentInSales].sort(),
+      zeroValueVoidedDocumentsPresentInSales:
+        [...zeroValueVoidedDocumentsPresentInSales].sort(),
+      currentPeriodBlockingDocumentNumbers:
+        [...currentPeriodBlockingDocumentNumbers].sort(),
+      historicalExceptionDocumentNumbers:
+        [...historicalExceptionDocumentNumbers].sort(),
     },
   }
 }

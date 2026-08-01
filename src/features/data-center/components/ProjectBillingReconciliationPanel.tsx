@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  Clock3,
   GitCompareArrows,
   ReceiptText,
 } from 'lucide-react'
@@ -48,6 +49,12 @@ function formatPercentage(
   return percentageFormatter.format(value)
 }
 
+function formatDate(
+  value: string | null,
+): string {
+  return value ?? 'Sin corte'
+}
+
 export function ProjectBillingReconciliationPanel() {
   const workspace = useWorkspaceContext()
 
@@ -70,21 +77,22 @@ export function ProjectBillingReconciliationPanel() {
     .filter((period) =>
       period.total.documents > 0 ||
       period.matchedBillingDocuments > 0 ||
-      period.missingBillingDocuments > 0,
+      period.missingBillingDocuments > 0 ||
+      period.pendingCutoffBillingDocuments > 0,
     )
     .slice(-6)
     .reverse()
 
-  const hasBlockingIssues =
-    report.quality.missingBillingDocuments > 0 ||
-    report.quality.conflictBillingDocuments > 0
+  const currentBlockingDocuments =
+    report.quality.currentPeriodBlockingDocumentNumbers.length
+  const hasBlockingIssues = currentBlockingDocuments > 0
 
   return (
     <AtlasCard className="p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <SectionHeader
           title="Conciliación de facturación de proyectos"
-          description="Separa la venta real por origen usando Document Number y los importes oficiales del repositorio de ventas en MXN."
+          description="Separa la venta real por origen usando Document Number, corte temporal y materialidad financiera del repositorio de ventas en MXN."
         />
 
         <div
@@ -100,8 +108,8 @@ export function ProjectBillingReconciliationPanel() {
             : <CheckCircle2 size={15} />}
 
           {hasBlockingIssues
-            ? 'Revisión requerida'
-            : 'Conciliación saludable'}
+            ? 'Revisión del periodo requerida'
+            : 'Periodo actual conciliable'}
         </div>
       </div>
 
@@ -147,22 +155,51 @@ export function ProjectBillingReconciliationPanel() {
           </p>
 
           <p className="mt-1 text-xs text-cyan-700">
-            Base histórica para FW-009
+            Base histórica para Project-Aware Forecast
           </p>
         </div>
 
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-sm font-medium text-emerald-700">
-            Cobertura documental
+            Cobertura del periodo actual
           </p>
 
           <p className="mt-3 text-2xl font-semibold text-emerald-950">
-            {formatPercentage(report.quality.coverageRate)}
+            {formatPercentage(
+              report.quality.currentPeriodCoverageRate,
+            )}
           </p>
 
           <p className="mt-1 text-xs text-emerald-700">
-            {report.quality.matchedBillingDocuments} conciliados de{' '}
-            {report.quality.activeBillingDocuments}
+            Histórica: {formatPercentage(
+              report.quality.historicalCoverageRate,
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+          <p className="font-semibold text-slate-900">Corte de Ventas</p>
+          <p className="mt-1 text-slate-600">
+            {formatDate(report.quality.salesDataCutoff)}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+          <p className="font-semibold text-slate-900">Corte de facturación de proyectos</p>
+          <p className="mt-1 text-slate-600">
+            {formatDate(report.quality.projectBillingDataCutoff)}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-sky-900">
+            <Clock3 size={16} />
+            Pendientes por diferencia de corte
+          </div>
+          <p className="mt-1 text-sky-800">
+            {report.quality.pendingCutoffBillingDocuments} documentos
           </p>
         </div>
       </div>
@@ -175,7 +212,7 @@ export function ProjectBillingReconciliationPanel() {
             </p>
 
             <p className="mt-1 text-xs text-slate-600">
-              La marca, el cliente, Revenue y GP provienen de las filas reales de ventas.
+              Los faltantes históricos reducen confianza; solo las incidencias materiales del periodo actual pueden bloquear el Forecast oficial.
             </p>
           </div>
 
@@ -187,7 +224,8 @@ export function ProjectBillingReconciliationPanel() {
                   <th className="px-4 py-3 text-right">Total</th>
                   <th className="px-4 py-3 text-right">Proyectos</th>
                   <th className="px-4 py-3 text-right">Transaccional</th>
-                  <th className="px-4 py-3 text-right">Participación</th>
+                  <th className="px-4 py-3 text-right">Cobertura</th>
+                  <th className="px-4 py-3 text-right">Por corte</th>
                 </tr>
               </thead>
 
@@ -207,7 +245,10 @@ export function ProjectBillingReconciliationPanel() {
                       {formatCurrency(period.transactional.revenue)}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-700">
-                      {formatPercentage(period.projectRevenueShare)}
+                      {formatPercentage(period.reconciliationCoverage)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sky-700">
+                      {period.pendingCutoffBillingDocuments}
                     </td>
                   </tr>
                 ))}
@@ -224,9 +265,16 @@ export function ProjectBillingReconciliationPanel() {
 
             <dl className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-600">Sin venta correspondiente</dt>
+                <dt className="text-slate-600">Faltantes dentro del corte</dt>
                 <dd className="font-semibold text-amber-700">
                   {report.quality.missingBillingDocuments}
+                </dd>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-slate-600">Posteriores al corte</dt>
+                <dd className="font-semibold text-sky-700">
+                  {report.quality.pendingCutoffBillingDocuments}
                 </dd>
               </div>
 
@@ -238,6 +286,20 @@ export function ProjectBillingReconciliationPanel() {
               </div>
 
               <div className="flex items-center justify-between gap-4">
+                <dt className="text-slate-600">Anulados con impacto</dt>
+                <dd className="font-semibold text-red-700">
+                  {report.quality.materialVoidedDocumentsPresentInSales.length}
+                </dd>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-slate-600">Anulados en cero</dt>
+                <dd className="font-semibold text-slate-900">
+                  {report.quality.zeroValueVoidedDocumentsPresentInSales.length}
+                </dd>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
                 <dt className="text-slate-600">Notas de crédito</dt>
                 <dd className="font-semibold text-slate-900">
                   {report.quality.creditNoteDocuments}
@@ -245,9 +307,9 @@ export function ProjectBillingReconciliationPanel() {
               </div>
 
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-600">Documentos anulados</dt>
+                <dt className="text-slate-600">Excepciones históricas</dt>
                 <dd className="font-semibold text-slate-900">
-                  {report.quality.voidedBillingDocuments}
+                  {report.quality.historicalExceptionDocumentNumbers.length}
                 </dd>
               </div>
 
@@ -260,7 +322,7 @@ export function ProjectBillingReconciliationPanel() {
             </dl>
           </div>
 
-          {hasBlockingIssues && (
+          {hasBlockingIssues ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle
@@ -270,14 +332,18 @@ export function ProjectBillingReconciliationPanel() {
 
                 <div>
                   <p className="font-semibold text-amber-900">
-                    Excepciones bloqueadas
+                    Bloqueos materiales del periodo actual
                   </p>
 
                   <p className="mt-1 text-sm leading-6 text-amber-800">
-                    Los documentos faltantes o asociados a más de un proyecto no se clasifican como venta de proyectos hasta resolver la conciliación. Esto impide el doble conteo.
+                    {currentBlockingDocuments} documentos requieren conciliación porque están dentro del corte vigente, tienen conflicto de proyecto o conservan impacto financiero pese a estar anulados.
                   </p>
                 </div>
               </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
+              Las diferencias históricas y los documentos posteriores al corte permanecen visibles para auditoría, pero no bloquean el Forecast oficial del periodo actual.
             </div>
           )}
         </div>

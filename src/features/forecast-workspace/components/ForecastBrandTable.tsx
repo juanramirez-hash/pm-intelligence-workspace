@@ -61,11 +61,15 @@ export function ForecastBrandTable({
       data-forecast-component="brand-table"
       data-forecast-print-table="true"
     >
-      <table className="min-w-[1080px] w-full border-separate border-spacing-0 text-left text-sm">
+      <table className="min-w-[1460px] w-full border-separate border-spacing-0 text-left text-sm">
         <thead>
           <tr className="text-xs uppercase tracking-[0.08em] text-slate-500">
             <th className="border-b border-slate-200 px-3 py-3 font-semibold">Marca</th>
-            <th className="border-b border-slate-200 px-3 py-3 font-semibold">Venta proyectada</th>
+            <th className="border-b border-slate-200 px-3 py-3 font-semibold">Forecast transaccional</th>
+            <th className="border-b border-slate-200 px-3 py-3 font-semibold">Proyecto facturado</th>
+            <th className="border-b border-slate-200 px-3 py-3 font-semibold">Pipeline maduro</th>
+            <th className="border-b border-slate-200 px-3 py-3 font-semibold">Forecast combinado</th>
+            <th className="border-b border-slate-200 px-3 py-3 font-semibold">Upside potencial</th>
             <th className="border-b border-slate-200 px-3 py-3 font-semibold">Objetivo</th>
             <th className="border-b border-slate-200 px-3 py-3 font-semibold">Cumplimiento</th>
             <th className="border-b border-slate-200 px-3 py-3 font-semibold">Confianza</th>
@@ -80,11 +84,31 @@ export function ForecastBrandTable({
               <td className="border-b border-slate-100 px-3 py-4">
                 <div className="font-semibold text-slate-900">{row.label}</div>
                 <div className="mt-1 text-xs text-slate-500">
-                  {row.productsAnalyzed} productos analizados
+                  {row.productsAnalyzed} productos · {row.matureProjects} proyectos maduros
                 </div>
+                {!row.officialAvailable && (
+                  <div className="mt-1 text-xs font-semibold text-rose-700">
+                    Forecast provisional
+                  </div>
+                )}
               </td>
-              <td className="border-b border-slate-100 px-3 py-4 font-semibold text-slate-900">
+              <td className="border-b border-slate-100 px-3 py-4 font-semibold text-indigo-800">
+                {formatForecastCurrency(row.projectedTransactional.revenue, true)}
+              </td>
+              <td className="border-b border-slate-100 px-3 py-4 text-emerald-800">
+                {formatForecastCurrency(row.actualProjectBilling.revenue, true)}
+              </td>
+              <td className="border-b border-slate-100 px-3 py-4 text-amber-800">
+                {formatForecastCurrency(row.maturePipeline.revenue, true)}
+              </td>
+              <td className="border-b border-slate-100 px-3 py-4 font-semibold text-slate-950">
                 {formatForecastCurrency(row.projected.revenue, true)}
+              </td>
+              <td className="border-b border-slate-100 px-3 py-4 text-sky-800">
+                <div>{formatForecastCurrency(row.potentialPipelineRevenue, true)}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  Ponderado {formatForecastCurrency(row.potentialWeightedPipelineRevenue, true)}
+                </div>
               </td>
               <td className="border-b border-slate-100 px-3 py-4 text-slate-700">
                 {formatForecastCurrency(row.targetRevenue, true)}

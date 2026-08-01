@@ -12,7 +12,7 @@ import {
   ForecastBrandTable,
 } from './ForecastBrandTable'
 
-describe('FW-005 ForecastBrandTable', () => {
+describe('FW-010 ForecastBrandTable', () => {
   it('expone proyección, cobertura, riesgo y navegación por marca', () => {
     const markup = renderToStaticMarkup(
       <ForecastBrandTable
@@ -20,16 +20,43 @@ describe('FW-005 ForecastBrandTable', () => {
           {
             brandId: 'UNV',
             label: 'UNV',
+            officialAvailable: true,
             actual: {
               revenue: 800,
               grossProfit: 200,
               quantity: 8,
+            },
+            actualTransactional: {
+              revenue: 600,
+              grossProfit: 150,
+              quantity: 6,
+              documents: 3,
+            },
+            actualProjectBilling: {
+              revenue: 200,
+              grossProfit: 50,
+              quantity: 2,
+              documents: 1,
+            },
+            projectedTransactional: {
+              revenue: 900,
+              grossProfit: 225,
+              quantity: 9,
+            },
+            maturePipeline: {
+              revenue: 100,
+              grossProfit: 25,
+              quantity: 0,
             },
             projected: {
               revenue: 1_200,
               grossProfit: 300,
               quantity: 12,
             },
+            potentialPipelineRevenue: 300,
+            potentialWeightedPipelineRevenue: 120,
+            matureProjects: 1,
+            potentialProjects: 2,
             projectedGrossMargin: 0.25,
             targetRevenue: 1_000,
             targetAttainment: 1.2,

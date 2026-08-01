@@ -77,6 +77,15 @@ interface ContributionBuildResult {
   issues: ProjectAwareForecastQualityIssue[]
 }
 
+interface ReconciliationQualityContext {
+  currentCoverage: number
+  historicalCoverage: number
+  currentPeriodId: string | null
+  pendingCutoffDocuments: number
+  salesDataCutoff: string | null
+  projectBillingDataCutoff: string | null
+}
+
 function roundValue(
   value: number,
   decimals = 2,
@@ -634,11 +643,10 @@ function relevantReconciliationIssues(
   reconciliation: ProjectBillingReconciliationReport,
 ): ProjectAwareForecastQualityIssue[] {
   const issues: ProjectAwareForecastQualityIssue[] = []
+  const currentPeriodId = foundation.currentPeriodId
   const relevantPeriods = new Set([
     ...foundation.history.baselinePeriodIds,
-    ...(foundation.currentPeriodId
-      ? [foundation.currentPeriodId]
-      : []),
+    ...(currentPeriodId ? [currentPeriodId] : []),
   ])
 
   if (!model.salesTransactionLines || model.salesTransactionLines.size === 0) {
@@ -683,19 +691,44 @@ function relevantReconciliationIssues(
       continue
     }
 
+    const currentPeriodIssue = Boolean(
+      currentPeriodId &&
+      (
+        document.projectBillingPeriodId === currentPeriodId ||
+        document.salesPeriodIds.includes(currentPeriodId)
+      ),
+    )
+    const materialSeverity: ProjectAwareForecastQualityIssue['severity'] =
+      currentPeriodIssue ? 'blocking' : 'warning'
+    const context = {
+      periodId: document.projectBillingPeriodId,
+      projectId: document.projectId,
+      documentNumber: document.documentNumber,
+      brandId: document.brandIds[0] ?? null,
+    }
+
+    if (document.status === 'pending_cutoff') {
+      addIssue(
+        issues,
+        issue(
+          'PROJECT_BILLING_PENDING_SALES_CUTOFF',
+          'information',
+          `El documento ${document.documentNumber} es posterior al corte de Ventas y queda pendiente de la siguiente carga.`,
+          context,
+        ),
+      )
+    }
+
     if (document.status === 'missing_sales_document') {
       addIssue(
         issues,
         issue(
           'PROJECT_BILLING_NOT_RECONCILED',
-          'blocking',
-          `El documento ${document.documentNumber} de facturación de proyectos no existe en Ventas.`,
-          {
-            periodId: document.projectBillingPeriodId,
-            projectId: document.projectId,
-            documentNumber: document.documentNumber,
-            brandId: document.brandIds[0] ?? null,
-          },
+          materialSeverity,
+          currentPeriodIssue
+            ? `El documento ${document.documentNumber} de facturación de proyectos no existe en Ventas dentro del corte vigente.`
+            : `El documento histórico ${document.documentNumber} no existe en Ventas y reduce la calidad de la serie transaccional.`,
+          context,
         ),
       )
     }
@@ -705,37 +738,39 @@ function relevantReconciliationIssues(
         issues,
         issue(
           'PROJECT_BILLING_DOCUMENT_CONFLICT',
-          'blocking',
-          `El documento ${document.documentNumber} está asociado a más de un proyecto activo.`,
-          {
-            periodId: document.projectBillingPeriodId,
-            projectId: document.projectId,
-            documentNumber: document.documentNumber,
-            brandId: document.brandIds[0] ?? null,
-          },
+          materialSeverity,
+          currentPeriodIssue
+            ? `El documento ${document.documentNumber} está asociado a más de un proyecto activo en el periodo actual.`
+            : `El documento histórico ${document.documentNumber} está asociado a más de un proyecto activo.`,
+          context,
         ),
       )
     }
 
-    if (
-      document.status === 'voided' &&
-      reconciliation.quality.voidedDocumentsPresentInSales.includes(
-        document.documentNumber,
-      )
-    ) {
-      addIssue(
-        issues,
-        issue(
-          'VOIDED_PROJECT_DOCUMENT_PRESENT_IN_SALES',
-          'blocking',
-          `El documento anulado ${document.documentNumber} continúa presente en Ventas.`,
-          {
-            periodId: document.projectBillingPeriodId,
-            projectId: document.projectId,
-            documentNumber: document.documentNumber,
-          },
-        ),
-      )
+    if (document.status === 'voided' && document.salesDocumentPresent) {
+      if (document.salesDocumentFinanciallyMaterial) {
+        addIssue(
+          issues,
+          issue(
+            'VOIDED_PROJECT_DOCUMENT_WITH_FINANCIAL_IMPACT',
+            materialSeverity,
+            currentPeriodIssue
+              ? `El documento anulado ${document.documentNumber} conserva Revenue, GP o cantidad en Ventas del periodo actual.`
+              : `El documento anulado histórico ${document.documentNumber} conserva impacto financiero en Ventas.`,
+            context,
+          ),
+        )
+      } else {
+        addIssue(
+          issues,
+          issue(
+            'VOIDED_PROJECT_DOCUMENT_ZERO_VALUE',
+            'information',
+            `El documento anulado ${document.documentNumber} permanece en Ventas con contribución financiera cero.`,
+            context,
+          ),
+        )
+      }
     }
 
     if (document.creditNoteSignAnomaly) {
@@ -743,13 +778,11 @@ function relevantReconciliationIssues(
         issues,
         issue(
           'PROJECT_CREDIT_NOTE_SIGN_ANOMALY',
-          'blocking',
-          `La nota de crédito ${document.documentNumber} tiene Revenue positivo en Ventas.`,
-          {
-            periodId: document.projectBillingPeriodId,
-            projectId: document.projectId,
-            documentNumber: document.documentNumber,
-          },
+          materialSeverity,
+          currentPeriodIssue
+            ? `La nota de crédito ${document.documentNumber} tiene Revenue positivo en Ventas del periodo actual.`
+            : `La nota de crédito histórica ${document.documentNumber} tiene Revenue positivo en Ventas.`,
+          context,
         ),
       )
     }
@@ -761,11 +794,7 @@ function relevantReconciliationIssues(
           'PROJECT_BILLING_PERIOD_MISMATCH',
           'warning',
           `El documento ${document.documentNumber} difiere entre periodo de facturación y periodo de Ventas.`,
-          {
-            periodId: document.projectBillingPeriodId,
-            projectId: document.projectId,
-            documentNumber: document.documentNumber,
-          },
+          context,
         ),
       )
     }
@@ -777,11 +806,7 @@ function relevantReconciliationIssues(
           'PROJECT_BILLING_CUSTOMER_MISMATCH',
           'warning',
           `El documento ${document.documentNumber} presenta una diferencia de cliente.`,
-          {
-            periodId: document.projectBillingPeriodId,
-            projectId: document.projectId,
-            documentNumber: document.documentNumber,
-          },
+          context,
         ),
       )
     }
@@ -793,11 +818,7 @@ function relevantReconciliationIssues(
           'PROJECT_BILLING_ORPHAN_PROJECT',
           'warning',
           `El proyecto ${document.projectId} tiene facturación histórica sin registro maestro vigente.`,
-          {
-            periodId: document.projectBillingPeriodId,
-            projectId: document.projectId,
-            documentNumber: document.documentNumber,
-          },
+          context,
         ),
       )
     }
@@ -894,7 +915,7 @@ function buildPipelineSummary(
 function buildQualityProfile(
   issues: readonly ProjectAwareForecastQualityIssue[],
   contributions: readonly ProjectAwareForecastProjectContribution[],
-  reconciliationCoverage: number,
+  reconciliation: ReconciliationQualityContext,
 ): ProjectAwareForecastQualityProfile {
   const pipeline = buildPipelineSummary(contributions)
 
@@ -909,7 +930,15 @@ function buildQualityProfile(
     information: issues.filter(
       (candidate) => candidate.severity === 'information',
     ).length,
-    reconciliationCoverage,
+    reconciliationCoverage: reconciliation.currentCoverage,
+    historicalReconciliationCoverage:
+      reconciliation.historicalCoverage,
+    currentPeriodId: reconciliation.currentPeriodId,
+    pendingCutoffDocuments:
+      reconciliation.pendingCutoffDocuments,
+    salesDataCutoff: reconciliation.salesDataCutoff,
+    projectBillingDataCutoff:
+      reconciliation.projectBillingDataCutoff,
     matureProjectsEvaluated: pipeline.matureProjects,
     matureProjectsIncluded: pipeline.matureIncludedProjects,
     matureProjectsBlocked: pipeline.matureBlockedProjects,
@@ -1005,14 +1034,30 @@ function buildConfidence(
 
   if (quality.reconciliationCoverage >= 0.9999) {
     score += 8
-    signals.push('La facturación de proyectos relevante está conciliada al 100% contra Ventas.')
+    signals.push('La facturación de proyectos del periodo actual está conciliada al 100% contra Ventas.')
   } else {
     score -= Math.min(
       20,
       (1 - quality.reconciliationCoverage) * 30,
     )
     limitations.push(
-      `La cobertura documental de facturación de proyectos es ${(quality.reconciliationCoverage * 100).toFixed(1)}%.`,
+      `La cobertura documental del periodo actual es ${(quality.reconciliationCoverage * 100).toFixed(1)}%.`,
+    )
+  }
+
+  if (quality.historicalReconciliationCoverage < 0.9999) {
+    score -= Math.min(
+      8,
+      (1 - quality.historicalReconciliationCoverage) * 12,
+    )
+    limitations.push(
+      `La cobertura histórica de facturación de proyectos es ${(quality.historicalReconciliationCoverage * 100).toFixed(1)}%; reduce confianza, pero no bloquea el cierre actual.`,
+    )
+  }
+
+  if (quality.pendingCutoffDocuments > 0) {
+    limitations.push(
+      `${quality.pendingCutoffDocuments} documentos de proyectos son posteriores al corte de Ventas y se conciliarán en la siguiente carga.`,
     )
   }
 
@@ -1140,7 +1185,7 @@ function buildProjection(
   brandPeriod: ProjectBillingReconciliationBrandPeriod | undefined,
   contributions: readonly ProjectAwareForecastProjectContribution[],
   globalIssues: readonly ProjectAwareForecastQualityIssue[],
-  reconciliationCoverage: number,
+  reconciliation: ReconciliationQualityContext,
 ): ProjectAwareForecastProjection {
   const selectedContributions = filterContributions(
     contributions,
@@ -1172,7 +1217,7 @@ function buildProjection(
   const quality = buildQualityProfile(
     relevantIssues,
     selectedContributions,
-    reconciliationCoverage,
+    reconciliation,
   )
   const status = resolveStatus(baseline, quality)
   const officialAvailable = status === 'ready' || status === 'partial'
@@ -1238,7 +1283,18 @@ function buildProjection(
 function emptyQuality(
   issues: readonly ProjectAwareForecastQualityIssue[],
 ): ProjectAwareForecastQualityProfile {
-  return buildQualityProfile(issues, [], 0)
+  return buildQualityProfile(
+    issues,
+    [],
+    {
+      currentCoverage: 0,
+      historicalCoverage: 0,
+      currentPeriodId: null,
+      pendingCutoffDocuments: 0,
+      salesDataCutoff: null,
+      projectBillingDataCutoff: null,
+    },
+  )
 }
 
 export class ProjectAwareForecastEngine {
@@ -1308,25 +1364,35 @@ export class ProjectAwareForecastEngine {
     const currentReconciliation = reconciliation.periods.find(
       (period) => period.periodId === currentPeriodId,
     )
-    const relevantCoveragePeriods = reconciliation.periods.filter(
+    const historicalCoveragePeriods = reconciliation.periods.filter(
       (period) =>
-        this.foundation.history.baselinePeriodIds.includes(period.periodId) ||
-        period.periodId === currentPeriodId,
+        this.foundation.history.baselinePeriodIds.includes(period.periodId),
     )
-    const relevantMatchedDocuments = relevantCoveragePeriods.reduce(
+    const historicalMatchedDocuments = historicalCoveragePeriods.reduce(
       (total, period) => total + period.matchedBillingDocuments,
       0,
     )
-    const relevantActiveDocuments = relevantCoveragePeriods.reduce(
+    const historicalEligibleDocuments = historicalCoveragePeriods.reduce(
       (total, period) =>
         total +
         period.matchedBillingDocuments +
-        period.missingBillingDocuments,
+        period.missingBillingDocuments +
+        period.conflictBillingDocuments,
       0,
     )
-    const reconciliationCoverage = relevantActiveDocuments === 0
-      ? 1
-      : relevantMatchedDocuments / relevantActiveDocuments
+    const reconciliationContext: ReconciliationQualityContext = {
+      currentCoverage:
+        currentReconciliation?.reconciliationCoverage ?? 1,
+      historicalCoverage: historicalEligibleDocuments === 0
+        ? 1
+        : historicalMatchedDocuments / historicalEligibleDocuments,
+      currentPeriodId,
+      pendingCutoffDocuments:
+        currentReconciliation?.pendingCutoffBillingDocuments ?? 0,
+      salesDataCutoff: reconciliation.quality.salesDataCutoff,
+      projectBillingDataCutoff:
+        reconciliation.quality.projectBillingDataCutoff,
+    }
 
     const baselineEngine = new ForecastBaselineEngine(
       this.model,
@@ -1378,7 +1444,7 @@ export class ProjectAwareForecastEngine {
       undefined,
       contributionResult.contributions,
       issues,
-      reconciliationCoverage,
+      reconciliationContext,
     )
 
     const brandPeriods = new Map(
@@ -1409,7 +1475,7 @@ export class ProjectAwareForecastEngine {
           brandPeriods.get(brandId),
           contributionResult.contributions,
           issues,
-          reconciliationCoverage,
+          reconciliationContext,
         )
       })
       .filter(

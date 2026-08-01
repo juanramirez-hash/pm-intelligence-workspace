@@ -19,12 +19,14 @@ import {
 function workspaceFixture(): ForecastWorkspaceModel {
   return {
     available: true,
+    officialAvailable: true,
     status: 'ready',
     unavailableReason: null,
     generatedAt: '2026-07-31T12:00:00.000Z',
     methodology: {
       baseline: 'baseline-v1',
       inventory: 'forecast-inventory-v1',
+      projectAware: 'project-aware-v1',
     },
     scenarioId: 'expected',
     scenarios: [
@@ -38,6 +40,7 @@ function workspaceFixture(): ForecastWorkspaceModel {
         portfolioQuantity: 90,
         portfolioGrossMargin: 0.25,
         targetAttainment: 0.9,
+        official: true,
       },
       {
         id: 'expected',
@@ -49,6 +52,7 @@ function workspaceFixture(): ForecastWorkspaceModel {
         portfolioQuantity: 100,
         portfolioGrossMargin: 0.25,
         targetAttainment: 1,
+        official: true,
       },
       {
         id: 'accelerated',
@@ -60,6 +64,7 @@ function workspaceFixture(): ForecastWorkspaceModel {
         portfolioQuantity: 110,
         portfolioGrossMargin: 0.25,
         targetAttainment: 1.1,
+        official: true,
       },
     ],
     filters: {
@@ -101,6 +106,7 @@ function workspaceFixture(): ForecastWorkspaceModel {
     },
     portfolio: {
       available: true,
+      officialAvailable: true,
       actual: {
         revenue: 800,
         grossProfit: 200,
@@ -119,8 +125,111 @@ function workspaceFixture(): ForecastWorkspaceModel {
       targetStatus: 'on-track',
       confidenceScore: 90,
       confidenceLevel: 'high',
+      origin: {
+        actualTotal: {
+          revenue: 800,
+          grossProfit: 200,
+          quantity: 80,
+          documents: 8,
+        },
+        actualTransactional: {
+          revenue: 600,
+          grossProfit: 150,
+          quantity: 60,
+          documents: 6,
+        },
+        actualProjectBilling: {
+          revenue: 200,
+          grossProfit: 50,
+          quantity: 20,
+          documents: 2,
+        },
+        projectedTransactional: {
+          revenue: 700,
+          grossProfit: 175,
+          quantity: 70,
+        },
+        projectBillingActual: {
+          revenue: 200,
+          grossProfit: 50,
+          quantity: 20,
+        },
+        maturePipeline: {
+          revenue: 100,
+          grossProfit: 25,
+          quantity: 0,
+        },
+        combined: {
+          revenue: 1_000,
+          grossProfit: 250,
+          quantity: 90,
+        },
+      },
       explainability: ['La proyeccion combina metodos disponibles.'],
       limitations: [],
+    },
+    projectPipeline: {
+      status: 'ready',
+      officialAvailable: true,
+      summary: {
+        matureProjects: 1,
+        matureIncludedProjects: 1,
+        matureBlockedProjects: 0,
+        matureRevenueMxn: 100,
+        matureEstimatedGrossProfitMxn: 25,
+        potentialProjects: 1,
+        potentialAvailableProjects: 1,
+        potentialRevenueMxn: 300,
+        potentialWeightedRevenueMxn: 120,
+        potentialEstimatedGrossProfitMxn: 75,
+        missingExchangeRates: 0,
+        grossProfitEstimateCoverage: 1,
+        quantityAvailable: false,
+      },
+      contributions: [
+        {
+          id: 'PROY-1::2026-07',
+          projectId: 'PROY-1',
+          projectName: 'Proyecto Uno',
+          brandId: 'UNV',
+          statusCode: '05',
+          statusLabel: '05 Esperando OC',
+          forecastStage: 'mature',
+          contributionStatus: 'included',
+          estimatedBillingDate: '2026-07-31',
+          periodId: '2026-07',
+          closingProbability: 1,
+          sourceCurrency: 'USD',
+          sourceAmount: 5,
+          exchangeRate: 20,
+          convertedAmountMxn: 100,
+          weightedAmountMxn: 100,
+          conversionStatus: 'converted',
+          estimatedGrossMargin: 0.25,
+          estimatedGrossProfitMxn: 25,
+          marginSource: 'historical-project-brand',
+          issueCodes: [],
+        },
+      ],
+      quality: {
+        issues: [],
+        blockingIssues: 0,
+        warnings: 0,
+        information: 0,
+        reconciliationCoverage: 1,
+        historicalReconciliationCoverage: 1,
+        currentPeriodId: '2026-07',
+        pendingCutoffDocuments: 0,
+        salesDataCutoff: '2026-07-21',
+        projectBillingDataCutoff: '2026-07-31',
+        matureProjectsEvaluated: 1,
+        matureProjectsIncluded: 1,
+        matureProjectsBlocked: 0,
+        potentialProjectsEvaluated: 1,
+        potentialProjectsAvailable: 1,
+        missingExchangeRates: 0,
+        grossProfitEstimateCoverage: 1,
+      },
     },
     inventory: {
       reportStatus: 'ready',
@@ -154,16 +263,43 @@ function workspaceFixture(): ForecastWorkspaceModel {
       {
         brandId: 'UNV',
         label: 'UNV',
+        officialAvailable: true,
         actual: {
           revenue: 800,
           grossProfit: 200,
           quantity: 80,
+        },
+        actualTransactional: {
+          revenue: 600,
+          grossProfit: 150,
+          quantity: 60,
+          documents: 6,
+        },
+        actualProjectBilling: {
+          revenue: 200,
+          grossProfit: 50,
+          quantity: 20,
+          documents: 2,
+        },
+        projectedTransactional: {
+          revenue: 700,
+          grossProfit: 175,
+          quantity: 70,
+        },
+        maturePipeline: {
+          revenue: 100,
+          grossProfit: 25,
+          quantity: 0,
         },
         projected: {
           revenue: 1_000,
           grossProfit: 250,
           quantity: 100,
         },
+        potentialPipelineRevenue: 300,
+        potentialWeightedPipelineRevenue: 120,
+        matureProjects: 1,
+        potentialProjects: 1,
         projectedGrossMargin: 0.25,
         targetRevenue: 1_000,
         targetAttainment: 1,
@@ -272,7 +408,7 @@ function workspaceFixture(): ForecastWorkspaceModel {
   }
 }
 
-describe('FW-006 Forecast Executive Export', () => {
+describe('FW-010 Forecast Executive Export', () => {
   it('genera resumen deterministico con escenario, filtros y hallazgos', () => {
     const summary = buildForecastExecutiveSummary(
       workspaceFixture(),
@@ -281,10 +417,11 @@ describe('FW-006 Forecast Executive Export', () => {
     expect(summary.scenarioLabel).toBe('Esperado')
     expect(summary.overview).toContain('$1,000')
     expect(summary.outlook).toContain('objetivo')
-    expect(summary.findings).toHaveLength(5)
+    expect(summary.findings).toHaveLength(7)
+    expect(summary.overview).toContain('Forecast transaccional')
   })
 
-  it('construye las seis hojas ejecutivas y conserva navegacion', () => {
+  it('construye las siete hojas Project-Aware y conserva navegacion', () => {
     const workspace = workspaceFixture()
     const payload = buildForecastExecutiveExport(
       {
@@ -300,11 +437,19 @@ describe('FW-006 Forecast Executive Export', () => {
     expect(payload.sheets.map((sheet) => sheet.name)).toEqual([
       'Resumen Ejecutivo',
       'Forecast por Marca',
+      'Pipeline de Proyectos',
       'Riesgos por Producto',
       'Oportunidades',
       'Cobertura y Balance',
       'Metodologia y Fuentes',
     ])
+
+    const projectRows = payload.sheets.find(
+      (sheet) => sheet.name === 'Pipeline de Proyectos',
+    )?.rows
+
+    expect(projectRows?.[1]).toContain('PROY-1')
+    expect(projectRows?.[1]).toContain('Incluido')
 
     const riskRows = payload.sheets.find(
       (sheet) => sheet.name === 'Riesgos por Producto',

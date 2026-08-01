@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   BadgeDollarSign,
-  Boxes,
   CheckCircle2,
   CircleGauge,
   Crosshair,
@@ -57,7 +56,10 @@ import {
   ForecastBrandTable,
   ForecastCoveragePanel,
   ForecastFilterBar,
+  ForecastOriginBreakdown,
   ForecastPriorityList,
+  ForecastProjectPipelinePanel,
+  ForecastProjectQualityPanel,
   ForecastScenarioSelector,
 } from '../components'
 
@@ -160,6 +162,14 @@ function workspaceStatusPresentation(
       label: 'Forecast disponible con limitaciones',
       className: 'bg-amber-100 text-amber-800',
       icon: <AlertTriangle size={13} />,
+    }
+  }
+
+  if (status === 'blocked') {
+    return {
+      label: 'Forecast provisional · bloqueos de calidad',
+      className: 'bg-rose-100 text-rose-700',
+      icon: <ShieldAlert size={13} />,
     }
   }
 
@@ -327,8 +337,8 @@ export function ForecastWorkspacePage() {
               </ShellActions>
             </div>
           )}
-          description="Proyecta el cierre comercial y conecta demanda, objetivos, inventario, cobertura y sustituciones para priorizar decisiones del Product Manager."
-          eyebrow="Forecast Decision Intelligence"
+          description="Separa venta transaccional, facturación real de proyectos y pipeline maduro para proyectar el cierre sin doble conteo y con trazabilidad completa."
+          eyebrow="Project-Aware Forecast Intelligence"
           icon={<Crosshair size={22} />}
           metadata={(
             <>
@@ -352,14 +362,38 @@ export function ForecastWorkspacePage() {
           ) : undefined}
           metrics={[
             {
-              label: 'Cierre proyectado',
+              label: 'Cierre Project-Aware',
               value: formatForecastCurrency(
                 workspace.portfolio.projected.revenue,
                 true,
               ),
-              helper: `Escenario ${scenarioLabel(workspace.scenarioId).toLowerCase()}`,
+              helper: workspace.officialAvailable
+                ? `Escenario ${scenarioLabel(workspace.scenarioId).toLowerCase()} oficial`
+                : 'Resultado provisional por bloqueos de calidad',
               icon: <TrendingUp size={17} />,
-              tone: 'intelligence',
+              tone: workspace.officialAvailable
+                ? 'intelligence'
+                : 'attention',
+            },
+            {
+              label: 'Forecast transaccional',
+              value: formatForecastCurrency(
+                workspace.portfolio.origin.projectedTransactional.revenue,
+                true,
+              ),
+              helper: 'Baseline sobre venta sin proyectos',
+              icon: <CircleGauge size={17} />,
+              tone: 'default',
+            },
+            {
+              label: 'Pipeline maduro',
+              value: formatForecastCurrency(
+                workspace.portfolio.origin.maturePipeline.revenue,
+                true,
+              ),
+              helper: `${workspace.projectPipeline.summary.matureIncludedProjects} proyectos 05–06 incluidos`,
+              icon: <Target size={17} />,
+              tone: 'attention',
             },
             {
               label: 'Cumplimiento esperado',
@@ -370,34 +404,8 @@ export function ForecastWorkspacePage() {
                 workspace.portfolio.targetRevenue,
                 true,
               )}`,
-              icon: <Target size={17} />,
-              tone: targetTone(workspace.portfolio.targetStatus),
-            },
-            {
-              label: 'Brecha contra objetivo',
-              value: formatForecastCurrency(
-                workspace.portfolio.revenueGap,
-                true,
-              ),
-              helper: workspace.portfolio.revenueGap === 0
-                ? 'Sin brecha pendiente'
-                : 'Venta adicional requerida',
-              icon: <CircleGauge size={17} />,
-              tone: workspace.portfolio.revenueGap === 0
-                ? 'positive'
-                : 'attention',
-            },
-            {
-              label: 'Margen proyectado',
-              value: formatForecastPercentage(
-                workspace.portfolio.projectedGrossMargin,
-              ),
-              helper: `GP ${formatForecastCurrency(
-                workspace.portfolio.projected.grossProfit,
-                true,
-              )}`,
               icon: <BadgeDollarSign size={17} />,
-              tone: 'positive',
+              tone: targetTone(workspace.portfolio.targetStatus),
             },
           ]}
           score={{
@@ -414,25 +422,41 @@ export function ForecastWorkspacePage() {
           )}
           summaryItems={[
             {
-              label: 'Venta acumulada',
+              label: 'Venta total real',
               value: formatForecastCurrency(
-                workspace.portfolio.actual.revenue,
+                workspace.portfolio.origin.actualTotal.revenue,
                 true,
               ),
             },
             {
-              label: 'Objetivo mensual',
+              label: 'Venta transaccional real',
               value: formatForecastCurrency(
-                workspace.portfolio.targetRevenue,
+                workspace.portfolio.origin.actualTransactional.revenue,
                 true,
               ),
             },
             {
-              label: 'Ritmo diario requerido',
+              label: 'Proyectos facturados',
               value: formatForecastCurrency(
-                workspace.portfolio.requiredDailyRevenue,
+                workspace.portfolio.origin.actualProjectBilling.revenue,
                 true,
               ),
+            },
+            {
+              label: 'Upside potencial',
+              value: formatForecastCurrency(
+                workspace.projectPipeline.summary.potentialRevenueMxn,
+                true,
+              ),
+            },
+            {
+              label: 'Bloqueos de calidad',
+              value: formatForecastInteger(
+                workspace.projectPipeline.quality.blockingIssues,
+              ),
+              tone: workspace.projectPipeline.quality.blockingIssues > 0
+                ? 'critical'
+                : 'positive',
             },
             {
               label: 'Días laborales',
@@ -441,23 +465,8 @@ export function ForecastWorkspacePage() {
                 : `${workspace.period.elapsedWorkingDays ?? 0}/${workspace.period.totalWorkingDays}`,
             },
             {
-              label: 'Productos analizados',
-              value: formatForecastInteger(
-                workspace.inventory.filteredProducts,
-              ),
-            },
-            {
-              label: 'Prioridad crítica',
-              value: formatForecastInteger(
-                workspace.inventory.criticalItems,
-              ),
-              tone: workspace.inventory.criticalItems > 0
-                ? 'critical'
-                : 'positive',
-            },
-            {
               label: 'Metodología',
-              value: workspace.methodology.baseline,
+              value: workspace.methodology.projectAware,
             },
           ]}
           theme="forecast"
@@ -510,50 +519,53 @@ export function ForecastWorkspacePage() {
             </div>
           )}
 
-          <KPIGrid columns={6} gap="compact">
-            <IntelligentKpiCard
-              context={`Corte ${formatForecastDate(workspace.period.dataCutoff)}`}
-              icon={<BadgeDollarSign size={19} />}
-              insight="Venta acumulada registrada en el periodo actual."
-              source="Business Repository"
-              status={{
-                label: 'Real acumulado',
-                tone: 'neutral',
-              }}
-              title="Venta actual"
-              tone="neutral"
-              value={formatForecastCurrency(
-                workspace.portfolio.actual.revenue,
-                true,
-              )}
-            />
 
-            <IntelligentKpiCard
-              context={`Escenario ${scenarioLabel(workspace.scenarioId)}`}
+          {!workspace.officialAvailable && (
+            <div
+              className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900"
+              role="alert"
+            >
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="mt-0.5 shrink-0" size={20} />
+                <div>
+                  <p className="font-semibold">
+                    Forecast oficial bloqueado por calidad de datos
+                  </p>
+                  <p className="mt-1 text-sm leading-6">
+                    La lectura permanece visible para auditoría, pero no debe utilizarse como cierre oficial hasta resolver {workspace.projectPipeline.quality.blockingIssues} incidencias bloqueantes. Revisa conciliación, proyectos y tipos de cambio en Data Center.
+                  </p>
+                  <Link
+                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-rose-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-800"
+                    to="/data-center"
+                  >
+                    <Database size={16} />
+                    Resolver en Data Center
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div data-forecast-print-section="origin-breakdown">
+            <ExecutivePanel
               icon={<TrendingUp size={19} />}
-              insight="Cierre mensual generado por Forecast Baseline Engine."
-              source={workspace.methodology.baseline}
-              status={{
-                label: confidenceLabel(workspace.portfolio.confidenceLevel),
-                tone: workspace.portfolio.confidenceLevel === 'high'
-                  ? 'positive'
-                  : workspace.portfolio.confidenceLevel === 'medium'
-                    ? 'attention'
-                    : 'critical',
-              }}
-              title="Venta proyectada"
+              subtitle="La proyección separa el comportamiento transaccional, la facturación ya realizada por proyectos y el pipeline maduro todavía pendiente."
+              title="Composición del cierre Project-Aware"
               tone="intelligence"
-              value={formatForecastCurrency(
-                workspace.portfolio.projected.revenue,
-                true,
-              )}
-            />
+            >
+              <ForecastOriginBreakdown
+                portfolio={workspace.portfolio}
+                projectPipeline={workspace.projectPipeline}
+              />
+            </ExecutivePanel>
+          </div>
 
+          <KPIGrid columns={4} gap="compact">
             <IntelligentKpiCard
               context={`Margen ${formatForecastPercentage(workspace.portfolio.projectedGrossMargin)}`}
               icon={<BadgeDollarSign size={19} />}
-              insight="Gross Profit proyectado para el escenario activo."
-              source={workspace.methodology.baseline}
+              insight="Gross Profit combinado del Forecast transaccional, proyectos facturados y pipeline maduro."
+              source={workspace.methodology.projectAware}
               title="GP proyectado"
               tone="positive"
               value={formatForecastCurrency(
@@ -563,23 +575,26 @@ export function ForecastWorkspacePage() {
             />
 
             <IntelligentKpiCard
+              context={`${workspace.projectPipeline.summary.potentialAvailableProjects} proyectos 03–04`}
+              icon={<Sparkles size={19} />}
+              insight="Oportunidad visible fuera del Forecast oficial; el monto ponderado utiliza la probabilidad declarada."
+              source="Project Pipeline"
+              title="Upside potencial"
+              tone="intelligence"
+              value={formatForecastCurrency(
+                workspace.projectPipeline.summary.potentialRevenueMxn,
+                true,
+              )}
+            />
+
+            <IntelligentKpiCard
               context={`${formatForecastInteger(workspace.inventory.productsWithProjectedDemand)} productos con demanda`}
               icon={<PackageCheck size={19} />}
-              insight="Unidades mensuales estimadas para los productos filtrados."
+              insight="La demanda por SKU conserva el motor de inventario; el pipeline sin detalle de productos no genera unidades artificiales."
               source={workspace.methodology.inventory}
               title="Demanda proyectada"
               tone="intelligence"
               value={`${formatForecastInteger(workspace.inventory.expectedDemandUnits)} uds.`}
-            />
-
-            <IntelligentKpiCard
-              context={`${formatForecastInteger(workspace.inventory.inboundUnits)} unidades en tránsito u orden`}
-              icon={<Boxes size={19} />}
-              insight="Disponibilidad actual antes de atender la demanda restante."
-              source="Inventory Repository"
-              title="Disponible"
-              tone="neutral"
-              value={`${formatForecastInteger(workspace.inventory.availableUnits)} uds.`}
             />
 
             <IntelligentKpiCard
@@ -607,7 +622,7 @@ export function ForecastWorkspacePage() {
             <ExecutivePanel
               count={`${workspace.inventory.filteredProducts}/${workspace.inventory.productsAnalyzed}`}
               icon={<Crosshair size={19} />}
-              subtitle="La selección modifica productos, cobertura y rankings; no altera el cierre consolidado del portafolio."
+              subtitle="La marca y la búsqueda también segmentan el pipeline visible; cobertura y prioridad continúan aplicando a productos e inventario."
               title="Segmentación del Forecast"
               tone="intelligence"
             >
@@ -616,6 +631,34 @@ export function ForecastWorkspacePage() {
                 onChange={setFilters}
                 onReset={resetFilters}
                 options={workspace.filterOptions}
+              />
+            </ExecutivePanel>
+          </div>
+
+          <div data-forecast-print-section="project-pipeline">
+            <ExecutivePanel
+              count={workspace.projectPipeline.contributions.length}
+              icon={<Target size={19} />}
+              subtitle="Proyectos del periodo clasificados como incluidos, upside, bloqueados o excluidos; los montos convertidos conservan moneda, tasa y trazabilidad."
+              title="Pipeline de proyectos del Forecast"
+              tone="attention"
+            >
+              <ForecastProjectPipelinePanel
+                contributions={workspace.projectPipeline.contributions}
+              />
+            </ExecutivePanel>
+          </div>
+
+          <div data-forecast-print-section="project-quality">
+            <ExecutivePanel
+              count={workspace.projectPipeline.quality.issues.length}
+              icon={<ShieldAlert size={19} />}
+              subtitle="Controles de conciliación, tipos de cambio, duplicidad, fechas, monto pendiente y cobertura de GP estimado."
+              title="Calidad y disponibilidad oficial"
+              tone={workspace.officialAvailable ? 'positive' : 'critical'}
+            >
+              <ForecastProjectQualityPanel
+                pipeline={workspace.projectPipeline}
               />
             </ExecutivePanel>
           </div>
@@ -697,7 +740,7 @@ export function ForecastWorkspacePage() {
             <ExecutivePanel
               count={workspace.brands.length}
               icon={<Target size={19} />}
-              subtitle="Comparación de cierre, objetivo, confianza y riesgo de inventario por marca."
+              subtitle="Comparación por marca de Forecast transaccional, proyecto facturado, pipeline maduro, cierre combinado, objetivo y riesgo de inventario."
               title="Forecast ejecutivo por marca"
               tone="intelligence"
             >
@@ -759,7 +802,7 @@ export function ForecastWorkspacePage() {
             <ExecutivePanel
               count={workspace.limitations.length}
               icon={<AlertTriangle size={19} />}
-              subtitle={`Generado ${formatForecastDate(workspace.generatedAt)} · ${workspace.methodology.baseline} + ${workspace.methodology.inventory}`}
+              subtitle={`Generado ${formatForecastDate(workspace.generatedAt)} · ${workspace.methodology.projectAware} + ${workspace.methodology.inventory}`}
               title="Limitaciones y calidad de fuente"
               tone="attention"
             >

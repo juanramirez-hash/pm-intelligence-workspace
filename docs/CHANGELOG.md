@@ -1,3 +1,45 @@
+# 0.38.3-FW-010-HOTFIX3
+
+- Corrige la cobertura del periodo actual cuando todos los documentos pendientes se encuentran despues del corte de Ventas.
+- Los documentos `pending_cutoff` permanecen fuera del universo elegible de conciliacion y ya no provocan una cobertura artificial de 0%.
+- Cuando el periodo no contiene documentos elegibles —conciliados, faltantes dentro del corte o conflictivos— la cobertura se publica como 100%, porque no existe rezago conciliable.
+- Se conserva el conteo independiente de documentos pendientes por diferencia de corte y todos los bloqueos materiales definidos en FW-010 Hotfix 2.
+- No modifica venta transaccional, facturacion de proyectos, Forecast Project-Aware, pipeline, GP, escenarios, UI ni exportacion Excel.
+
+# 0.38.2-FW-010-HOTFIX2
+
+- Ajusta Project Billing Reconciliation para evaluar diferencias por corte temporal, periodo y materialidad financiera.
+- Los documentos de Facturacion de proyectos posteriores al corte de Ventas se clasifican como `pending_cutoff`; permanecen auditables y no bloquean el Forecast actual.
+- Los documentos historicos faltantes o conflictivos reducen confianza y generan advertencias, pero no impiden publicar el cierre del periodo vigente.
+- Los documentos anulados solo bloquean cuando conservan Revenue, GP o cantidad material en Ventas; los anulados con contribucion cero se clasifican como informacion.
+- La cobertura de conciliacion se separa entre periodo actual e historico, excluyendo del denominador los documentos pendientes por diferencia de corte.
+- Data Center muestra ambos cortes, pendientes por corte, anulados con impacto, anulados en cero y excepciones historicas.
+- Forecast Workspace prioriza incidencias del periodo actual y limita la lista visual; la exportacion Excel conserva el detalle completo.
+- Se preservan los bloqueos por faltantes actuales dentro del corte, conflictos actuales, notas de credito con signo anomalo, tipo de cambio faltante y pipeline maduro invalido.
+
+# 0.38.1-FW-010-HOTFIX1
+
+- Corrige el fixture de `buildForecastWorkspace.test.ts` para representar una fundacion Project-Aware completa.
+- El caso listo incorpora un proyecto y un documento historicos fuera de los periodos relevantes, sin alterar Forecast, facturacion actual ni pipeline.
+- Conserva el bloqueo productivo cuando Proyectos o Facturacion de proyectos realmente no estan disponibles.
+- No modifica formulas, disponibilidad oficial en produccion, UI, exportacion ni contratos del Business Core.
+
+# 0.38.0-FW-010
+
+- Forecast Workspace consume `project-aware-v1` como fuente comercial oficial y deja de presentar la proyección mezclada anterior.
+- Executive Hero y KPIs separan Forecast transaccional, facturación real de proyectos, pipeline maduro pendiente y cierre combinado.
+- Estado `blocked` y alerta ejecutiva cuando conciliación, tipo de cambio, fechas, montos o duplicidad impiden publicar un Forecast oficial.
+- Nuevo panel de composición por origen con documentos conciliados, proyectos incluidos y condición oficial/provisional.
+- Nuevo panel auditable de Pipeline de proyectos con status, tratamiento, fecha estimada, moneda, tipo de cambio, monto MXN, ponderación, GP estimado e incidencias.
+- Nuevo panel de calidad con cobertura de conciliación, bloqueos, tipos de cambio faltantes, cobertura de GP estimado y detalle de issues.
+- Tabla por marca ampliada con Forecast transaccional, proyecto facturado, pipeline maduro, cierre combinado y upside potencial.
+- Resumen ejecutivo determinístico actualizado con siete hallazgos Project-Aware.
+- Exportación Excel versión 2.0 con siete hojas y nueva hoja `Pipeline de Proyectos`; incluye componentes por origen, calidad, metodología, tasas e incidencias.
+- Corrección del formateador de Excel para aplicar formatos numéricos correctamente después de la columna Z.
+- Impresión/PDF ajustada para composición, pipeline, calidad, cobertura, marcas, prioridades y metodología.
+- Pruebas visuales y de exportación ampliadas para composición, pipeline, calidad, escenarios y siete hojas.
+- Forecast Workspace queda cerrado funcionalmente de FW-001 a FW-010.
+
 # 0.37.0-FW-009
 
 - Nuevo motor determinístico `project-aware-v1` para reconstruir el cierre mensual por origen de venta.

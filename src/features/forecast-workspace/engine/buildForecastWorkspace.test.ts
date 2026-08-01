@@ -13,6 +13,14 @@ import type {
 } from '../../data-center/importers/products/productMasterTypes'
 
 import type {
+  NormalizedProjectRow,
+} from '../../data-center/importers/projects/projectTypes'
+
+import type {
+  NormalizedProjectBillingRow,
+} from '../../data-center/importers/project-billings/projectBillingTypes'
+
+import type {
   NormalizedSalesRow,
 } from '../../data-center/importers/sales/salesTypes'
 
@@ -130,6 +138,75 @@ function inventoryRow(
   }
 }
 
+function historicalProject(): NormalizedProjectRow {
+  return {
+    internalId: 'PROJECT-HISTORY',
+    projectId: 'PROY-HISTORY',
+    name: 'Proyecto historico de referencia',
+    endUser: null,
+    customerId: 'C-HISTORY',
+    customerName: 'Cliente historico',
+    salesExecutive: null,
+    location: 'CDMX',
+    assignedBusinessDeveloper: null,
+    assignedProductManager: null,
+    group: null,
+    primaryBrand: 'UNV',
+    createdAt: '2025-01-10',
+    elapsedDays: null,
+    currency: 'MXN',
+    statusCode: '07',
+    statusLabel: '07 Finalizado / Facturado',
+    forecastStage: 'realized',
+    closingProbability: 1,
+    estimatedCloseDate: '2025-01-15',
+    estimatedBillingDate: '2025-01-15',
+    amountToClose: 0,
+    observations: null,
+    assignedEngineer: null,
+    approximateAmount: 100,
+    invoicedAmount: 100,
+    reportAmountToInvoice: 0,
+    amountToInvoice: 0,
+    isDuplicate: false,
+  }
+}
+
+function historicalProjectBilling(): NormalizedProjectBillingRow {
+  return {
+    lineKey: 'PROJECT-HISTORY::F-HISTORY::P-HISTORY',
+    duplicateOccurrences: 0,
+    internalId: 'BILLING-HISTORY',
+    projectId: 'PROY-HISTORY',
+    projectDescription: 'Proyecto historico de referencia',
+    endUser: null,
+    customerId: 'C-HISTORY',
+    customerName: 'Cliente historico',
+    primaryBrand: 'UNV',
+    itemCode: 'P-HISTORY',
+    model: 'P-HISTORY',
+    brand: 'UNV',
+    quantity: 1,
+    amount: 100,
+    date: '2025-01-15',
+    periodId: '2025-01',
+    documentNumber: 'F-HISTORY',
+    documentType: 'invoice',
+    documentStatus: 'Paid In Full',
+    createdFrom: null,
+    relatedDocumentStatus: null,
+    currency: 'MXN',
+    isVoided: false,
+    estimatedCloseDate: '2025-01-15',
+    estimatedBillingDate: '2025-01-15',
+    estimatedDeliveryDate: null,
+    salesRepresentative: null,
+    salesLocation: 'CDMX',
+    assignedBusinessDeveloper: null,
+    purchaseDescription: null,
+  }
+}
+
 function createRepository(): BusinessRepository {
   const model = buildBusinessDataModel(
     [
@@ -141,6 +218,8 @@ function createRepository(): BusinessRepository {
       salesRow('2026-03-13', 'P-OLD', 20, 2),
     ],
     {
+      projects: [historicalProject()],
+      projectBillings: [historicalProjectBilling()],
       brandTargets: [
         {
           brandId: 'UNV',
@@ -185,11 +264,13 @@ function createRepository(): BusinessRepository {
   return new BusinessRepository(model)
 }
 
-describe('FW-004 Forecast Workspace Model', () => {
+describe('FW-010 Forecast Workspace Model', () => {
   it('compone resumen ejecutivo, marcas y rankings navegables', () => {
     const workspace = buildForecastWorkspace(createRepository())
 
     expect(workspace.available).toBe(true)
+    expect(workspace.officialAvailable).toBe(true)
+    expect(workspace.methodology.projectAware).toBe('project-aware-v1')
     expect(workspace.scenarioId).toBe('expected')
     expect(
       workspace.scenarios.find((scenario) => scenario.selected)?.id,
@@ -198,6 +279,8 @@ describe('FW-004 Forecast Workspace Model', () => {
     expect(workspace.portfolio.projected.revenue).toBeGreaterThan(
       workspace.portfolio.actual.revenue,
     )
+    expect(workspace.portfolio.origin.actualProjectBilling.revenue).toBe(0)
+    expect(workspace.portfolio.origin.maturePipeline.revenue).toBe(0)
     expect(workspace.inventory.filteredProducts).toBe(4)
     expect(workspace.inventory.coverage).toMatchObject({
       stockout: 1,
@@ -254,7 +337,7 @@ describe('FW-004 Forecast Workspace Model', () => {
     expect(workspace.riskRanking[0]?.productId).toBe('P-OLD')
     expect(workspace.portfolio.projected.revenue).toBe(portfolioRevenue)
     expect(workspace.limitations.some((message) =>
-      message.includes('resumen comercial de portafolio'),
+      message.includes('cierre comercial conserva'),
     )).toBe(true)
   })
 
@@ -263,6 +346,8 @@ describe('FW-004 Forecast Workspace Model', () => {
 
     expect(workspace.available).toBe(false)
     expect(workspace.status).toBe('unavailable')
+    expect(workspace.officialAvailable).toBe(false)
+    expect(workspace.projectPipeline.contributions).toEqual([])
     expect(workspace.brands).toEqual([])
     expect(workspace.riskRanking).toEqual([])
     expect(workspace.unavailableReason).toContain(

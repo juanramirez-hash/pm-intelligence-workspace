@@ -107,7 +107,7 @@ function targetStatusText(
 function filterContext(
   filters: ForecastWorkspaceFilters,
 ): string {
-  const values = [
+  return [
     filters.search
       ? `Busqueda: ${filters.search}`
       : 'Busqueda: todas',
@@ -123,14 +123,16 @@ function filterContext(
     filters.confidence === 'all'
       ? 'Confianza: todos los niveles'
       : `Confianza: ${filters.confidence}`,
-  ]
-
-  return values.join(' | ')
+  ].join(' | ')
 }
 
 function buildOutlook(
   workspace: ForecastWorkspaceModel,
 ): string {
+  if (!workspace.officialAvailable) {
+    return `El Forecast Project-Aware permanece provisional. Existen ${formatNumber(workspace.projectPipeline.quality.blockingIssues)} incidencias bloqueantes que deben resolverse antes de utilizar el cierre como resultado oficial.`
+  }
+
   const status = workspace.portfolio.targetStatus
   const critical = workspace.inventory.criticalItems
   const shortage =
@@ -138,7 +140,7 @@ function buildOutlook(
     workspace.inventory.coverage.shortage
 
   if (status === 'unavailable') {
-    return 'El escenario conserva la proyeccion comercial, pero no puede evaluar cumplimiento porque no existe un objetivo mensual disponible.'
+    return 'El escenario conserva la proyeccion Project-Aware, pero no puede evaluar cumplimiento porque no existe un objetivo mensual disponible.'
   }
 
   if (status === 'behind') {
@@ -159,35 +161,55 @@ export function buildForecastExecutiveSummary(
   const targetText = workspace.portfolio.targetRevenue === null
     ? 'sin objetivo mensual disponible'
     : `contra un objetivo de ${formatCurrency(workspace.portfolio.targetRevenue)}`
+  const origin = workspace.portfolio.origin
+  const pipeline = workspace.projectPipeline.summary
 
   return {
     scenarioLabel: selectedScenario,
     filterContext: filterContext(workspace.filters),
     overview: workspace.available
-      ? `El escenario ${selectedScenario} proyecta un cierre de ${formatCurrency(workspace.portfolio.projected.revenue)}, con cumplimiento esperado de ${formatPercentage(workspace.portfolio.targetAttainment)} ${targetText}. El modelo analiza ${formatNumber(workspace.inventory.filteredProducts)} productos y mantiene una confianza ${workspace.portfolio.confidenceLevel ?? 'sin clasificar'} de ${formatPercentage(workspace.portfolio.confidenceScore === null ? null : workspace.portfolio.confidenceScore / 100)}.`
+      ? `El escenario ${selectedScenario} proyecta un cierre Project-Aware de ${formatCurrency(workspace.portfolio.projected.revenue)}, compuesto por ${formatCurrency(origin.projectedTransactional.revenue)} de Forecast transaccional, ${formatCurrency(origin.actualProjectBilling.revenue)} de proyectos ya facturados y ${formatCurrency(origin.maturePipeline.revenue)} de pipeline maduro pendiente. El cumplimiento esperado es ${formatPercentage(workspace.portfolio.targetAttainment)} ${targetText}.`
       : workspace.unavailableReason ??
         'Forecast Workspace no dispone de informacion suficiente para generar una lectura ejecutiva.',
     outlook: buildOutlook(workspace),
     findings: [
       {
-        label: 'Cierre proyectado',
+        label: 'Cierre Project-Aware',
         value: formatCurrency(workspace.portfolio.projected.revenue),
         detail: `${formatPercentage(workspace.portfolio.targetAttainment)} de cumplimiento esperado en escenario ${selectedScenario}.`,
-        tone: workspace.portfolio.targetStatus === 'behind'
+        tone: !workspace.officialAvailable
           ? 'critical'
-          : workspace.portfolio.targetStatus === 'unavailable'
-            ? 'neutral'
-            : 'positive',
+          : workspace.portfolio.targetStatus === 'behind'
+            ? 'critical'
+            : workspace.portfolio.targetStatus === 'unavailable'
+              ? 'neutral'
+              : 'positive',
       },
       {
-        label: 'Brecha comercial',
-        value: formatCurrency(workspace.portfolio.revenueGap),
-        detail: workspace.portfolio.revenueGap === 0
-          ? 'El escenario no presenta brecha pendiente contra objetivo.'
-          : `Ritmo diario requerido: ${formatCurrency(workspace.portfolio.requiredDailyRevenue)}.`,
-        tone: workspace.portfolio.revenueGap === 0
-          ? 'positive'
-          : 'warning',
+        label: 'Forecast transaccional',
+        value: formatCurrency(origin.projectedTransactional.revenue),
+        detail: `Parte de ${formatCurrency(origin.actualTransactional.revenue)} de venta transaccional real, después de retirar facturación conciliada de proyectos.`,
+        tone: 'neutral',
+      },
+      {
+        label: 'Proyectos facturados',
+        value: formatCurrency(origin.actualProjectBilling.revenue),
+        detail: `${formatNumber(origin.actualProjectBilling.documents)} documentos conciliados con Revenue y GP oficiales de Ventas.`,
+        tone: 'positive',
+      },
+      {
+        label: 'Pipeline maduro',
+        value: formatCurrency(pipeline.matureRevenueMxn),
+        detail: `${formatNumber(pipeline.matureIncludedProjects)} proyectos 05–06 incluidos y ${formatNumber(pipeline.matureBlockedProjects)} bloqueados.`,
+        tone: pipeline.matureBlockedProjects > 0
+          ? 'warning'
+          : 'positive',
+      },
+      {
+        label: 'Upside potencial',
+        value: formatCurrency(pipeline.potentialRevenueMxn),
+        detail: `${formatCurrency(pipeline.potentialWeightedRevenueMxn)} ponderado por probabilidad; no se suma al Forecast oficial.`,
+        tone: 'neutral',
       },
       {
         label: 'Riesgo de cobertura',
@@ -198,20 +220,14 @@ export function buildForecastExecutiveSummary(
           : 'positive',
       },
       {
-        label: 'Balance despues de demanda',
-        value: `${formatNumber(workspace.inventory.projectedSupplyAfterDemand)} uds.`,
-        detail: `Incluye ${formatNumber(workspace.inventory.inboundUnits)} unidades agregadas en In Transit y On Order.`,
-        tone: workspace.inventory.projectedSupplyAfterDemand > 0
+        label: 'Calidad del Forecast',
+        value: workspace.officialAvailable
+          ? 'Oficial disponible'
+          : 'Resultado provisional',
+        detail: `${formatNumber(workspace.projectPipeline.quality.blockingIssues)} bloqueos actuales, ${formatNumber(workspace.projectPipeline.quality.pendingCutoffDocuments)} pendientes por corte, ${formatPercentage(workspace.projectPipeline.quality.reconciliationCoverage)} de cobertura actual y ${formatPercentage(workspace.projectPipeline.quality.historicalReconciliationCoverage)} histórica.`,
+        tone: workspace.officialAvailable
           ? 'positive'
-          : 'warning',
-      },
-      {
-        label: 'Sustitucion de catalogo',
-        value: `${formatNumber(workspace.inventory.replacementRecoveries)} recuperaciones`,
-        detail: `${formatNumber(workspace.inventory.supersededInventoryProducts)} productos Superseded conservan inventario dentro del corte.`,
-        tone: workspace.inventory.replacementRecoveries > 0
-          ? 'positive'
-          : 'neutral',
+          : 'critical',
       },
     ],
   }
