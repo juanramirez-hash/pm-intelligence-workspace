@@ -77,3 +77,9 @@ export type {
   BusinessProjectBillingLine,
 } from './entities/projectBilling'
 export type { BusinessExchangeRate } from './entities/exchangeRate'
+
+
+export type {
+  BusinessSalesTransactionDocument,
+  BusinessSalesTransactionLine,
+} from './entities/salesTransaction'

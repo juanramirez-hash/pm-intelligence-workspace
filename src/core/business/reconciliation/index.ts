@@ -17,3 +17,20 @@ export type {
   ProductSalesReconciliationStrategy,
   ProductSalesReconciliationSummary,
 } from './productSalesReconciliation'
+
+
+export {
+  buildProjectBillingReconciliation,
+} from './projectBillingReconciliation'
+
+export type {
+  ProjectBillingReconciliationBrandPeriod,
+  ProjectBillingReconciliationCustomer,
+  ProjectBillingReconciliationDocument,
+  ProjectBillingReconciliationMetrics,
+  ProjectBillingReconciliationPeriod,
+  ProjectBillingReconciliationProject,
+  ProjectBillingReconciliationQuality,
+  ProjectBillingReconciliationReport,
+  ProjectBillingReconciliationStatus,
+} from './projectBillingReconciliation'

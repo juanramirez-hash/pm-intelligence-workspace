@@ -74,6 +74,14 @@ import {
   ExchangeRateQueries,
 } from './exchangeRateQueries'
 
+import {
+  SalesTransactionQueries,
+} from './salesTransactionQueries'
+
+import {
+  ProjectBillingReconciliationQueries,
+} from './projectBillingReconciliationQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -123,6 +131,12 @@ export class BusinessRepository {
 
   readonly exchangeRates:
     ExchangeRateQueries
+
+  readonly salesTransactions:
+    SalesTransactionQueries
+
+  readonly projectBillingReconciliation:
+    ProjectBillingReconciliationQueries
 
   constructor(
     model: BusinessDataModel,
@@ -190,6 +204,12 @@ export class BusinessRepository {
 
     this.exchangeRates =
       new ExchangeRateQueries(model)
+
+    this.salesTransactions =
+      new SalesTransactionQueries(model)
+
+    this.projectBillingReconciliation =
+      new ProjectBillingReconciliationQueries(model)
   }
 
   getCustomers():
@@ -241,6 +261,14 @@ export class BusinessRepository {
 
   getExchangeRates() {
     return this.exchangeRates.getAll()
+  }
+
+  getSalesTransactionDocuments() {
+    return this.salesTransactions.getAllDocuments()
+  }
+
+  getProjectBillingReconciliationReport() {
+    return this.projectBillingReconciliation.getReport()
   }
 
   findCustomer(

@@ -52,6 +52,34 @@ Los resultados se devuelven clonados. Ningún Workspace debe modificar escenario
 
 `getInventoryIntelligenceReport()` utiliza la proyección oficial de FW-002 y el corte activo de Inventory. Las unidades `inTransit` y `onOrder` se tratan como entradas agregadas sin fecha hasta que Purchasing Visibility esté conectado.
 
+
+## Project Billing Reconciliation API
+
+FW-008 expone la separación histórica por origen mediante:
+
+```ts
+repository.salesTransactions.getAllDocuments()
+repository.salesTransactions.findDocument(documentNumber)
+repository.salesTransactions.getLinesByDocument(documentNumber)
+repository.salesTransactions.getLinesByPeriod(periodId)
+
+repository.projectBillingReconciliation.getReport()
+repository.projectBillingReconciliation.getPeriods()
+repository.projectBillingReconciliation.findPeriod(periodId)
+repository.projectBillingReconciliation.getBrandPeriods(brandId)
+repository.projectBillingReconciliation.getDocumentsByStatus(status)
+repository.projectBillingReconciliation.findProject(projectId)
+repository.projectBillingReconciliation.findCustomer(customerId)
+```
+
+La conciliación utiliza `Document Number` como vínculo y toma Revenue, GP, cantidad, periodo, cliente y marca de Sales Repository. El importe fuente del reporte de proyectos se conserva para auditoría, pero no sustituye los importes oficiales ya normalizados en MXN.
+
+Los documentos faltantes, anulados o conflictivos no se descuentan de la venta transaccional. Esta regla mantiene la identidad:
+
+```text
+Venta total = Venta transaccional + Facturación de proyectos conciliada
+```
+
 ## Regla de consumo
 
 Los Workspaces no deben importar archivos internos como:

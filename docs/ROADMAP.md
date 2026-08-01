@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.35.0
-Sprint: FW-007 - Project & Project Billing Data Foundation
+Versión: v0.36.0
+Sprint: FW-008 - Project Billing Reconciliation
 Estado: Completado
 ```
 
@@ -26,7 +26,7 @@ Estado: Completado
 | FW-005 | Forecast Workspace UI | Completado |
 | FW-006 | Resumen ejecutivo y exportación base | Completado · cierre final reabierto |
 | FW-007 | Project & Project Billing Data Foundation | Completado |
-| FW-008 | Project Billing Reconciliation | Planeado |
+| FW-008 | Project Billing Reconciliation | Completado |
 | FW-009 | Project-Aware Forecast Engine | Planeado |
 | FW-010 | Forecast UI & Export Final Closure | Planeado |
 
@@ -48,9 +48,9 @@ FW-006 Hotfix 1 alinea la narrativa ejecutiva `on-track` con el objetivo mensual
 
 FW-007 incorpora en Data Center y Business Repository los dominios Proyectos, Facturación de proyectos y Tipos de cambio mensuales. La fundación conserva el monto original, la moneda, el documento, el status, la fecha estimada de facturación y la trazabilidad necesaria para evitar doble conteo.
 
-FW-008 conciliará los números de factura contra Sales Repository para identificar facturación neta de proyectos en MXN y separar la venta transaccional. FW-009 reconstruirá el Forecast con componentes por origen. FW-010 cerrará nuevamente la UI y exportación.
+FW-008 concilia los números de factura contra Sales Repository, identifica la facturación neta de proyectos en MXN y materializa series históricas transaccionales por periodo y marca. Las excepciones se bloquean para evitar doble conteo. FW-009 reconstruirá el Forecast con componentes por origen. FW-010 cerrará nuevamente la UI y exportación.
 
-**Siguiente sprint:** FW-008 — Project Billing Reconciliation.
+**Siguiente sprint:** FW-009 — Project-Aware Forecast Engine.
 
 ## Inventory Workspace — CERRADO
 

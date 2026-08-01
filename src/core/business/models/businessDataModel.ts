@@ -63,6 +63,11 @@ import type {
   BusinessExchangeRate,
 } from '../entities/exchangeRate'
 
+import type {
+  BusinessSalesTransactionDocument,
+  BusinessSalesTransactionLine,
+} from '../entities/salesTransaction'
+
 export interface BusinessDataTotals {
   revenue: number
   grossProfit: number
@@ -140,6 +145,14 @@ export interface BusinessDataModel {
   /** Inventory aggregates by snapshot date. */
   inventorySnapshots?:
     Map<string, BusinessInventorySnapshot>
+
+  /** Transaction-level sales lines materialized by FW-008. */
+  salesTransactionLines?:
+    Map<string, BusinessSalesTransactionLine>
+
+  /** Sales documents aggregated from transaction-level lines. */
+  salesDocuments?:
+    Map<string, BusinessSalesTransactionDocument>
 
   /** Project pipeline snapshot imported by FW-007. */
   projects?:

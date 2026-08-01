@@ -1,3 +1,16 @@
+# 0.36.0-FW-008
+
+- Materializa líneas y documentos de ventas dentro de `BusinessDataModel` para conciliación transaccional sin exponer `NormalizedSalesRow[]` a consumidores.
+- Nuevo motor determinístico de conciliación por `Document Number` entre Facturación de proyectos y Sales Repository.
+- Revenue, GP, cantidad, cliente, marca y periodo oficiales provienen exclusivamente de las ventas ya normalizadas en MXN.
+- Separa por periodo y marca la venta total, facturación neta de proyectos y venta transaccional.
+- Las notas de crédito conservan el signo registrado en ventas; los documentos anulados no se clasifican como facturación de proyectos.
+- Los documentos ausentes o vinculados a más de un proyecto quedan bloqueados para impedir doble conteo.
+- Controles de calidad para cobertura, proyectos huérfanos, discrepancias de periodo y cliente, notas de crédito con signo anómalo y anulados presentes en ventas.
+- `BusinessRepository` incorpora `salesTransactions` y `projectBillingReconciliation` con consultas por periodo, marca, proyecto, cliente, documento y status.
+- Data Center muestra conciliación histórica, participación de proyectos, venta transaccional y auditoría documental.
+- FW-008 no modifica todavía Forecast Baseline ni suma pipeline abierto; prepara las series limpias para FW-009.
+
 # 0.35.0-FW-007
 
 - Data Center incorpora importadores productivos para Proyectos, Facturación de proyectos y Tipos de cambio.

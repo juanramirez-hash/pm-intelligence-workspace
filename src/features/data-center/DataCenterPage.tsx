@@ -61,6 +61,10 @@ import {
 } from './components/ExchangeRateEditor'
 
 import {
+  ProjectBillingReconciliationPanel,
+} from './components/ProjectBillingReconciliationPanel'
+
+import {
   SpreadsheetFileInformation,
 } from './components/SpreadsheetFileInformation'
 
@@ -286,6 +290,8 @@ export function DataCenterPage() {
       <DataCatalog />
 
       <ExchangeRateEditor />
+
+      <ProjectBillingReconciliationPanel />
 
       <AtlasCard className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">

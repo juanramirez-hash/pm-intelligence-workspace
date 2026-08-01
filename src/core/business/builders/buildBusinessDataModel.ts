@@ -55,6 +55,11 @@ import type {
 } from '../entities/salesSegment'
 
 import type {
+  BusinessSalesTransactionDocument,
+  BusinessSalesTransactionLine,
+} from '../entities/salesTransaction'
+
+import type {
   BusinessDataModel,
   BusinessPeriod,
 } from '../models/businessDataModel'
@@ -770,6 +775,18 @@ export function buildBusinessDataModel(
         BusinessSalesSegment
       >(),
 
+    salesTransactionLines:
+      new Map<
+        string,
+        BusinessSalesTransactionLine
+      >(),
+
+    salesDocuments:
+      new Map<
+        string,
+        BusinessSalesTransactionDocument
+      >(),
+
     productReconciliation:
       createProductSalesReconciliationSummary(),
 
@@ -905,7 +922,12 @@ export function buildBusinessDataModel(
       Set<string>
     >()
 
-  for (const row of rows) {
+  for (
+    const [
+      rowIndex,
+      row,
+    ] of rows.entries()
+  ) {
     const parsedDate =
       parseDate(row.date)
 
@@ -1028,6 +1050,105 @@ export function buildBusinessDataModel(
       normalizeIdentifier(
         row.currency,
       )
+
+    if (documentNumber) {
+      const salesLineId =
+        `SALES::${String(rowIndex + 1).padStart(8, '0')}`
+
+      const salesLine:
+        BusinessSalesTransactionLine = {
+          id: salesLineId,
+          date: rowDate,
+          periodId,
+          documentNumber,
+          brandId,
+          customerId,
+          customerName,
+          productId,
+          locationId: location,
+          salesRepresentativeId: salesRepresentative,
+          currency,
+          revenue: row.revenue,
+          grossProfit: row.grossProfit,
+          quantity: row.quantity,
+        }
+
+      model.salesTransactionLines?.set(
+        salesLineId,
+        salesLine,
+      )
+
+      let salesDocument =
+        model.salesDocuments?.get(
+          documentNumber,
+        )
+
+      if (!salesDocument) {
+        salesDocument = {
+          id: documentNumber,
+          documentNumber,
+          firstDate: rowDate,
+          lastDate: rowDate,
+          revenue: 0,
+          grossProfit: 0,
+          quantity: 0,
+          lineCount: 0,
+          lineIds: new Set<string>(),
+          periodIds: new Set<string>(),
+          brandIds: new Set<string>(),
+          customerIds: new Set<string>(),
+          productIds: new Set<string>(),
+          locationIds: new Set<string>(),
+          salesRepresentativeIds: new Set<string>(),
+          currencies: new Set<string>(),
+        }
+
+        model.salesDocuments?.set(
+          documentNumber,
+          salesDocument,
+        )
+      }
+
+      salesDocument.firstDate =
+        rowDate < salesDocument.firstDate
+          ? rowDate
+          : salesDocument.firstDate
+
+      salesDocument.lastDate =
+        rowDate > salesDocument.lastDate
+          ? rowDate
+          : salesDocument.lastDate
+
+      salesDocument.revenue += row.revenue
+      salesDocument.grossProfit += row.grossProfit
+      salesDocument.quantity += row.quantity
+      salesDocument.lineCount += 1
+      salesDocument.lineIds.add(salesLineId)
+      salesDocument.periodIds.add(periodId)
+      salesDocument.brandIds.add(brandId)
+
+      if (customerId) {
+        salesDocument.customerIds.add(customerId)
+      }
+
+      if (productId) {
+        salesDocument.productIds.add(productId)
+      }
+
+      if (location) {
+        salesDocument.locationIds.add(location)
+      }
+
+      if (salesRepresentative) {
+        salesDocument.salesRepresentativeIds.add(
+          salesRepresentative,
+        )
+      }
+
+      if (currency) {
+        salesDocument.currencies.add(currency)
+      }
+    }
 
     const salesSegmentId =
       getSalesSegmentId(
