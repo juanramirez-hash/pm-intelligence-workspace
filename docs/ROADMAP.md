@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Version: v0.40.0
-Sprint: PL-002 - Pricing Data Center Importer & Source Integration
+Version: v0.41.0
+Sprint: PL-003 - Price Engineering Engine & Scenario Evaluation
 Estado: Completado
 ```
 
@@ -66,8 +66,8 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 |---|---|---|
 | PL-001 | Data Foundation, contratos, Price Repository, indices y calidad | Completado |
 | PL-002 | Pricing Data Center Import & Reconciliation | Completado |
-| PL-003 | Price Engineering Engine | Siguiente |
-| PL-004 | Scenario Engine & Pricing Groups | Planeado |
+| PL-003 | Price Engineering Engine & Scenario Evaluation | Completado |
+| PL-004 | Pricing Group Templates & Commercial Guardrails | Siguiente |
 | PL-005 | Price DNA & Recommendations | Planeado |
 | PL-006 | Pricing Laboratory Workspace UI | Planeado |
 | PL-007 | Executive Export & Closure | Planeado |
@@ -78,7 +78,9 @@ PL-001 agrega indices por producto, marca, moneda, banda de margen, Gross Margin
 
 PL-002 conecta Data Center con fuentes canonicas y con el reporte ERP de costos y precios. Separa hechos MXN y USD, impide cruces de moneda, conserva trazabilidad, persiste Pricing en IndexedDB v8 y recalcula la conciliacion contra Product Master. La importacion no infiere promociones ni politicas comerciales.
 
-**Siguiente sprint:** PL-003 - Price Engineering Engine.
+PL-003 incorpora `price-engineering-v1` como laboratorio puro de calculo. Evalua escenarios descartables por precio, descuento, margen objetivo, GP objetivo, factor o descuento adicional compuesto; compara contra el precio actual y aplica exclusivamente restricciones suministradas por el usuario. El motor no persiste resultados, no modifica BusinessPrice y no escribe en otros dominios.
+
+**Siguiente sprint:** PL-004 - Pricing Group Templates & Commercial Guardrails.
 
 ## Inventory Workspace — CERRADO
 

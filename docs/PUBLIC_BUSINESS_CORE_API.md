@@ -93,6 +93,49 @@ Pricing is persisted in Data Center IndexedDB and re-enters Core exclusively
 through `BuildBusinessIntelligenceOptions.prices`. Workspaces must consume
 `BusinessRepository.prices`, not `NormalizedPricingRow[]`.
 
+### Price Engineering Laboratory
+
+PL-003 publishes a calculation-only engine through the public `pricing` module:
+
+```ts
+evaluatePriceLaboratory({
+  price,
+  scenarios,
+  defaultGuardrails,
+})
+
+new PriceEngineeringEngine().evaluate({
+  price,
+  scenarios,
+})
+```
+
+Supported scenario bases are `selling_price`, `discount_rate`,
+`target_gross_margin`, `target_gross_profit`, `selling_price_factor` and
+`additional_discount`. Additional discounts can be compounded over List Price
+or over the current Selling Price.
+
+The engine returns metrics, deltas, signals, explainability and a status of
+`valid`, `warning`, `blocked` or `invalid`. Blocking behavior exists only when
+the caller supplies a blocking guardrail. PL-003 does not embed commercial
+thresholds or infer Silver, Gold or Platinum discounts.
+
+Every result declares:
+
+```ts
+executionMode: 'simulation-only'
+isolation: {
+  mutatesSourcePrice: false,
+  persistsScenarioResults: false,
+  writesBusinessRepository: false,
+  writesOtherWorkspaces: false,
+}
+```
+
+The engine preserves the source currency and performs no exchange-rate
+conversion. Results are disposable laboratory calculations and are not price
+master changes, approvals or commercial instructions.
+
 ## Forecast API
 
 `BusinessRepository` expone el baseline oficial mediante:

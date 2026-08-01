@@ -54,11 +54,85 @@ export function calculatePriceFactor(
   return listPrice / cost
 }
 
+export function calculateSellingPriceFactor(
+  sellingPrice: number,
+  cost: number,
+): number | null {
+  if (cost === 0) {
+    return null
+  }
+
+  return sellingPrice / cost
+}
+
 export function calculatePriceFromDiscount(
   listPrice: number,
   discountRate: number,
 ): number {
   return listPrice * (1 - discountRate)
+}
+
+export function calculatePriceAfterAdditionalDiscount(
+  basePrice: number,
+  additionalDiscountRate: number,
+): number {
+  return basePrice * (1 - additionalDiscountRate)
+}
+
+export function calculatePriceFromTargetGrossMargin(
+  cost: number,
+  targetGrossMargin: number,
+): number | null {
+  if (
+    !Number.isFinite(cost) ||
+    !Number.isFinite(targetGrossMargin) ||
+    cost < 0 ||
+    targetGrossMargin >= 1
+  ) {
+    return null
+  }
+
+  const price = cost / (1 - targetGrossMargin)
+  return Number.isFinite(price) && price > 0
+    ? price
+    : null
+}
+
+export function calculatePriceFromTargetGrossProfit(
+  cost: number,
+  targetGrossProfit: number,
+): number | null {
+  if (
+    !Number.isFinite(cost) ||
+    !Number.isFinite(targetGrossProfit) ||
+    cost < 0
+  ) {
+    return null
+  }
+
+  const price = cost + targetGrossProfit
+  return Number.isFinite(price) && price > 0
+    ? price
+    : null
+}
+
+export function calculatePriceFromSellingFactor(
+  cost: number,
+  factor: number,
+): number | null {
+  if (
+    !Number.isFinite(cost) ||
+    !Number.isFinite(factor) ||
+    cost < 0 ||
+    factor <= 0
+  ) {
+    return null
+  }
+
+  const price = cost * factor
+  return Number.isFinite(price) && price > 0
+    ? price
+    : null
 }
 
 export function classifyPriceMarginBand(

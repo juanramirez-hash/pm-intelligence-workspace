@@ -1,3 +1,15 @@
+# 0.41.0-PL-003
+
+- Adds `price-engineering-v1` as a pure, deterministic calculation engine.
+- Evaluates disposable scenarios from selling price, list discount, target Gross Margin, target Gross Profit, selling-price factor and additional compounded discount.
+- Publishes unit GP, Gross Margin, discount, list factor, selling-price factor and deltas against the current price.
+- Applies only caller-supplied guardrails; no hidden Silver, Gold, Platinum, approval or commercial policy is embedded.
+- Separates warning, blocking and invalid results with deterministic explainability.
+- Adapts persisted `BusinessPriceScenario` records into simulations without writing results back.
+- Preserves source currency and performs no exchange-rate conversion or mixed-currency calculation.
+- Declares an explicit `simulation-only` isolation contract: no mutation of BusinessPrice, repository, Data Center or any other Workspace.
+- Adds inverse pricing math and automated tests for target margin, target GP, factor, compounded discount, guardrails, invalid inputs and immutability.
+
 # 0.40.0-PL-002
 
 - Adds the Pricing import plugin for canonical and ERP dual-currency sources.
