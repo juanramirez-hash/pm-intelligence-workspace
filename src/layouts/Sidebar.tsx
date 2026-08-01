@@ -42,7 +42,7 @@ const workspaceNavigation = [
     icon: Package,
   },
   {
-    label: 'Pricing Workspace',
+    label: 'Pricing Laboratory',
     path: '/pricing',
     icon: DollarSign,
   },

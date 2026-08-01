@@ -119,6 +119,18 @@ const loadProductIdentityQuality = async () => {
 }
 
 
+const loadPricingLaboratory = async () => {
+  const module =
+    await import(
+      '../features/pricing-laboratory/pages/PricingLaboratoryPage'
+    )
+
+  return {
+    Component:
+      module.PricingLaboratoryPage,
+  }
+}
+
 const loadForecastWorkspace = async () => {
   const module =
     await import(
@@ -194,12 +206,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'pricing',
-        element: (
-          <PlaceholderPage
-            title="Pricing Workspace"
-            description="Márgenes, descuentos y oportunidades de rentabilidad."
-          />
-        ),
+        lazy: loadPricingLaboratory,
       },
       {
         path: 'forecast',

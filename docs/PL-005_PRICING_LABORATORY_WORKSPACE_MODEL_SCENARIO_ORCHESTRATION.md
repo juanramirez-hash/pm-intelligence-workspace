@@ -5,7 +5,7 @@
 PL-005 construye el contrato único que consumirá la futura interfaz `/pricing`.
 El Workspace Model selecciona una fuente de precio, orquesta escenarios y
 centraliza la comparación sin incorporar lógica visual ni capacidad de
-publicación.
+publicación. PL-006 utiliza este contrato como única fuente para `/pricing`.
 
 El módulo sigue siendo un laboratorio de cálculos. No es un administrador de
 precios y no representa una instrucción comercial.
@@ -174,8 +174,8 @@ La cobertura de PL-005 verifica:
 - modificación o publicación de precios;
 - exportación Excel o PDF.
 
-## Siguiente entrega
+## Integración visual
 
-`PL-006 — Pricing Laboratory Workspace UI` deberá consumir exclusivamente
-`PricingLaboratoryWorkspaceModel` y conservar la misma frontera de
-simulación-only.
+PL-006 consume exclusivamente `PricingLaboratoryWorkspaceModel` y conserva la
+misma frontera `simulation-only`. La UI captura supuestos explícitos, pero no
+recalcula métricas ni persiste resultados.

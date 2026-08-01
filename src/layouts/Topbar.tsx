@@ -13,7 +13,7 @@ const workspaceTitles: Record<string, string> = {
   '/brands': 'Brand Workspace',
   '/customers': 'Customer Workspace',
   '/products': 'Product Workspace',
-  '/pricing': 'Pricing Workspace',
+  '/pricing': 'Pricing Laboratory',
   '/forecast': 'Forecast Workspace',
   '/inventory': 'Inventory Workspace',
   '/purchasing': 'Purchasing Workspace',

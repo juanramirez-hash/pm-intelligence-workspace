@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Version: v0.43.0
-Sprint: PL-005 - Pricing Laboratory Workspace Model & Scenario Orchestration
+Version: v0.44.0
+Sprint: PL-006 - Pricing Laboratory UI & Interactive Scenario Builder
 Estado: Completado
 ```
 
@@ -69,8 +69,8 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-003 | Price Engineering Engine & Scenario Evaluation | Completado |
 | PL-004 | Pricing Group Templates & Commercial Guardrails | Completado · Hotfix 1 |
 | PL-005 | Pricing Laboratory Workspace Model & Scenario Orchestration | Completado |
-| PL-006 | Pricing Laboratory Workspace UI | Siguiente |
-| PL-007 | Executive Export & Closure | Planeado |
+| PL-006 | Pricing Laboratory UI & Interactive Scenario Builder | Completado |
+| PL-007 | Executive Export & Functional Closure | Siguiente |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
@@ -84,11 +84,13 @@ PL-004 incorpora un catálogo de plantillas Silver, Gold, Platinum, promoción, 
 
 PL-004 Hotfix 1 elimina una advertencia de análisis estático en la prueba de aislamiento del catálogo. No altera contratos, plantillas, guardrails ni comportamiento productivo.
 
-PL-005 incorpora `pricing-workspace-v1` como modelo único para la futura interfaz. Selecciona el precio vigente por producto y moneda, publica opciones de selección, orquesta plantillas y escenarios almacenados, conserva el orden de comparación y centraliza métricas, deltas, señales, guardrails, issues y explainability. El modelo nunca recomienda ni selecciona automáticamente un precio, no persiste resultados y no escribe fuera del laboratorio.
+PL-005 incorpora `pricing-workspace-v1` como modelo único para la interfaz. Selecciona el precio vigente por producto y moneda, publica opciones de selección, orquesta plantillas y escenarios almacenados, conserva el orden de comparación y centraliza métricas, deltas, señales, guardrails, issues y explainability. El modelo nunca recomienda ni selecciona automáticamente un precio, no persiste resultados y no escribe fuera del laboratorio.
+
+PL-006 conecta `/pricing` con ese modelo e incorpora selección de producto y moneda, constructor de escenarios, guardrails explícitos, comparación, selección visual y explainability. Todo el estado nuevo vive en memoria y las referencias almacenadas permanecen de solo lectura.
 
 Price DNA y recomendaciones automáticas quedan fuera del alcance vigente. Cualquier evolución futura deberá permanecer explicable, temporal y sin capacidad de publicar precios.
 
-**Siguiente sprint:** PL-006 - Pricing Laboratory Workspace UI.
+**Siguiente sprint:** PL-007 - Pricing Laboratory Executive Export & Functional Closure.
 
 ## Inventory Workspace — CERRADO
 

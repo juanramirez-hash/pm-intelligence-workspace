@@ -1,3 +1,16 @@
+# 0.44.0-PL-006
+
+- Replaces the `/pricing` placeholder with the lazy-loaded Pricing Laboratory interface.
+- Adds product search, explicit product selection and isolated currency selection without FX conversion.
+- Adds an in-memory scenario builder for Promotion, Silver, Gold, Platinum, Project and Custom templates.
+- Requires explicit selling price, discount, target margin, target GP, factor or compounded additional-discount inputs; no numeric commercial defaults are embedded.
+- Adds optional warning or blocking guardrails for minimum margin, minimum GP, minimum/maximum selling price and maximum discount.
+- Presents current price facts, scenario comparisons, deltas, status, signals, guardrails and deterministic explainability from `pricing-workspace-v1`.
+- Allows local scenario selection, removal and reset while keeping stored scenarios read-only.
+- Keeps all UI state in React memory and preserves the `simulation-only` contract: no price mutation, persistence, Repository writes or cross-Workspace writes.
+- Renames the navigation label to `Pricing Laboratory` to avoid presenting the feature as price administration.
+- Adds tests for visual input conversion, explicit guardrails, validation, formatting and comparison rendering.
+
 # 0.43.0-PL-005
 
 - Adds `pricing-workspace-v1` as the UI-independent model for Pricing Laboratory.
