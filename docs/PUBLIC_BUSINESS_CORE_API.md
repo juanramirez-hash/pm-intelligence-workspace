@@ -46,11 +46,29 @@ repository.forecast.getProductInventoryInsights()
 repository.forecast.findProductInventoryInsight(productId)
 repository.forecast.getTopInventoryIntelligence(limit)
 repository.forecast.findInventoryInsightsByCoverage(status)
+
+repository.forecast.getProjectAwareReport()
+repository.forecast.getProjectAwarePortfolioProjection()
+repository.forecast.getProjectAwareBrandProjections()
+repository.forecast.findProjectAwareBrandProjection(brandId)
 ```
 
 Los resultados se devuelven clonados. Ningún Workspace debe modificar escenarios, pesos, confianza, cobertura, señales o métodos dentro del Core.
 
 `getInventoryIntelligenceReport()` utiliza la proyección oficial de FW-002 y el corte activo de Inventory. Las unidades `inTransit` y `onOrder` se tratan como entradas agregadas sin fecha hasta que Purchasing Visibility esté conectado.
+
+
+### Project-Aware Forecast
+
+FW-009 publica `project-aware-v1` como contrato de cierre comercial por origen:
+
+```text
+Forecast total = Forecast transaccional + Facturación real de proyectos + Pipeline maduro pendiente
+```
+
+El baseline transaccional reutiliza `baseline-v1`, pero consume series limpiadas por FW-008. La facturación real se incorpora con Revenue y GP provenientes de Ventas en MXN. El pipeline abierto utiliza `Monto por cerrar`, `Fecha estimada de facturación` y el tipo de cambio mensual registrado en Data Center.
+
+Los status 05–06 forman parte del cierre oficial. Los status 03–04 se publican como upside bruto y ponderado, pero no se agregan a los escenarios oficiales. Cuando existe una incidencia bloqueante, los valores provisionales siguen siendo auditables y `officialAvailable` queda en `false`.
 
 
 ## Project Billing Reconciliation API

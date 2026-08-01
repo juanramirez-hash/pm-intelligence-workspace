@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.36.0
-Sprint: FW-008 - Project Billing Reconciliation
+Versión: v0.37.0
+Sprint: FW-009 - Project-Aware Forecast Engine
 Estado: Completado
 ```
 
@@ -27,7 +27,7 @@ Estado: Completado
 | FW-006 | Resumen ejecutivo y exportación base | Completado · cierre final reabierto |
 | FW-007 | Project & Project Billing Data Foundation | Completado |
 | FW-008 | Project Billing Reconciliation | Completado |
-| FW-009 | Project-Aware Forecast Engine | Planeado |
+| FW-009 | Project-Aware Forecast Engine | Completado |
 | FW-010 | Forecast UI & Export Final Closure | Planeado |
 
 FW-001 establece que Forecast es un dominio derivado del Business Repository. Utiliza ventas históricas como fuente obligatoria y objetivos, días laborales, inventario y Product Master como contextos enriquecedores. Purchasing permanece como fuente futura opcional y no bloqueante.
@@ -48,9 +48,11 @@ FW-006 Hotfix 1 alinea la narrativa ejecutiva `on-track` con el objetivo mensual
 
 FW-007 incorpora en Data Center y Business Repository los dominios Proyectos, Facturación de proyectos y Tipos de cambio mensuales. La fundación conserva el monto original, la moneda, el documento, el status, la fecha estimada de facturación y la trazabilidad necesaria para evitar doble conteo.
 
-FW-008 concilia los números de factura contra Sales Repository, identifica la facturación neta de proyectos en MXN y materializa series históricas transaccionales por periodo y marca. Las excepciones se bloquean para evitar doble conteo. FW-009 reconstruirá el Forecast con componentes por origen. FW-010 cerrará nuevamente la UI y exportación.
+FW-008 concilia los números de factura contra Sales Repository, identifica la facturación neta de proyectos en MXN y materializa series históricas transaccionales por periodo y marca. Las excepciones se bloquean para evitar doble conteo.
 
-**Siguiente sprint:** FW-009 — Project-Aware Forecast Engine.
+FW-009 reconstruye el Forecast con componentes por origen: baseline transaccional, facturación real de proyectos y pipeline maduro convertido a MXN. Los proyectos 03–04 se mantienen como upside separado y los bloqueos de calidad impiden declarar oficial un cierre incompleto. FW-010 actualizará UI y exportación para consumir `project-aware-v1`.
+
+**Siguiente sprint:** FW-010 — Forecast UI & Export Final Closure.
 
 ## Inventory Workspace — CERRADO
 

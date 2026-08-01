@@ -14,6 +14,33 @@ export {
   ForecastInventoryIntelligenceEngine,
 } from './forecastInventoryIntelligence'
 
+
+export {
+  buildTransactionalForecastSeries,
+} from './buildTransactionalForecastSeries'
+
+export {
+  ProjectAwareForecastEngine,
+} from './projectAwareForecastEngine'
+
+export type {
+  ProjectAwareForecastComponentMetrics,
+  ProjectAwareForecastContributionStatus,
+  ProjectAwareForecastConversionStatus,
+  ProjectAwareForecastGranularity,
+  ProjectAwareForecastIssueSeverity,
+  ProjectAwareForecastMarginSource,
+  ProjectAwareForecastMethodologyVersion,
+  ProjectAwareForecastPipelineSummary,
+  ProjectAwareForecastProjectContribution,
+  ProjectAwareForecastProjection,
+  ProjectAwareForecastQualityIssue,
+  ProjectAwareForecastQualityProfile,
+  ProjectAwareForecastReport,
+  ProjectAwareForecastScenarioProjection,
+  ProjectAwareForecastStatus,
+} from './projectAwareForecastContracts'
+
 export {
   FORECAST_INVENTORY_THRESHOLDS,
 } from './forecastInventoryContracts'

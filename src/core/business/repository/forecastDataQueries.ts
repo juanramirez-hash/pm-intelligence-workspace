@@ -7,6 +7,7 @@ import {
   buildForecastSeries,
   ForecastBaselineEngine,
   ForecastInventoryIntelligenceEngine,
+  ProjectAwareForecastEngine,
 } from '../forecast'
 
 import type {
@@ -24,6 +25,11 @@ import type {
   ForecastSourceId,
   ForecastSeries,
   ForecastSourceProfile,
+  ProjectAwareForecastProjectContribution,
+  ProjectAwareForecastProjection,
+  ProjectAwareForecastQualityIssue,
+  ProjectAwareForecastQualityProfile,
+  ProjectAwareForecastReport,
 } from '../forecast'
 
 function cloneSource(
@@ -129,6 +135,80 @@ function cloneInventoryInsight(
   }
 }
 
+function cloneProjectAwareIssue(
+  issue: ProjectAwareForecastQualityIssue,
+): ProjectAwareForecastQualityIssue {
+  return { ...issue }
+}
+
+function cloneProjectAwareQuality(
+  quality: ProjectAwareForecastQualityProfile,
+): ProjectAwareForecastQualityProfile {
+  return {
+    ...quality,
+    issues: quality.issues.map(cloneProjectAwareIssue),
+  }
+}
+
+function cloneProjectContribution(
+  contribution: ProjectAwareForecastProjectContribution,
+): ProjectAwareForecastProjectContribution {
+  return {
+    ...contribution,
+    issueCodes: [...contribution.issueCodes],
+  }
+}
+
+function cloneProjectAwareProjection(
+  projection: ProjectAwareForecastProjection,
+): ProjectAwareForecastProjection {
+  return {
+    ...projection,
+    transactionalBaseline: cloneProjection(
+      projection.transactionalBaseline,
+    ),
+    actualTotal: { ...projection.actualTotal },
+    actualTransactional: { ...projection.actualTransactional },
+    actualProjectBilling: { ...projection.actualProjectBilling },
+    pipeline: { ...projection.pipeline },
+    expected: { ...projection.expected },
+    scenarios: projection.scenarios.map((scenario) => ({
+      ...scenario,
+      transactional: { ...scenario.transactional },
+      projectBillingActual: { ...scenario.projectBillingActual },
+      maturePipeline: { ...scenario.maturePipeline },
+      values: { ...scenario.values },
+    })),
+    target: { ...projection.target },
+    confidence: {
+      ...projection.confidence,
+      signals: [...projection.confidence.signals],
+      limitations: [...projection.confidence.limitations],
+    },
+    quality: cloneProjectAwareQuality(projection.quality),
+    projectContributions: projection.projectContributions.map(
+      cloneProjectContribution,
+    ),
+    explainability: [...projection.explainability],
+    limitations: [...projection.limitations],
+  }
+}
+
+function cloneProjectAwareReport(
+  report: ProjectAwareForecastReport,
+): ProjectAwareForecastReport {
+  return {
+    ...report,
+    portfolio: report.portfolio
+      ? cloneProjectAwareProjection(report.portfolio)
+      : null,
+    brands: report.brands.map(cloneProjectAwareProjection),
+    quality: cloneProjectAwareQuality(report.quality),
+    explainability: [...report.explainability],
+    limitations: [...report.limitations],
+  }
+}
+
 function cloneInventoryIntelligenceReport(
   report: ForecastInventoryIntelligenceReport,
 ): ForecastInventoryIntelligenceReport {
@@ -189,8 +269,14 @@ export class ForecastDataQueries {
   private readonly inventoryIntelligenceEngine:
     ForecastInventoryIntelligenceEngine
 
+  private readonly projectAwareForecastEngine:
+    ProjectAwareForecastEngine
+
   private inventoryIntelligenceCache:
     ForecastInventoryIntelligenceReport | null
+
+  private projectAwareForecastCache:
+    ProjectAwareForecastReport | null
 
   private readonly projectionCache:
     Map<string, ForecastBaselineProjection>
@@ -216,7 +302,13 @@ export class ForecastDataQueries {
     )
     this.inventoryIntelligenceEngine =
       new ForecastInventoryIntelligenceEngine(model)
+    this.projectAwareForecastEngine =
+      new ProjectAwareForecastEngine(
+        model,
+        this.foundation,
+      )
     this.inventoryIntelligenceCache = null
+    this.projectAwareForecastCache = null
     this.projectionCache = new Map()
   }
 
@@ -346,6 +438,53 @@ export class ForecastDataQueries {
 
     return series
       ? this.projectSeries(series)
+      : undefined
+  }
+
+  getProjectAwareReport():
+    ProjectAwareForecastReport {
+    if (!this.projectAwareForecastCache) {
+      this.projectAwareForecastCache =
+        this.projectAwareForecastEngine.build()
+    }
+
+    return cloneProjectAwareReport(
+      this.projectAwareForecastCache,
+    )
+  }
+
+  getProjectAwarePortfolioProjection():
+    ProjectAwareForecastProjection | undefined {
+    const projection = this.getProjectAwareReport().portfolio
+
+    return projection
+      ? cloneProjectAwareProjection(projection)
+      : undefined
+  }
+
+  getProjectAwareBrandProjections():
+    ProjectAwareForecastProjection[] {
+    return this.getProjectAwareReport()
+      .brands
+      .map(cloneProjectAwareProjection)
+  }
+
+  findProjectAwareBrandProjection(
+    brandId: string,
+  ): ProjectAwareForecastProjection | undefined {
+    const normalizedBrandId = brandId
+      .trim()
+      .toLocaleUpperCase('es-MX')
+      .replace(/\s+/g, ' ')
+
+    const projection = this.getProjectAwareReport()
+      .brands
+      .find(
+        (candidate) => candidate.entityId === normalizedBrandId,
+      )
+
+    return projection
+      ? cloneProjectAwareProjection(projection)
       : undefined
   }
 

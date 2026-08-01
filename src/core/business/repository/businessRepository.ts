@@ -271,6 +271,10 @@ export class BusinessRepository {
     return this.projectBillingReconciliation.getReport()
   }
 
+  getProjectAwareForecastReport() {
+    return this.forecast.getProjectAwareReport()
+  }
+
   findCustomer(
     id: string,
   ): BusinessCustomer | undefined {

@@ -1,3 +1,17 @@
+# 0.37.0-FW-009
+
+- Nuevo motor determinístico `project-aware-v1` para reconstruir el cierre mensual por origen de venta.
+- El baseline estadístico se recalcula con series transaccionales después de separar la facturación conciliada de proyectos por periodo y marca.
+- La fórmula oficial queda definida como Forecast transaccional + Facturación real de proyectos + Pipeline maduro pendiente.
+- Los proyectos `05 Esperando OC` y `06 Surtido parcialmente` se incorporan al 100% mediante `Monto por cerrar` y `Fecha estimada de facturación`.
+- Los proyectos `03 Pendiente por usuario final` y `04 Pendiente por integrador` permanecen como upside separado; se muestra monto bruto y monto ponderado con la probabilidad declarada.
+- El pipeline USD se convierte a MXN con la tasa exacta del periodo; no existe tipo de cambio predeterminado ni oculto.
+- La facturación real conserva Revenue, GP, cantidad, marca y cliente provenientes de Ventas en MXN.
+- El GP pendiente se estima con margen histórico de proyectos por marca, proyecto portafolio, marca general o portafolio, en ese orden.
+- Controles bloqueantes para documentos sin conciliar, conflictos factura-proyecto, notas de crédito con signo anómalo, anulados presentes en Ventas, proyectos maduros sin fecha, monto, moneda o tipo de cambio.
+- API pública ampliada con `getProjectAwareReport()`, proyección de portafolio, proyecciones por marca y búsqueda por marca.
+- FW-009 no modifica todavía la UI ni la exportación ejecutiva; FW-010 consumirá estos contratos y cerrará Forecast Workspace.
+
 # 0.36.0-FW-008
 
 - Materializa líneas y documentos de ventas dentro de `BusinessDataModel` para conciliación transaccional sin exponer `NormalizedSalesRow[]` a consumidores.

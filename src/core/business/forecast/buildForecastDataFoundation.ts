@@ -246,6 +246,37 @@ function buildSources(
     productMasterAvailable &&
     productMasterCoverage === 1
 
+  const projects = [
+    ...(model.projects?.values() ?? []),
+  ]
+  const projectBillings = [
+    ...(model.projectBillings?.values() ?? []),
+  ]
+  const exchangeRates = [
+    ...(model.exchangeRates?.values() ?? []),
+  ]
+  const currentMatureProjects = currentPeriodId
+    ? projects.filter(
+        (project) =>
+          project.estimatedBillingPeriodId === currentPeriodId &&
+          project.forecastStage === 'mature' &&
+          !project.isDuplicate,
+      )
+    : []
+  const currentPotentialProjects = currentPeriodId
+    ? projects.filter(
+        (project) =>
+          project.estimatedBillingPeriodId === currentPeriodId &&
+          project.forecastStage === 'potential' &&
+          !project.isDuplicate,
+      )
+    : []
+  const currentExchangeRates = currentPeriodId
+    ? exchangeRates.filter(
+        (rate) => rate.periodId === currentPeriodId,
+      )
+    : []
+
   return {
     sources: [
       {
@@ -354,6 +385,66 @@ function buildSources(
         },
         notes: [
           'Superseded y sustituto directo son atributos de contexto; no alteran hechos históricos.',
+        ],
+      },
+      {
+        id: 'projects',
+        label: 'Pipeline de proyectos',
+        role: 'required',
+        status: projects.length > 0 ? 'ready' : 'unavailable',
+        summary: projects.length > 0
+          ? 'Snapshot de proyectos disponible para identificar pipeline maduro y potencial.'
+          : 'No hay proyectos cargados.',
+        facts: {
+          projects: projects.length,
+          currentMatureProjects: currentMatureProjects.length,
+          currentPotentialProjects: currentPotentialProjects.length,
+        },
+        notes: [
+          'Solo 05 Esperando OC y 06 Surtido parcialmente contribuyen al forecast oficial.',
+          '03 y 04 permanecen como upside separado.',
+        ],
+      },
+      {
+        id: 'project-billings',
+        label: 'Facturación de proyectos',
+        role: 'required',
+        status: projectBillings.length > 0 ? 'ready' : 'unavailable',
+        summary: projectBillings.length > 0
+          ? 'Documentos disponibles para separar venta transaccional y facturación real de proyectos.'
+          : 'No hay facturación de proyectos cargada.',
+        facts: {
+          documents: projectBillings.length,
+          activeDocuments: projectBillings.filter(
+            (document) => !document.isVoided,
+          ).length,
+          voidedDocuments: projectBillings.filter(
+            (document) => document.isVoided,
+          ).length,
+        },
+        notes: [
+          'Revenue y GP se recuperan desde Ventas mediante Document Number.',
+        ],
+      },
+      {
+        id: 'exchange-rates',
+        label: 'Tipos de cambio',
+        role: 'required',
+        status: exchangeRates.length === 0
+          ? 'unavailable'
+          : currentExchangeRates.length > 0
+            ? 'ready'
+            : 'partial',
+        summary: exchangeRates.length > 0
+          ? 'Tasas mensuales auditables disponibles para convertir pipeline abierto a MXN.'
+          : 'No hay tipos de cambio cargados.',
+        facts: {
+          rates: exchangeRates.length,
+          currentPeriodRates: currentExchangeRates.length,
+          currentPeriodId,
+        },
+        notes: [
+          'No existe tasa predeterminada ni conversión oculta.',
         ],
       },
       {
@@ -475,6 +566,9 @@ function buildCapabilities(
   const workingDaysStatus = statusBySource.get('working-days') ?? 'unavailable'
   const inventoryStatus = statusBySource.get('inventory') ?? 'unavailable'
   const productMasterStatus = statusBySource.get('product-master') ?? 'unavailable'
+  const projectsStatus = statusBySource.get('projects') ?? 'unavailable'
+  const projectBillingsStatus = statusBySource.get('project-billings') ?? 'unavailable'
+  const exchangeRatesStatus = statusBySource.get('exchange-rates') ?? 'unavailable'
 
   return [
     {
@@ -533,6 +627,23 @@ function buildCapabilities(
             : 'partial',
       summary: 'Analiza productos Superseded y sustitutos directos sin reescribir los hechos históricos.',
       dependencies: ['sales-history', 'product-master'],
+    },
+    {
+      id: 'project-aware-outlook',
+      label: 'Forecast por origen de venta',
+      status: combineStatus([
+        findGranularityStatus(granularities, 'portfolio'),
+        projectsStatus,
+        projectBillingsStatus,
+        exchangeRatesStatus,
+      ]),
+      summary: 'Separa baseline transaccional, facturación real de proyectos y pipeline maduro pendiente.',
+      dependencies: [
+        'sales-history',
+        'projects',
+        'project-billings',
+        'exchange-rates',
+      ],
     },
     {
       id: 'supply-aware',
@@ -741,8 +852,8 @@ export function buildForecastDataFoundation(
       inventoryIdentityCoverage,
     },
     constraints: [
-      'FW-002 calcula un baseline determinista; no incorpora todavía cobertura de inventario ni Purchasing detallado.',
-      'El forecast oficial se derivará de BusinessDataModel y BusinessRepository, no de una calculadora aislada.',
+      'FW-009 conserva baseline-v1 para demanda y añade project-aware-v1 para el cierre comercial por origen.',
+      'El forecast oficial se deriva de BusinessDataModel y BusinessRepository, separando venta transaccional, facturación real de proyectos y pipeline maduro.',
       'Un forecast manual futuro será un escenario u override explícito y nunca reemplazará los hechos base.',
       'Purchasing es una fuente opcional futura y no bloquea Forecast, Pricing Laboratory ni Executive Workspace.',
     ],

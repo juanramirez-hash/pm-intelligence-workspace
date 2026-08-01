@@ -20,6 +20,9 @@ export type ForecastSourceId =
   | 'working-days'
   | 'inventory'
   | 'product-master'
+  | 'projects'
+  | 'project-billings'
+  | 'exchange-rates'
   | 'purchasing'
 
 export type ForecastCapabilityId =
@@ -30,6 +33,7 @@ export type ForecastCapabilityId =
   | 'target-pace'
   | 'inventory-coverage'
   | 'replacement-aware'
+  | 'project-aware-outlook'
   | 'supply-aware'
 
 export type ForecastGranularity =
