@@ -183,3 +183,11 @@ Se agregan pruebas para:
 - conversión del borrador visual;
 - aislamiento del artefacto transitorio;
 - renderizado del modo independiente de catálogo.
+
+## Extensión PL-009
+
+PL-009 reutiliza `price-design-v1` dentro de `price-batch-design-v1` para
+calcular varios productos y descuentos en una sola matriz. PL-008 permanece
+como diseñador individual; PL-009 añade factor común, cumplimiento por fila,
+resumen agregado y exportación documental sin introducir persistencia.
+

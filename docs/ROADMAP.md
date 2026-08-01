@@ -3,9 +3,9 @@
 ## Estado actual
 
 ```text
-Version: v0.46.0
-Sprint: PL-008 - New Product & Brand Price Design
-Estado: Pricing Laboratory ampliado para diseño sin catálogo
+Version: v0.47.0
+Sprint: PL-009 - New Product & Brand Batch Pricing Matrix
+Estado: Pricing Laboratory ampliado para diseño por lote sin catálogo
 ```
 
 ## Orden estratégico de ejecución
@@ -72,6 +72,7 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-006 | Pricing Laboratory UI & Interactive Scenario Builder | Completado |
 | PL-007 | Pricing Scenario Executive Comparison & Export | Completado |
 | PL-008 | New Product & Brand Price Design from Cost | Completado |
+| PL-009 | New Product & Brand Batch Pricing Matrix | Completado |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
@@ -93,7 +94,9 @@ PL-007 incorpora `pricing-executive-comparison-v1`, selección documental de esc
 
 PL-008 corrige la dependencia exclusiva de precios existentes. Incorpora `price-design-v1` y un modo `Nuevo producto / marca` que parte del costo, moneda, descuento y objetivo explícito para derivar precio de lista, venta neta, factor de lista, factor neto, GP y margen. El usuario puede comparar 32%, 34% o cualquier otro descuento como diseños independientes sin crear productos ni registros de precio.
 
-Pricing Laboratory queda cubierto para dos fuentes: producto existente y diseño previo al catálogo. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
+PL-009 incorpora `price-batch-design-v1` para calcular una familia completa de productos nuevos contra varios descuentos. Compara el factor individual requerido con un factor común máximo, promedio o explícito; publica cumplimiento y agregados por descuento; acepta pegado desde Excel y exporta la simulación a Excel o PDF sin crear ni modificar datos comerciales.
+
+Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo y diseño por lote de nuevas marcas. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
 
 ## Inventory Workspace — CERRADO
 

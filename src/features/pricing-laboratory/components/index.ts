@@ -5,3 +5,5 @@ export * from './PricingScenarioExecutiveComparison'
 export * from './PricingScenarioTable'
 
 export * from './PricingNewProductDesigner'
+
+export * from './PricingBatchDesigner'

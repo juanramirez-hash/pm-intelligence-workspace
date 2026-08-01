@@ -1,3 +1,16 @@
+# 0.47.0-PL-009
+
+- Adds `price-batch-design-v1` for multi-product price design before catalog creation.
+- Builds the Cartesian matrix of products and explicit discounts while reusing `price-design-v1` for every calculation.
+- Calculates the individual list factor required by each product and discount, then compares it with one common list factor for the brand.
+- Supports three explicit common-factor strategies: protect all with the maximum required factor, average required factors, or evaluate a caller-supplied factor.
+- Publishes aggregate cost, list price, net selling price, GP and Gross Margin by discount, assuming one unit of each product and no volume projection.
+- Identifies every row that falls below the explicit objective without ranking, recommending or approving a commercial parameter.
+- Adds manual product rows and tabular paste from Excel for model, SKU, cost and notes.
+- Adds a five-sheet Excel export and a dedicated print/PDF document, both labeled `SIMULACIÓN SIN EFECTO COMERCIAL`.
+- Preserves full simulation isolation: the batch does not create products or brands, persist designs, write Repository data or affect other Workspaces.
+- Adds automated coverage for matrix calculation, factor strategies, compliance, aggregation, validation, paste parsing, export, print and visual rendering.
+
 # 0.46.0-PL-008
 
 - Reopens Pricing Laboratory to correct the catalog-only source limitation identified after PL-007.

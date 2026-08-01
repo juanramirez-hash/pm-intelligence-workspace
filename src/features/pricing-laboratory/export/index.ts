@@ -1,2 +1,5 @@
 export * from './buildPricingScenarioExecutiveExport'
 export * from './downloadPricingScenarioExecutiveExport'
+export * from './buildPricingBatchDesignExport'
+export * from './downloadPricingBatchDesignExport'
+export * from './printPricingBatchDesign'

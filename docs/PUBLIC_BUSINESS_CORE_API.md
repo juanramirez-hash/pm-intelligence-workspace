@@ -256,6 +256,39 @@ with future laboratory orchestration. That object is never inserted into
 Product Master, Business Repository, Data Center or persistence. PL-008 embeds
 no commercial defaults and performs no recommendation or publication.
 
+
+### New Product and Brand Batch Pricing Matrix
+
+PL-009 publishes the catalog-independent batch engine:
+
+```ts
+const batch = evaluatePriceBatchDesign({
+  id: 'NEW-BRAND-BATCH-1',
+  brandName: 'Nueva Marca',
+  currency: 'MXN',
+  products: [
+    { id: 'P-1', model: 'MODEL-1', sku: null, cost: 100 },
+    { id: 'P-2', model: 'MODEL-2', sku: null, cost: 200 },
+  ],
+  discountRates: [0.32, 0.34],
+  objective: {
+    type: 'target_gross_margin',
+    grossMargin: 0.24,
+  },
+  commonFactor: {
+    strategy: 'protect_all',
+  },
+})
+```
+
+The engine calculates every product-discount combination, preserves the
+individual required list factor and evaluates one shared factor across the
+batch. Strategies are `protect_all`, `average_required` and `explicit`.
+
+Aggregates assume one unit of every product and are analytical only. The
+result does not create products or brands, persist calculations, write to the
+Repository or publish prices.
+
 ## Forecast API
 
 `BusinessRepository` expone el baseline oficial mediante:

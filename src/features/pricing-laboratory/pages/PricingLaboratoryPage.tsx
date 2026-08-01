@@ -51,6 +51,7 @@ import type {
 } from '../../../core/business/pricing'
 
 import {
+  PricingBatchDesigner,
   PricingLaboratorySelectionPanel,
   PricingNewProductDesigner,
   PricingScenarioBuilder,
@@ -532,6 +533,17 @@ export function PricingLaboratoryPage() {
           tone="intelligence"
         >
           <PricingNewProductDesigner key={manualDesignerVersion} />
+        </ExecutivePanel>
+      )}
+
+      {sourceMode === 'new_product' && (
+        <ExecutivePanel
+          icon={<Layers3 size={19} />}
+          subtitle="Evalúa varios modelos, costos y descuentos con un factor de lista común para la marca."
+          title="Matriz por lote de productos nuevos"
+          tone="intelligence"
+        >
+          <PricingBatchDesigner key={`batch-${manualDesignerVersion}`} />
         </ExecutivePanel>
       )}
 

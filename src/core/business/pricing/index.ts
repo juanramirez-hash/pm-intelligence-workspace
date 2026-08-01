@@ -8,3 +8,5 @@ export * from './pricingTemplateEngine'
 
 export * from './priceDesignContracts'
 export * from './priceDesignEngine'
+export * from './priceBatchDesignContracts'
+export * from './priceBatchDesignEngine'
