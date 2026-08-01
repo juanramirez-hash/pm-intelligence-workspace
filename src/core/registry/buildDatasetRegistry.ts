@@ -8,6 +8,15 @@ import type {
 import type {
   InventoryDatasetSummary,
 } from '../../features/data-center/importers/inventory/inventoryTypes'
+import type {
+  ProjectDatasetSummary,
+} from '../../features/data-center/importers/projects/projectTypes'
+import type {
+  ProjectBillingDatasetSummary,
+} from '../../features/data-center/importers/project-billings/projectBillingTypes'
+import type {
+  ExchangeRateDatasetSummary,
+} from '../../features/data-center/importers/exchange-rates/exchangeRateTypes'
 
 import {
   DATASET_DEFINITIONS,
@@ -15,6 +24,7 @@ import {
 
 import type {
   DatasetRegistryItem,
+  DatasetType,
 } from '../datasets/datasetTypes'
 
 export interface BuildDatasetRegistryInput {
@@ -30,6 +40,15 @@ export interface BuildDatasetRegistryInput {
   inventorySummary: InventoryDatasetSummary | null
   inventoryLastImportedFile: string | null
   inventoryLastImportedAt: string | null
+  projectsSummary?: ProjectDatasetSummary | null
+  projectsLastImportedFile?: string | null
+  projectsLastImportedAt?: string | null
+  projectBillingSummary?: ProjectBillingDatasetSummary | null
+  projectBillingLastImportedFile?: string | null
+  projectBillingLastImportedAt?: string | null
+  exchangeRateSummary?: ExchangeRateDatasetSummary | null
+  exchangeRateLastImportedFile?: string | null
+  exchangeRateLastImportedAt?: string | null
 }
 
 function createEmptyRegistryItem(
@@ -53,94 +72,118 @@ function createEmptyRegistryItem(
   }
 }
 
-export function buildDatasetRegistry({
-  salesSummary,
-  salesLastImportedFile,
-  salesLastImportedAt,
-  targetSummary,
-  targetsLastImportedFile,
-  targetsLastImportedAt,
-  productMasterSummary,
-  productMasterLastImportedFile,
-  productMasterLastImportedAt,
-  inventorySummary,
-  inventoryLastImportedFile,
-  inventoryLastImportedAt,
-}: BuildDatasetRegistryInput): DatasetRegistryItem[] {
+function activateDataset(
+  registry: DatasetRegistryItem[],
+  type: DatasetType,
+  input: {
+    totalRows: number
+    ignoredRows: number
+    periodStart: string | null
+    periodEnd: string | null
+    lastImportedFile: string | null
+    lastImportedAt: string | null
+  },
+): void {
+  const index = registry.findIndex((dataset) => dataset.type === type)
+
+  if (index < 0) {
+    return
+  }
+
+  registry[index] = {
+    ...registry[index],
+    status: 'active',
+    storage: 'indexeddb',
+    totalRows: input.totalRows,
+    ignoredRows: input.ignoredRows,
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lastImportedFile: input.lastImportedFile,
+    lastImportedAt: input.lastImportedAt,
+    version: 1,
+  }
+}
+
+export function buildDatasetRegistry(
+  input: BuildDatasetRegistryInput,
+): DatasetRegistryItem[] {
   const registry = DATASET_DEFINITIONS.map(createEmptyRegistryItem)
 
-  const salesIndex = registry.findIndex((dataset) => dataset.type === 'sales')
-
-  if (salesSummary && salesIndex >= 0) {
-    registry[salesIndex] = {
-      ...registry[salesIndex],
-      status: 'active',
-      storage: 'indexeddb',
-      totalRows: salesSummary.processedRows,
-      ignoredRows: salesSummary.ignoredRows,
-      periodStart: salesSummary.periodStart,
-      periodEnd: salesSummary.periodEnd,
-      lastImportedFile: salesLastImportedFile,
-      lastImportedAt: salesLastImportedAt,
-      version: 1,
-    }
+  if (input.salesSummary) {
+    activateDataset(registry, 'sales', {
+      totalRows: input.salesSummary.processedRows,
+      ignoredRows: input.salesSummary.ignoredRows,
+      periodStart: input.salesSummary.periodStart,
+      periodEnd: input.salesSummary.periodEnd,
+      lastImportedFile: input.salesLastImportedFile,
+      lastImportedAt: input.salesLastImportedAt,
+    })
   }
 
-  const targetIndex = registry.findIndex(
-    (dataset) => dataset.type === 'salesTargets',
-  )
-
-  if (targetSummary && targetIndex >= 0) {
-    registry[targetIndex] = {
-      ...registry[targetIndex],
-      status: 'active',
-      storage: 'indexeddb',
-      totalRows: targetSummary.processedRows,
-      ignoredRows: targetSummary.ignoredRows,
-      periodStart: targetSummary.periodStart,
-      periodEnd: targetSummary.periodEnd,
-      lastImportedFile: targetsLastImportedFile,
-      lastImportedAt: targetsLastImportedAt,
-      version: 1,
-    }
+  if (input.targetSummary) {
+    activateDataset(registry, 'salesTargets', {
+      totalRows: input.targetSummary.processedRows,
+      ignoredRows: input.targetSummary.ignoredRows,
+      periodStart: input.targetSummary.periodStart,
+      periodEnd: input.targetSummary.periodEnd,
+      lastImportedFile: input.targetsLastImportedFile,
+      lastImportedAt: input.targetsLastImportedAt,
+    })
   }
 
-  const inventoryIndex = registry.findIndex(
-    (dataset) => dataset.type === 'inventory',
-  )
-
-  if (inventorySummary && inventoryIndex >= 0) {
-    registry[inventoryIndex] = {
-      ...registry[inventoryIndex],
-      status: 'active',
-      storage: 'indexeddb',
-      totalRows: inventorySummary.processedRows,
-      ignoredRows: inventorySummary.ignoredRows,
-      periodStart: inventorySummary.periodStart,
-      periodEnd: inventorySummary.periodEnd,
-      lastImportedFile: inventoryLastImportedFile,
-      lastImportedAt: inventoryLastImportedAt,
-      version: 1,
-    }
+  if (input.inventorySummary) {
+    activateDataset(registry, 'inventory', {
+      totalRows: input.inventorySummary.processedRows,
+      ignoredRows: input.inventorySummary.ignoredRows,
+      periodStart: input.inventorySummary.periodStart,
+      periodEnd: input.inventorySummary.periodEnd,
+      lastImportedFile: input.inventoryLastImportedFile,
+      lastImportedAt: input.inventoryLastImportedAt,
+    })
   }
 
-  const productIndex = registry.findIndex(
-    (dataset) => dataset.type === 'products',
-  )
-
-  if (productMasterSummary && productIndex >= 0) {
-    registry[productIndex] = {
-      ...registry[productIndex],
-      status: 'active',
-      storage: 'indexeddb',
-      totalRows: productMasterSummary.processedRows,
-      ignoredRows: productMasterSummary.ignoredRows,
+  if (input.productMasterSummary) {
+    activateDataset(registry, 'products', {
+      totalRows: input.productMasterSummary.processedRows,
+      ignoredRows: input.productMasterSummary.ignoredRows,
       periodStart: null,
       periodEnd: null,
-      lastImportedFile: productMasterLastImportedFile,
-      lastImportedAt: productMasterLastImportedAt,
-      version: 1,
-    }
+      lastImportedFile: input.productMasterLastImportedFile,
+      lastImportedAt: input.productMasterLastImportedAt,
+    })
+  }
+
+  if (input.projectsSummary) {
+    activateDataset(registry, 'projects', {
+      totalRows: input.projectsSummary.processedRows,
+      ignoredRows: input.projectsSummary.ignoredRows,
+      periodStart: input.projectsSummary.periodStart,
+      periodEnd: input.projectsSummary.periodEnd,
+      lastImportedFile: input.projectsLastImportedFile ?? null,
+      lastImportedAt: input.projectsLastImportedAt ?? null,
+    })
+  }
+
+  if (input.projectBillingSummary) {
+    activateDataset(registry, 'projectBillings', {
+      totalRows: input.projectBillingSummary.processedRows,
+      ignoredRows: input.projectBillingSummary.ignoredRows,
+      periodStart: input.projectBillingSummary.periodStart,
+      periodEnd: input.projectBillingSummary.periodEnd,
+      lastImportedFile: input.projectBillingLastImportedFile ?? null,
+      lastImportedAt: input.projectBillingLastImportedAt ?? null,
+    })
+  }
+
+  if (input.exchangeRateSummary) {
+    activateDataset(registry, 'exchangeRates', {
+      totalRows: input.exchangeRateSummary.processedRows,
+      ignoredRows: input.exchangeRateSummary.ignoredRows,
+      periodStart: input.exchangeRateSummary.periodStart,
+      periodEnd: input.exchangeRateSummary.periodEnd,
+      lastImportedFile: input.exchangeRateLastImportedFile ?? null,
+      lastImportedAt: input.exchangeRateLastImportedAt ?? null,
+    })
   }
 
   return registry.sort(

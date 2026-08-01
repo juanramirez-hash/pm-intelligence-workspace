@@ -36,3 +36,25 @@ export type {
 
 export * from './components'
 export * from './utils/forecastWorkspaceFormatters'
+
+export {
+  buildForecastExecutiveSummary,
+} from './engine/buildForecastExecutiveSummary'
+
+export type {
+  ForecastExecutiveFinding,
+  ForecastExecutiveFindingTone,
+  ForecastExecutiveSummary,
+} from './engine/buildForecastExecutiveSummary'
+
+export {
+  buildForecastExecutiveExport,
+  downloadForecastExecutiveExport,
+} from './export'
+
+export type {
+  ForecastExecutiveExportInput,
+  ForecastExecutiveExportPayload,
+  ForecastExportCell,
+  ForecastExportSheet,
+} from './export'

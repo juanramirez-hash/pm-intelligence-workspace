@@ -339,6 +339,42 @@ export function DataCatalog() {
       (state) => state.productMasterLastImportedAt,
     )
 
+  const projectsSummary = useDataCenterStore(
+    (state) => state.projectsSummary,
+  )
+
+  const projectsLastImportedFile = useDataCenterStore(
+    (state) => state.projectsLastImportedFile,
+  )
+
+  const projectsLastImportedAt = useDataCenterStore(
+    (state) => state.projectsLastImportedAt,
+  )
+
+  const projectBillingSummary = useDataCenterStore(
+    (state) => state.projectBillingSummary,
+  )
+
+  const projectBillingLastImportedFile = useDataCenterStore(
+    (state) => state.projectBillingLastImportedFile,
+  )
+
+  const projectBillingLastImportedAt = useDataCenterStore(
+    (state) => state.projectBillingLastImportedAt,
+  )
+
+  const exchangeRateSummary = useDataCenterStore(
+    (state) => state.exchangeRateSummary,
+  )
+
+  const exchangeRateLastImportedFile = useDataCenterStore(
+    (state) => state.exchangeRateLastImportedFile,
+  )
+
+  const exchangeRateLastImportedAt = useDataCenterStore(
+    (state) => state.exchangeRateLastImportedAt,
+  )
+
   const datasets =
     useMemo(
       () =>
@@ -355,6 +391,15 @@ export function DataCatalog() {
           inventorySummary,
           inventoryLastImportedFile,
           inventoryLastImportedAt,
+          projectsSummary,
+          projectsLastImportedFile,
+          projectsLastImportedAt,
+          projectBillingSummary,
+          projectBillingLastImportedFile,
+          projectBillingLastImportedAt,
+          exchangeRateSummary,
+          exchangeRateLastImportedFile,
+          exchangeRateLastImportedAt,
         }),
       [
         salesSummary,
@@ -369,6 +414,15 @@ export function DataCatalog() {
         inventorySummary,
         inventoryLastImportedFile,
         inventoryLastImportedAt,
+        projectsSummary,
+        projectsLastImportedFile,
+        projectsLastImportedAt,
+        projectBillingSummary,
+        projectBillingLastImportedFile,
+        projectBillingLastImportedAt,
+        exchangeRateSummary,
+        exchangeRateLastImportedFile,
+        exchangeRateLastImportedAt,
       ],
     )
 

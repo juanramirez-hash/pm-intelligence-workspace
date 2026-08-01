@@ -81,3 +81,30 @@ export {
   InventoryRiskOpportunityQueries,
 } from './inventoryRiskOpportunityQueries'
 export { ForecastDataQueries } from './forecastDataQueries'
+
+export { ProjectQueries } from './projectQueries'
+export type { ProjectDataQualityReport } from './projectQueries'
+export { buildProjectIndexes } from './projectIndexes'
+export type { ProjectIndexes } from './projectIndexes'
+
+export { ProjectBillingQueries } from './projectBillingQueries'
+export type {
+  ProjectBillingDataQualityReport,
+} from './projectBillingQueries'
+export {
+  buildProjectBillingIndexes,
+} from './projectBillingIndexes'
+export type {
+  ProjectBillingIndexes,
+} from './projectBillingIndexes'
+
+export { ExchangeRateQueries } from './exchangeRateQueries'
+export type {
+  ExchangeRateConversionResult,
+} from './exchangeRateQueries'
+export {
+  buildExchangeRateIndexes,
+} from './exchangeRateIndexes'
+export type {
+  ExchangeRateIndexes,
+} from './exchangeRateIndexes'

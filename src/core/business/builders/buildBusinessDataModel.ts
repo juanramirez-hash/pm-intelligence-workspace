@@ -11,6 +11,18 @@ import type {
 } from '../../../features/data-center/importers/inventory/inventoryTypes'
 
 import type {
+  NormalizedProjectRow,
+} from '../../../features/data-center/importers/projects/projectTypes'
+
+import type {
+  NormalizedProjectBillingRow,
+} from '../../../features/data-center/importers/project-billings/projectBillingTypes'
+
+import type {
+  NormalizedExchangeRateRow,
+} from '../../../features/data-center/importers/exchange-rates/exchangeRateTypes'
+
+import type {
   BusinessBrand,
 } from '../entities/brand'
 
@@ -70,6 +82,18 @@ import type {
 import {
   buildBusinessInventory,
 } from './buildBusinessInventory'
+
+import {
+  buildBusinessProjects,
+} from './buildBusinessProjects'
+
+import {
+  buildBusinessProjectBillings,
+} from './buildBusinessProjectBillings'
+
+import {
+  buildBusinessExchangeRates,
+} from './buildBusinessExchangeRates'
 
 import {
   createProductIdentityQualityAccumulator,
@@ -667,6 +691,9 @@ export interface BuildBusinessDataModelOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
   productMaster?: readonly NormalizedProductMasterRow[]
   inventory?: readonly NormalizedInventoryRow[]
+  projects?: readonly NormalizedProjectRow[]
+  projectBillings?: readonly NormalizedProjectBillingRow[]
+  exchangeRates?: readonly NormalizedExchangeRateRow[]
 }
 
 export function buildBusinessDataModel(
@@ -752,6 +779,18 @@ export function buildBusinessDataModel(
     inventorySnapshots:
       new Map(),
 
+    projects:
+      new Map(),
+
+    projectBillings:
+      new Map(),
+
+    projectBillingLines:
+      new Map(),
+
+    exchangeRates:
+      new Map(),
+
     periods:
       new Map<
         string,
@@ -815,6 +854,20 @@ export function buildBusinessDataModel(
 
   model.inventoryPositions = inventory.positions
   model.inventorySnapshots = inventory.snapshots
+
+  model.projects = buildBusinessProjects(
+    options.projects ?? [],
+  )
+
+  const projectBillings = buildBusinessProjectBillings(
+    options.projectBillings ?? [],
+  )
+
+  model.projectBillings = projectBillings.documents
+  model.projectBillingLines = projectBillings.lines
+  model.exchangeRates = buildBusinessExchangeRates(
+    options.exchangeRates ?? [],
+  )
 
   const periodDocuments =
     new Map<

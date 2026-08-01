@@ -62,6 +62,18 @@ import {
   ForecastDataQueries,
 } from './forecastDataQueries'
 
+import {
+  ProjectQueries,
+} from './projectQueries'
+
+import {
+  ProjectBillingQueries,
+} from './projectBillingQueries'
+
+import {
+  ExchangeRateQueries,
+} from './exchangeRateQueries'
+
 export class BusinessRepository {
   private readonly model:
     BusinessDataModel
@@ -102,6 +114,15 @@ export class BusinessRepository {
 
   readonly forecast:
     ForecastDataQueries
+
+  readonly projects:
+    ProjectQueries
+
+  readonly projectBillings:
+    ProjectBillingQueries
+
+  readonly exchangeRates:
+    ExchangeRateQueries
 
   constructor(
     model: BusinessDataModel,
@@ -160,6 +181,15 @@ export class BusinessRepository {
 
     this.forecast =
       new ForecastDataQueries(model)
+
+    this.projects =
+      new ProjectQueries(model)
+
+    this.projectBillings =
+      new ProjectBillingQueries(model)
+
+    this.exchangeRates =
+      new ExchangeRateQueries(model)
   }
 
   getCustomers():
@@ -199,6 +229,18 @@ export class BusinessRepository {
 
   getInventoryRiskOpportunityReport() {
     return this.inventoryRiskOpportunity.getReport()
+  }
+
+  getProjects() {
+    return this.projects.getAll()
+  }
+
+  getProjectBillingDocuments() {
+    return this.projectBillings.getAllDocuments()
+  }
+
+  getExchangeRates() {
+    return this.exchangeRates.getAll()
   }
 
   findCustomer(

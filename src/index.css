@@ -130,3 +130,31 @@ a {
     text-decoration: none !important;
   }
 }
+
+@media print {
+  [data-forecast-print-section="filters"] {
+    display: none !important;
+  }
+
+  [data-forecast-print-section="brands"],
+  [data-forecast-print-section="priorities"],
+  [data-forecast-print-section="methodology"] {
+    break-before: page;
+  }
+
+  [data-forecast-print-table="true"] {
+    overflow: visible !important;
+  }
+
+  [data-forecast-print-table="true"] table {
+    width: 100% !important;
+    min-width: 0 !important;
+    break-inside: auto;
+    font-size: 7pt !important;
+  }
+
+  [data-forecast-print-table="true"] tr {
+    break-inside: avoid;
+    break-after: auto;
+  }
+}

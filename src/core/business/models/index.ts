@@ -21,3 +21,10 @@ export type {
 export type {
   BusinessSalesSegment,
 } from '../entities/salesSegment'
+
+export type { BusinessProject } from '../entities/project'
+export type {
+  BusinessProjectBillingDocument,
+  BusinessProjectBillingLine,
+} from '../entities/projectBilling'
+export type { BusinessExchangeRate } from '../entities/exchangeRate'

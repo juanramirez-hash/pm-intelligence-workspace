@@ -30,12 +30,36 @@ export const DATASET_DEFINITIONS:
     displayOrder: 3,
   },
   {
+    type: 'projects',
+    label: 'Proyectos',
+    description:
+      'Snapshot vigente del pipeline, estatus, fecha estimada de facturación y monto por cerrar.',
+    updateFrequency: 'Semanal',
+    displayOrder: 4,
+  },
+  {
+    type: 'projectBillings',
+    label: 'Facturación de proyectos',
+    description:
+      'Documentos y líneas históricas que identifican la venta originada por proyectos.',
+    updateFrequency: 'Semanal',
+    displayOrder: 5,
+  },
+  {
+    type: 'exchangeRates',
+    label: 'Tipos de cambio',
+    description:
+      'Tipo de cambio mensual auditable para convertir pipeline abierto a la moneda oficial MXN.',
+    updateFrequency: 'Mensual',
+    displayOrder: 6,
+  },
+  {
     type: 'purchases',
     label: 'Órdenes de compra',
     description:
       'Órdenes emitidas, cantidades solicitadas, proveedores y fechas estimadas.',
     updateFrequency: 'Semanal',
-    displayOrder: 4,
+    displayOrder: 7,
   },
   {
     type: 'purchaseRequests',
@@ -43,7 +67,7 @@ export const DATASET_DEFINITIONS:
     description:
       'Requerimientos de abastecimiento y seguimiento de solicitudes pendientes.',
     updateFrequency: 'Semanal',
-    displayOrder: 5,
+    displayOrder: 8,
   },
   {
     type: 'pricing',
@@ -51,7 +75,7 @@ export const DATASET_DEFINITIONS:
     description:
       'Precios, costos, descuentos, niveles comerciales y márgenes.',
     updateFrequency: 'Semanal',
-    displayOrder: 6,
+    displayOrder: 9,
   },
   {
     type: 'customers',
@@ -59,7 +83,7 @@ export const DATASET_DEFINITIONS:
     description:
       'Maestro comercial de clientes, segmentos, regiones y clasificación.',
     updateFrequency: 'Mensual',
-    displayOrder: 7,
+    displayOrder: 10,
   },
   {
     type: 'products',
@@ -67,7 +91,7 @@ export const DATASET_DEFINITIONS:
     description:
       'Catálogo maestro de modelos, SKU, marcas, categorías y atributos.',
     updateFrequency: 'Semanal',
-    displayOrder: 8,
+    displayOrder: 11,
   },
   {
     type: 'businessCalendar',
@@ -75,7 +99,7 @@ export const DATASET_DEFINITIONS:
     description:
       'Días laborales utilizados para avance diario y proyecciones mensuales.',
     updateFrequency: 'Anual',
-    displayOrder: 9,
+    displayOrder: 12,
   },
 ]
 

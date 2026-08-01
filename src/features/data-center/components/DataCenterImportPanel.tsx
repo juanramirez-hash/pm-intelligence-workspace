@@ -139,7 +139,13 @@ export function DataCenterImportPanel({
                         ? 'Product Master'
                         : activeReportType === 'inventory'
                           ? 'Inventario'
-                          : activeReportType}
+                          : activeReportType === 'projects'
+                            ? 'Proyectos'
+                            : activeReportType === 'project-billing'
+                              ? 'Facturación de proyectos'
+                              : activeReportType === 'exchange-rates'
+                                ? 'Tipos de cambio'
+                                : activeReportType}
                 </div>
               )}
             </div>

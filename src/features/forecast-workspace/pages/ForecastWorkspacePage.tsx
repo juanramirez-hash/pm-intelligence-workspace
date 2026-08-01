@@ -6,6 +6,7 @@ import {
   CircleGauge,
   Crosshair,
   Database,
+  FileSpreadsheet,
   Home,
   PackageCheck,
   PackageX,
@@ -59,6 +60,15 @@ import {
   ForecastPriorityList,
   ForecastScenarioSelector,
 } from '../components'
+
+import {
+  buildForecastExecutiveSummary,
+} from '../engine/buildForecastExecutiveSummary'
+
+import {
+  buildForecastExecutiveExport,
+  downloadForecastExecutiveExport,
+} from '../export'
 
 import {
   useForecastWorkspace,
@@ -193,12 +203,15 @@ export function ForecastWorkspacePage() {
     useState<ForecastWorkspaceFilters>({
       ...DEFAULT_FORECAST_WORKSPACE_FILTERS,
     })
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const [exportFileName, setExportFileName] = useState<string | null>(null)
 
   const request = useMemo(
     () => ({
       scenarioId,
       filters,
-      rankingLimit: 10,
+      rankingLimit: Number.MAX_SAFE_INTEGER,
     }),
     [scenarioId, filters],
   )
@@ -206,11 +219,46 @@ export function ForecastWorkspacePage() {
   const workspace = useForecastWorkspace(request)
   const status = workspaceStatusPresentation(workspace.status)
   const filtersActive = hasActiveFilters(filters)
+  const visibleRiskRanking = workspace.riskRanking.slice(0, 10)
+  const visibleOpportunityRanking = workspace.opportunityRanking.slice(0, 10)
+
+  const executiveSummary = useMemo(
+    () => buildForecastExecutiveSummary(workspace),
+    [workspace],
+  )
 
   const resetFilters = () => {
     setFilters({
       ...DEFAULT_FORECAST_WORKSPACE_FILTERS,
     })
+  }
+
+  const handleExecutiveExport = async (): Promise<void> => {
+    if (!workspace.available || isExporting) {
+      return
+    }
+
+    setIsExporting(true)
+    setExportError(null)
+    setExportFileName(null)
+
+    try {
+      const payload = buildForecastExecutiveExport({
+        workspace,
+        summary: executiveSummary,
+      })
+
+      await downloadForecastExecutiveExport(payload)
+      setExportFileName(payload.fileName)
+    } catch (error) {
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : 'No fue posible generar el archivo Excel.',
+      )
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -257,6 +305,16 @@ export function ForecastWorkspacePage() {
                 </ShellActionsGroup>
 
                 <ShellActionsGroup label="Salida ejecutiva">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!workspace.available || isExporting}
+                    onClick={handleExecutiveExport}
+                    type="button"
+                  >
+                    <FileSpreadsheet size={16} />
+                    {isExporting ? 'Generando Excel...' : 'Exportar Excel'}
+                  </button>
+
                   <button
                     className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white"
                     onClick={() => window.print()}
@@ -437,6 +495,21 @@ export function ForecastWorkspacePage() {
         </ExecutivePanel>
       ) : (
         <>
+          {(exportError || exportFileName) && (
+            <div
+              className={[
+                'rounded-2xl border px-4 py-3 text-sm font-semibold',
+                exportError
+                  ? 'border-rose-200 bg-rose-50 text-rose-800'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-800',
+              ].join(' ')}
+              data-print-hidden="true"
+              role="status"
+            >
+              {exportError ?? `Excel generado: ${exportFileName}`}
+            </div>
+          )}
+
           <KPIGrid columns={6} gap="compact">
             <IntelligentKpiCard
               context={`Corte ${formatForecastDate(workspace.period.dataCutoff)}`}
@@ -530,22 +603,24 @@ export function ForecastWorkspacePage() {
             />
           </KPIGrid>
 
-          <ExecutivePanel
-            count={`${workspace.inventory.filteredProducts}/${workspace.inventory.productsAnalyzed}`}
-            icon={<Crosshair size={19} />}
-            subtitle="La selección modifica productos, cobertura y rankings; no altera el cierre consolidado del portafolio."
-            title="Segmentación del Forecast"
-            tone="intelligence"
-          >
-            <ForecastFilterBar
-              filters={filters}
-              onChange={setFilters}
-              onReset={resetFilters}
-              options={workspace.filterOptions}
-            />
-          </ExecutivePanel>
+          <div data-forecast-print-section="filters">
+            <ExecutivePanel
+              count={`${workspace.inventory.filteredProducts}/${workspace.inventory.productsAnalyzed}`}
+              icon={<Crosshair size={19} />}
+              subtitle="La selección modifica productos, cobertura y rankings; no altera el cierre consolidado del portafolio."
+              title="Segmentación del Forecast"
+              tone="intelligence"
+            >
+              <ForecastFilterBar
+                filters={filters}
+                onChange={setFilters}
+                onReset={resetFilters}
+                options={workspace.filterOptions}
+              />
+            </ExecutivePanel>
+          </div>
 
-          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]" data-forecast-print-section="coverage">
             <ExecutivePanel
               count={workspace.inventory.filteredProducts}
               icon={<CircleGauge size={19} />}
@@ -618,45 +693,47 @@ export function ForecastWorkspacePage() {
             </ExecutivePanel>
           </div>
 
-          <ExecutivePanel
-            count={workspace.brands.length}
-            icon={<Target size={19} />}
-            subtitle="Comparación de cierre, objetivo, confianza y riesgo de inventario por marca."
-            title="Forecast ejecutivo por marca"
-            tone="intelligence"
-          >
-            <ForecastBrandTable rows={workspace.brands} />
-          </ExecutivePanel>
-
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div data-forecast-print-section="brands">
             <ExecutivePanel
-              count={workspace.riskRanking.length}
+              count={workspace.brands.length}
+              icon={<Target size={19} />}
+              subtitle="Comparación de cierre, objetivo, confianza y riesgo de inventario por marca."
+              title="Forecast ejecutivo por marca"
+              tone="intelligence"
+            >
+              <ForecastBrandTable rows={workspace.brands} />
+            </ExecutivePanel>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-2" data-forecast-print-section="priorities">
+            <ExecutivePanel
+              count={visibleRiskRanking.length}
               icon={<ShieldAlert size={19} />}
               subtitle="Productos ordenados por score de señal y valor de inventario afectado."
               title="Prioridades de riesgo"
               tone="critical"
             >
               <ForecastPriorityList
-                items={workspace.riskRanking}
+                items={visibleRiskRanking}
                 kind="risk"
               />
             </ExecutivePanel>
 
             <ExecutivePanel
-              count={workspace.opportunityRanking.length}
+              count={visibleOpportunityRanking.length}
               icon={<Sparkles size={19} />}
               subtitle="Recuperaciones, exceso gestionable y rutas de sustitución detectadas."
               title="Oportunidades de intervención"
               tone="positive"
             >
               <ForecastPriorityList
-                items={workspace.opportunityRanking}
+                items={visibleOpportunityRanking}
                 kind="opportunity"
               />
             </ExecutivePanel>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-2" data-forecast-print-section="methodology">
             <ExecutivePanel
               count={workspace.explainability.length}
               icon={<Sparkles size={19} />}

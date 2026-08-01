@@ -42,6 +42,23 @@ type WorkspaceContextState =
     | 'lastImportedAt'
     | 'lastImportedFile'
     | 'importStatus'
+  > &
+  Partial<
+    Pick<
+      DataCenterState,
+      | 'projectsSummary'
+      | 'normalizedProjects'
+      | 'projectsLastImportedAt'
+      | 'projectsLastImportedFile'
+      | 'projectBillingSummary'
+      | 'normalizedProjectBillings'
+      | 'projectBillingLastImportedAt'
+      | 'projectBillingLastImportedFile'
+      | 'exchangeRateSummary'
+      | 'normalizedExchangeRates'
+      | 'exchangeRateLastImportedAt'
+      | 'exchangeRateLastImportedFile'
+    >
   >
 
 function resolveCurrentPeriodId(
@@ -82,16 +99,34 @@ export function buildWorkspaceContext(
       inventorySummary: state.inventorySummary,
       inventoryLastImportedAt: state.inventoryLastImportedAt,
       inventoryLastImportedFile: state.inventoryLastImportedFile,
+      projectsSummary: state.projectsSummary ?? null,
+      projectsLastImportedAt: state.projectsLastImportedAt ?? null,
+      projectsLastImportedFile: state.projectsLastImportedFile ?? null,
+      projectBillingSummary: state.projectBillingSummary ?? null,
+      projectBillingLastImportedAt: state.projectBillingLastImportedAt ?? null,
+      projectBillingLastImportedFile: state.projectBillingLastImportedFile ?? null,
+      exchangeRateSummary: state.exchangeRateSummary ?? null,
+      exchangeRateLastImportedAt: state.exchangeRateLastImportedAt ?? null,
+      exchangeRateLastImportedFile: state.exchangeRateLastImportedFile ?? null,
     })
 
+  const hasBusinessData =
+    state.normalizedSales.length > 0 ||
+    (state.normalizedProjects?.length ?? 0) > 0 ||
+    (state.normalizedProjectBillings?.length ?? 0) > 0 ||
+    (state.normalizedExchangeRates?.length ?? 0) > 0
+
   const business =
-    state.normalizedSales.length > 0
+    hasBusinessData
       ? buildBusinessIntelligence(
           state.normalizedSales,
           {
             brandTargets: state.normalizedTargets,
             productMaster: state.normalizedProductMaster,
             inventory: state.normalizedInventory,
+            projects: state.normalizedProjects ?? [],
+            projectBillings: state.normalizedProjectBillings ?? [],
+            exchangeRates: state.normalizedExchangeRates ?? [],
           },
         )
       : null

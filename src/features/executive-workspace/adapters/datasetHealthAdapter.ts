@@ -3,6 +3,9 @@ import {
   Crosshair,
   Database,
   DollarSign,
+  FolderKanban,
+  ReceiptText,
+  ArrowRightLeft,
   Package,
   PackageSearch,
   ShoppingCart,
@@ -54,6 +57,15 @@ const DATASET_ICONS: Record<
 
   salesTargets:
     Crosshair,
+
+  projects:
+    FolderKanban,
+
+  projectBillings:
+    ReceiptText,
+
+  exchangeRates:
+    ArrowRightLeft,
 
   purchases:
     ShoppingCart,

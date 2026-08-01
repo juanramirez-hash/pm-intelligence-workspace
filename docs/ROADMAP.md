@@ -3,8 +3,8 @@
 ## Estado actual
 
 ```text
-Versión: v0.33.0
-Sprint: FW-005 - Forecast Workspace UI
+Versión: v0.35.0
+Sprint: FW-007 - Project & Project Billing Data Foundation
 Estado: Completado
 ```
 
@@ -24,7 +24,11 @@ Estado: Completado
 | FW-003 | Forecast Intelligence, cobertura, riesgo y sustituciones por producto | Completado |
 | FW-004 | Workspace Model, comparación de escenarios y priorización ejecutiva | Completado |
 | FW-005 | Forecast Workspace UI | Completado |
-| FW-006 | Resumen ejecutivo, exportacion y cierre | Siguiente |
+| FW-006 | Resumen ejecutivo y exportación base | Completado · cierre final reabierto |
+| FW-007 | Project & Project Billing Data Foundation | Completado |
+| FW-008 | Project Billing Reconciliation | Planeado |
+| FW-009 | Project-Aware Forecast Engine | Planeado |
+| FW-010 | Forecast UI & Export Final Closure | Planeado |
 
 FW-001 establece que Forecast es un dominio derivado del Business Repository. Utiliza ventas históricas como fuente obligatoria y objetivos, días laborales, inventario y Product Master como contextos enriquecedores. Purchasing permanece como fuente futura opcional y no bloqueante.
 
@@ -38,7 +42,15 @@ FW-004 compone los resultados de FW-002 y FW-003 en `ForecastWorkspaceModel`. In
 
 FW-005 utiliza `ForecastWorkspaceModel` como unica fuente y entrega la interfaz visual completa con escenarios, KPIs, filtros, cobertura, marcas, rankings, explainability y estados sin datos.
 
-FW-006 cerrara Forecast Workspace con resumen ejecutivo deterministico, exportacion Excel y validacion final de consistencia.
+FW-006 entrega la infraestructura de resumen ejecutivo, exportación Excel e impresión/PDF. El cierre definitivo se reabre al identificar que la proyección debe separar venta transaccional, facturación real por proyectos y pipeline maduro pendiente.
+
+FW-006 Hotfix 1 alinea la narrativa ejecutiva `on-track` con el objetivo mensual. No cambia fórmulas, resultados, escenarios ni el contrato de exportación.
+
+FW-007 incorpora en Data Center y Business Repository los dominios Proyectos, Facturación de proyectos y Tipos de cambio mensuales. La fundación conserva el monto original, la moneda, el documento, el status, la fecha estimada de facturación y la trazabilidad necesaria para evitar doble conteo.
+
+FW-008 conciliará los números de factura contra Sales Repository para identificar facturación neta de proyectos en MXN y separar la venta transaccional. FW-009 reconstruirá el Forecast con componentes por origen. FW-010 cerrará nuevamente la UI y exportación.
+
+**Siguiente sprint:** FW-008 — Project Billing Reconciliation.
 
 ## Inventory Workspace — CERRADO
 

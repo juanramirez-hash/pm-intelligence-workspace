@@ -59,6 +59,7 @@ export function ForecastBrandTable({
     <div
       className="overflow-x-auto"
       data-forecast-component="brand-table"
+      data-forecast-print-table="true"
     >
       <table className="min-w-[1080px] w-full border-separate border-spacing-0 text-left text-sm">
         <thead>

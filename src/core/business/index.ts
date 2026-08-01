@@ -70,3 +70,10 @@ export type { BusinessInventoryPosition, BusinessInventoryIdentityStatus } from 
 export type { BusinessInventorySnapshot } from './entities/inventorySnapshot'
 export { buildBusinessInventory } from './builders/buildBusinessInventory'
 export type { BusinessInventoryBuildResult } from './builders/buildBusinessInventory'
+
+export type { BusinessProject } from './entities/project'
+export type {
+  BusinessProjectBillingDocument,
+  BusinessProjectBillingLine,
+} from './entities/projectBilling'
+export type { BusinessExchangeRate } from './entities/exchangeRate'

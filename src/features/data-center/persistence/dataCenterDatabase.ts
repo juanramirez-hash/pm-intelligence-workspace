@@ -22,11 +22,23 @@ import type {
   InventoryDatasetSummary,
   NormalizedInventoryRow,
 } from '../importers/inventory/inventoryTypes'
+import type {
+  NormalizedProjectRow,
+  ProjectDatasetSummary,
+} from '../importers/projects/projectTypes'
+import type {
+  NormalizedProjectBillingRow,
+  ProjectBillingDatasetSummary,
+} from '../importers/project-billings/projectBillingTypes'
+import type {
+  ExchangeRateDatasetSummary,
+  NormalizedExchangeRateRow,
+} from '../importers/exchange-rates/exchangeRateTypes'
 
 export const DATA_CENTER_DATABASE_NAME =
   'pm-intelligence-workspace'
 
-export const DATA_CENTER_DATABASE_VERSION = 4
+export const DATA_CENTER_DATABASE_VERSION = 7
 
 export const SALES_METADATA_KEY =
   'current-sales-dataset'
@@ -36,8 +48,15 @@ export const PRODUCT_METADATA_KEY =
   'current-product-master-dataset'
 export const INVENTORY_METADATA_KEY =
   'current-inventory-dataset'
+export const PROJECT_METADATA_KEY =
+  'current-project-dataset'
+export const PROJECT_BILLING_METADATA_KEY =
+  'current-project-billing-dataset'
+export const EXCHANGE_RATE_METADATA_KEY =
+  'current-exchange-rate-dataset'
 
 export const SALES_CHUNK_SIZE = 5_000
+export const PROJECT_BILLING_CHUNK_SIZE = 2_500
 
 export interface PersistedSalesMetadata {
   id: string
@@ -81,6 +100,39 @@ export interface PersistedInventoryMetadata {
   persistenceVersion: number
 }
 
+export interface PersistedProjectMetadata {
+  id: string
+  summary: ProjectDatasetSummary
+  normalizedRows: NormalizedProjectRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+  persistenceVersion: number
+}
+
+export interface PersistedProjectBillingMetadata {
+  id: string
+  summary: ProjectBillingDatasetSummary
+  lastImportedFile: string
+  lastImportedAt: string
+  totalRows: number
+  totalChunks: number
+  persistenceVersion: number
+}
+
+export interface PersistedProjectBillingChunk {
+  chunkIndex: number
+  rows: NormalizedProjectBillingRow[]
+}
+
+export interface PersistedExchangeRateMetadata {
+  id: string
+  summary: ExchangeRateDatasetSummary
+  normalizedRows: NormalizedExchangeRateRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+  persistenceVersion: number
+}
+
 interface DataCenterDatabaseSchema
   extends DBSchema {
   salesMetadata: {
@@ -106,6 +158,26 @@ interface DataCenterDatabaseSchema
   inventoryMetadata: {
     key: string
     value: PersistedInventoryMetadata
+  }
+
+  projectMetadata: {
+    key: string
+    value: PersistedProjectMetadata
+  }
+
+  projectBillingMetadata: {
+    key: string
+    value: PersistedProjectBillingMetadata
+  }
+
+  projectBillingChunks: {
+    key: number
+    value: PersistedProjectBillingChunk
+  }
+
+  exchangeRateMetadata: {
+    key: string
+    value: PersistedExchangeRateMetadata
   }
 }
 
@@ -143,6 +215,22 @@ export function getDataCenterDatabase():
 
             if (!database.objectStoreNames.contains('inventoryMetadata')) {
               database.createObjectStore('inventoryMetadata')
+            }
+
+            if (!database.objectStoreNames.contains('projectMetadata')) {
+              database.createObjectStore('projectMetadata')
+            }
+
+            if (!database.objectStoreNames.contains('projectBillingMetadata')) {
+              database.createObjectStore('projectBillingMetadata')
+            }
+
+            if (!database.objectStoreNames.contains('projectBillingChunks')) {
+              database.createObjectStore('projectBillingChunks')
+            }
+
+            if (!database.objectStoreNames.contains('exchangeRateMetadata')) {
+              database.createObjectStore('exchangeRateMetadata')
             }
           },
         },

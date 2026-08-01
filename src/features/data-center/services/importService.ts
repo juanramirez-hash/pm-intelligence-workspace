@@ -9,13 +9,40 @@ import type { SalesBusinessModel } from '../importers/sales/salesBusinessModel'
 import type { TargetBusinessModel } from '../importers/targets/targetBusinessModel'
 import type { ProductMasterBusinessModel } from '../importers/products/productMasterBusinessModel'
 import type { InventoryBusinessModel } from '../importers/inventory/inventoryBusinessModel'
-import type { NormalizedTargetRow, TargetDatasetSummary } from '../importers/targets/targetTypes'
-import type { NormalizedProductMasterRow, ProductMasterDatasetSummary } from '../importers/products/productMasterTypes'
-import type { NormalizedInventoryRow, InventoryDatasetSummary } from '../importers/inventory/inventoryTypes'
+import type {
+  NormalizedTargetRow,
+  TargetDatasetSummary,
+} from '../importers/targets/targetTypes'
+import type {
+  NormalizedProductMasterRow,
+  ProductMasterDatasetSummary,
+} from '../importers/products/productMasterTypes'
+import type {
+  NormalizedInventoryRow,
+  InventoryDatasetSummary,
+} from '../importers/inventory/inventoryTypes'
+import type {
+  NormalizedProjectRow,
+  ProjectDatasetSummary,
+} from '../importers/projects/projectTypes'
+import type { ProjectBusinessModel } from '../importers/projects/projectBusinessModel'
+import type {
+  NormalizedProjectBillingRow,
+  ProjectBillingDatasetSummary,
+} from '../importers/project-billings/projectBillingTypes'
+import type { ProjectBillingBusinessModel } from '../importers/project-billings/projectBillingBusinessModel'
+import type {
+  ExchangeRateDatasetSummary,
+  NormalizedExchangeRateRow,
+} from '../importers/exchange-rates/exchangeRateTypes'
+import type { ExchangeRateBusinessModel } from '../importers/exchange-rates/exchangeRateBusinessModel'
 import { salesImportPlugin } from '../importers/sales/salesPlugin'
 import { targetImportPlugin } from '../importers/targets/targetPlugin'
 import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
 import { inventoryImportPlugin } from '../importers/inventory/inventoryPlugin'
+import { projectImportPlugin } from '../importers/projects/projectPlugin'
+import { projectBillingImportPlugin } from '../importers/project-billings/projectBillingPlugin'
+import { exchangeRateImportPlugin } from '../importers/exchange-rates/exchangeRatePlugin'
 
 import { runImportEngine } from '../engine/importEngine'
 import { importPluginRegistry } from '../engine/importPluginRegistry'
@@ -45,11 +72,32 @@ export type InventoryImportResult = ImportEngineResult<
   InventoryBusinessModel
 > & { reportType: 'inventory' }
 
+export type ProjectImportResult = ImportEngineResult<
+  ProjectDatasetSummary,
+  NormalizedProjectRow,
+  ProjectBusinessModel
+> & { reportType: 'projects' }
+
+export type ProjectBillingImportResult = ImportEngineResult<
+  ProjectBillingDatasetSummary,
+  NormalizedProjectBillingRow,
+  ProjectBillingBusinessModel
+> & { reportType: 'project-billing' }
+
+export type ExchangeRateImportResult = ImportEngineResult<
+  ExchangeRateDatasetSummary,
+  NormalizedExchangeRateRow,
+  ExchangeRateBusinessModel
+> & { reportType: 'exchange-rates' }
+
 export type DataCenterImportResult =
   | SalesImportResult
   | TargetImportResult
   | ProductMasterImportResult
   | InventoryImportResult
+  | ProjectImportResult
+  | ProjectBillingImportResult
+  | ExchangeRateImportResult
 
 function extractSpreadsheetHeaders(
   rows: SpreadsheetRow[],
@@ -73,8 +121,7 @@ export function isSupportedReportType(
   reportType: ReportType,
 ): boolean {
   return importPluginRegistry.some(
-    (plugin) =>
-      plugin.reportType === reportType,
+    (plugin) => plugin.reportType === reportType,
   )
 }
 
@@ -87,8 +134,7 @@ export function runDataCenterImport(
     )
   }
 
-  const headers =
-    extractSpreadsheetHeaders(rows)
+  const headers = extractSpreadsheetHeaders(rows)
 
   if (headers.length === 0) {
     throw new Error(
@@ -96,21 +142,16 @@ export function runDataCenterImport(
     )
   }
 
-  const detection =
-    detectReportType(headers)
+  const detection = detectReportType(headers)
 
   if (!detection.detectedReportType) {
-    const bestCandidate =
-      detection.candidates[0]
+    const bestCandidate = detection.candidates[0]
 
     if (bestCandidate) {
-      const missingFields =
-        bestCandidate.missingRequiredFields
-
-      const missingFieldsText =
-        missingFields.length > 0
-          ? ` Faltan las columnas obligatorias: ${missingFields.join(', ')}.`
-          : ''
+      const missingFields = bestCandidate.missingRequiredFields
+      const missingFieldsText = missingFields.length > 0
+        ? ` Faltan las columnas obligatorias: ${missingFields.join(', ')}.`
+        : ''
 
       throw new Error(
         `No fue posible identificar automáticamente el tipo de reporte. La mejor coincidencia fue "${bestCandidate.reportType}" con ${bestCandidate.confidence}% de confianza.${missingFieldsText}`,
@@ -150,6 +191,27 @@ export function runDataCenterImport(
         rows,
         headers,
       ) as InventoryImportResult
+
+    case 'projects':
+      return runImportEngine(
+        projectImportPlugin,
+        rows,
+        headers,
+      ) as ProjectImportResult
+
+    case 'project-billing':
+      return runImportEngine(
+        projectBillingImportPlugin,
+        rows,
+        headers,
+      ) as ProjectBillingImportResult
+
+    case 'exchange-rates':
+      return runImportEngine(
+        exchangeRateImportPlugin,
+        rows,
+        headers,
+      ) as ExchangeRateImportResult
 
     default:
       throw new Error(

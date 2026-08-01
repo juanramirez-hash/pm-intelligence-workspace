@@ -16,6 +16,18 @@ import type {
   InventoryDatasetSummary,
   NormalizedInventoryRow,
 } from '../importers/inventory/inventoryTypes'
+import type {
+  NormalizedProjectRow,
+  ProjectDatasetSummary,
+} from '../importers/projects/projectTypes'
+import type {
+  NormalizedProjectBillingRow,
+  ProjectBillingDatasetSummary,
+} from '../importers/project-billings/projectBillingTypes'
+import type {
+  ExchangeRateDatasetSummary,
+  NormalizedExchangeRateRow,
+} from '../importers/exchange-rates/exchangeRateTypes'
 
 export interface PersistedSalesDataset {
   summary: SalesDatasetSummary
@@ -41,6 +53,27 @@ export interface PersistedProductMasterDataset {
 export interface PersistedInventoryDataset {
   summary: InventoryDatasetSummary
   normalizedRows: NormalizedInventoryRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedProjectDataset {
+  summary: ProjectDatasetSummary
+  normalizedRows: NormalizedProjectRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedProjectBillingDataset {
+  summary: ProjectBillingDatasetSummary
+  normalizedRows: NormalizedProjectBillingRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedExchangeRateDataset {
+  summary: ExchangeRateDatasetSummary
+  normalizedRows: NormalizedExchangeRateRow[]
   lastImportedFile: string
   lastImportedAt: string
 }
@@ -73,6 +106,27 @@ export interface DataRepository {
 
   loadInventoryDataset: () =>
     Promise<PersistedInventoryDataset | null>
+
+  saveProjectDataset: (
+    dataset: PersistedProjectDataset,
+  ) => Promise<void>
+
+  loadProjectDataset: () =>
+    Promise<PersistedProjectDataset | null>
+
+  saveProjectBillingDataset: (
+    dataset: PersistedProjectBillingDataset,
+  ) => Promise<void>
+
+  loadProjectBillingDataset: () =>
+    Promise<PersistedProjectBillingDataset | null>
+
+  saveExchangeRateDataset: (
+    dataset: PersistedExchangeRateDataset,
+  ) => Promise<void>
+
+  loadExchangeRateDataset: () =>
+    Promise<PersistedExchangeRateDataset | null>
 
   clearAllData: () => Promise<void>
 }

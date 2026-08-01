@@ -4,6 +4,8 @@ export type ReportType =
   | 'forecast'
   | 'quota'
   | 'projects'
+  | 'project-billing'
+  | 'exchange-rates'
   | 'pricing'
   | 'customers'
   | 'products'
@@ -15,6 +17,8 @@ export const REPORT_TYPES: ReportType[] = [
   'forecast',
   'quota',
   'projects',
+  'project-billing',
+  'exchange-rates',
   'pricing',
   'customers',
   'products',

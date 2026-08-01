@@ -1,3 +1,36 @@
+# 0.35.0-FW-007
+
+- Data Center incorpora importadores productivos para Proyectos, Facturación de proyectos y Tipos de cambio.
+- El importador de Proyectos clasifica status 01–02 como tempranos, 03–04 como potenciales, 05–06 como maduros, 07 como realizados y 08 como cancelados.
+- Los proyectos se actualizan mediante upsert por Internal ID y conservan fecha estimada de facturación, monto por cerrar, moneda y controles de calidad.
+- La facturación de proyectos conserva líneas auditables, consolida duplicados exactos y materializa documentos por factura, proyecto, periodo, estado y moneda.
+- Facturas, notas de crédito y documentos anulados se identifican sin calcular todavía el revenue oficial; la conciliación monetaria queda reservada para FW-008.
+- Nuevo editor mensual USD→MXN sin tipo de cambio oculto, con fuente auditable y bloqueo explícito cuando falta una tasa.
+- IndexedDB versión 7 persiste proyectos, facturación en chunks y tipos de cambio.
+- BusinessDataModel incorpora BusinessProject, BusinessProjectBillingDocument, BusinessProjectBillingLine y BusinessExchangeRate.
+- BusinessRepository expone `projects`, `projectBillings` y `exchangeRates` con índices por proyecto, documento, periodo, etapa y par de monedas.
+- Data Catalog y Workspace Context reconocen las tres nuevas fuentes.
+- Validación contra los reportes reales: 3,772 proyectos, 11,035 líneas de facturación de origen, 2,830 documentos y cobertura 2025-01 a 2026-07.
+- FW-007 no modifica todavía la fórmula del Forecast; prepara FW-008, FW-009 y FW-010.
+
+# 0.34.1-FW-006-HOTFIX1
+
+- Ajusta la narrativa ejecutiva del estado `on-track` para mencionar explícitamente que el cierre se encuentra en ritmo de cumplimiento del objetivo.
+- Alinea `buildForecastExecutiveSummary()` con el contrato de prueba y con la terminología utilizada en el resumen ejecutivo y la exportación Excel.
+- No modifica cálculos, escenarios, filtros, KPIs, estructura del libro ni datos del Forecast Workspace.
+
+# 0.34.0-FW-006
+
+- Cierra funcionalmente Forecast Workspace con resumen ejecutivo deterministico y exportacion Excel bajo demanda.
+- Nuevo boton `Exportar Excel` conectado al escenario y filtros activos sin modificar los datos base.
+- Libro ejecutivo con seis hojas: Resumen Ejecutivo, Forecast por Marca, Riesgos por Producto, Oportunidades, Cobertura y Balance, y Metodologia y Fuentes.
+- La exportacion incluye todos los riesgos y oportunidades que coinciden con la seleccion, mientras la UI conserva rankings visuales Top 10.
+- Incorpora escenario, periodo, cortes, filtros, metodologia, explainability, limitaciones y rutas de navegacion.
+- Formatos numericos de moneda, porcentaje, unidades y filtros automaticos en hojas tabulares.
+- Impresion/PDF mejorada con saltos de pagina, tabla por marca expandida y exclusion del panel interactivo de filtros.
+- Pruebas para resumen ejecutivo, estructura del libro, nomenclatura, navegacion y fuentes.
+- Forecast Workspace queda cerrado de FW-001 a FW-006 sobre Business Repository.
+
 # 0.33.0-FW-005
 
 - Sustituye el placeholder de `/forecast` por Forecast Workspace conectado a `ForecastWorkspaceModel`.

@@ -50,6 +50,19 @@ import type {
   BusinessInventorySnapshot,
 } from '../entities/inventorySnapshot'
 
+import type {
+  BusinessProject,
+} from '../entities/project'
+
+import type {
+  BusinessProjectBillingDocument,
+  BusinessProjectBillingLine,
+} from '../entities/projectBilling'
+
+import type {
+  BusinessExchangeRate,
+} from '../entities/exchangeRate'
+
 export interface BusinessDataTotals {
   revenue: number
   grossProfit: number
@@ -127,6 +140,22 @@ export interface BusinessDataModel {
   /** Inventory aggregates by snapshot date. */
   inventorySnapshots?:
     Map<string, BusinessInventorySnapshot>
+
+  /** Project pipeline snapshot imported by FW-007. */
+  projects?:
+    Map<string, BusinessProject>
+
+  /** Project billing documents imported by FW-007. */
+  projectBillings?:
+    Map<string, BusinessProjectBillingDocument>
+
+  /** Auditable item-level project billing lines. */
+  projectBillingLines?:
+    Map<string, BusinessProjectBillingLine>
+
+  /** Monthly exchange rates used for open pipeline conversion. */
+  exchangeRates?:
+    Map<string, BusinessExchangeRate>
 
   periods:
     Map<string, BusinessPeriod>

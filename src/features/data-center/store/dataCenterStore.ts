@@ -32,6 +32,30 @@ import type {
   InventoryDatasetSummary,
   NormalizedInventoryRow,
 } from '../importers/inventory/inventoryTypes'
+import type {
+  NormalizedProjectRow,
+  ProjectDatasetSummary,
+} from '../importers/projects/projectTypes'
+import type {
+  NormalizedProjectBillingRow,
+  ProjectBillingDatasetSummary,
+} from '../importers/project-billings/projectBillingTypes'
+import type {
+  ExchangeRateDatasetSummary,
+  NormalizedExchangeRateRow,
+} from '../importers/exchange-rates/exchangeRateTypes'
+import {
+  buildProjectBusinessModel,
+  upsertProjectRows,
+} from '../importers/projects/projectBusinessModel'
+import {
+  buildProjectBillingBusinessModel,
+  mergeProjectBillingRows,
+} from '../importers/project-billings/projectBillingBusinessModel'
+import {
+  buildExchangeRateBusinessModel,
+  upsertExchangeRateRows,
+} from '../importers/exchange-rates/exchangeRateBusinessModel'
 
 import {
   runDataCenterImport,
@@ -89,11 +113,33 @@ export interface DataCenterState {
 
   inventoryLastImportedAt: string | null
 
+  projectsSummary: ProjectDatasetSummary | null
+
+  normalizedProjects: NormalizedProjectRow[]
+
+  projectsLastImportedFile: string | null
+
+  projectsLastImportedAt: string | null
+
+  projectBillingSummary: ProjectBillingDatasetSummary | null
+
+  normalizedProjectBillings: NormalizedProjectBillingRow[]
+
+  projectBillingLastImportedFile: string | null
+
+  projectBillingLastImportedAt: string | null
+
+  exchangeRateSummary: ExchangeRateDatasetSummary | null
+
+  normalizedExchangeRates: NormalizedExchangeRateRow[]
+
+  exchangeRateLastImportedFile: string | null
+
+  exchangeRateLastImportedAt: string | null
+
   forecastSummary: unknown | null
 
   quotaSummary: unknown | null
-
-  projectsSummary: unknown | null
 
   pricingSummary: unknown | null
 
@@ -165,7 +211,31 @@ export interface DataCenterState {
   ) => void
 
   setProjectsSummary: (
-    summary: unknown | null,
+    summary: ProjectDatasetSummary | null,
+  ) => void
+
+  setNormalizedProjects: (
+    rows: NormalizedProjectRow[],
+  ) => void
+
+  setProjectBillingSummary: (
+    summary: ProjectBillingDatasetSummary | null,
+  ) => void
+
+  setNormalizedProjectBillings: (
+    rows: NormalizedProjectBillingRow[],
+  ) => void
+
+  setExchangeRateSummary: (
+    summary: ExchangeRateDatasetSummary | null,
+  ) => void
+
+  setNormalizedExchangeRates: (
+    rows: NormalizedExchangeRateRow[],
+  ) => void
+
+  upsertExchangeRate: (
+    input: Omit<NormalizedExchangeRateRow, 'recordedAt'>,
   ) => void
 
   setPricingSummary: (
@@ -248,11 +318,33 @@ export const useDataCenterStore =
 
       inventoryLastImportedAt: null,
 
+      projectsSummary: null,
+
+      normalizedProjects: [],
+
+      projectsLastImportedFile: null,
+
+      projectsLastImportedAt: null,
+
+      projectBillingSummary: null,
+
+      normalizedProjectBillings: [],
+
+      projectBillingLastImportedFile: null,
+
+      projectBillingLastImportedAt: null,
+
+      exchangeRateSummary: null,
+
+      normalizedExchangeRates: [],
+
+      exchangeRateLastImportedFile: null,
+
+      exchangeRateLastImportedAt: null,
+
       forecastSummary: null,
 
       quotaSummary: null,
-
-      projectsSummary: null,
 
       pricingSummary: null,
 
@@ -338,12 +430,69 @@ export const useDataCenterStore =
           quotaSummary: summary,
         }),
 
-      setProjectsSummary: (
-        summary,
-      ) =>
+      setProjectsSummary: (summary) =>
+        set({ projectsSummary: summary }),
+
+      setNormalizedProjects: (rows) =>
+        set({ normalizedProjects: rows }),
+
+      setProjectBillingSummary: (summary) =>
+        set({ projectBillingSummary: summary }),
+
+      setNormalizedProjectBillings: (rows) =>
+        set({ normalizedProjectBillings: rows }),
+
+      setExchangeRateSummary: (summary) =>
+        set({ exchangeRateSummary: summary }),
+
+      setNormalizedExchangeRates: (rows) =>
+        set({ normalizedExchangeRates: rows }),
+
+      upsertExchangeRate: (input) => {
+        const recordedAt = new Date().toISOString()
+        const currentRows = get().normalizedExchangeRates
+        const normalizedRows = upsertExchangeRateRows(
+          currentRows,
+          [{ ...input, recordedAt }],
+        )
+        const businessModel = buildExchangeRateBusinessModel(
+          normalizedRows,
+        )
+
         set({
-          projectsSummary: summary,
-        }),
+          activeReportType: 'exchange-rates',
+          exchangeRateSummary: businessModel.summary,
+          normalizedExchangeRates: businessModel.rates,
+          exchangeRateLastImportedFile: 'Registro manual',
+          exchangeRateLastImportedAt: recordedAt,
+          importStatus: 'completed',
+          importErrors: [],
+          isPersisting: true,
+        })
+
+        void indexedDbDataRepository
+          .saveExchangeRateDataset({
+            summary: businessModel.summary,
+            normalizedRows: businessModel.rates,
+            lastImportedFile: 'Registro manual',
+            lastImportedAt: recordedAt,
+          })
+          .then(() => {
+            set({
+              isPersisting: false,
+              persistenceError: null,
+            })
+          })
+          .catch((persistenceError) => {
+            set({
+              isPersisting: false,
+              persistenceError: getErrorMessage(
+                persistenceError,
+                'No fue posible guardar el tipo de cambio.',
+              ),
+            })
+          })
+      },
 
       setPricingSummary: (
         summary,
@@ -593,6 +742,147 @@ export const useDataCenterStore =
               break
             }
 
+            case 'projects': {
+              const importedAt = new Date().toISOString()
+              const mergedRows = upsertProjectRows(
+                get().normalizedProjects,
+                result.normalizedRows,
+              )
+              const businessModel = buildProjectBusinessModel(
+                mergedRows,
+                result.ignoredRows,
+              )
+
+              set({
+                projectsSummary: businessModel.summary,
+                normalizedProjects: businessModel.projects,
+                projectsLastImportedFile: metadata.fileName,
+                projectsLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .saveProjectDataset({
+                  summary: businessModel.summary,
+                  normalizedRows: businessModel.projects,
+                  lastImportedFile: metadata.fileName,
+                  lastImportedAt: importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: getErrorMessage(
+                      persistenceError,
+                      'No fue posible guardar el repositorio de proyectos.',
+                    ),
+                  })
+                })
+
+              break
+            }
+
+            case 'project-billing': {
+              const importedAt = new Date().toISOString()
+              const mergedRows = mergeProjectBillingRows(
+                get().normalizedProjectBillings,
+                result.normalizedRows,
+              )
+              const businessModel = buildProjectBillingBusinessModel(
+                mergedRows,
+                result.ignoredRows,
+              )
+
+              set({
+                projectBillingSummary: businessModel.summary,
+                normalizedProjectBillings: businessModel.lines,
+                projectBillingLastImportedFile: metadata.fileName,
+                projectBillingLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .saveProjectBillingDataset({
+                  summary: businessModel.summary,
+                  normalizedRows: businessModel.lines,
+                  lastImportedFile: metadata.fileName,
+                  lastImportedAt: importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: getErrorMessage(
+                      persistenceError,
+                      'No fue posible guardar la facturación de proyectos.',
+                    ),
+                  })
+                })
+
+              break
+            }
+
+            case 'exchange-rates': {
+              const importedAt = new Date().toISOString()
+              const mergedRows = upsertExchangeRateRows(
+                get().normalizedExchangeRates,
+                result.normalizedRows,
+              )
+              const businessModel = buildExchangeRateBusinessModel(
+                mergedRows,
+                result.ignoredRows,
+              )
+
+              set({
+                exchangeRateSummary: businessModel.summary,
+                normalizedExchangeRates: businessModel.rates,
+                exchangeRateLastImportedFile: metadata.fileName,
+                exchangeRateLastImportedAt: importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .saveExchangeRateDataset({
+                  summary: businessModel.summary,
+                  normalizedRows: businessModel.rates,
+                  lastImportedFile: metadata.fileName,
+                  lastImportedAt: importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: getErrorMessage(
+                      persistenceError,
+                      'No fue posible guardar los tipos de cambio.',
+                    ),
+                  })
+                })
+
+              break
+            }
+
             default:
               throw new Error(
                 'No existe un destino de almacenamiento para el reporte detectado.',
@@ -643,28 +933,43 @@ export const useDataCenterStore =
               persistedTargets,
               persistedProductMaster,
               persistedInventory,
+              persistedProjects,
+              persistedProjectBillings,
+              persistedExchangeRates,
             ] = await Promise.all([
               indexedDbDataRepository.loadSalesDataset(),
               indexedDbDataRepository.loadTargetDataset(),
               indexedDbDataRepository.loadProductMasterDataset(),
               indexedDbDataRepository.loadInventoryDataset(),
+              indexedDbDataRepository.loadProjectDataset(),
+              indexedDbDataRepository.loadProjectBillingDataset(),
+              indexedDbDataRepository.loadExchangeRateDataset(),
             ])
 
             set({
-              activeReportType: persistedInventory
-                ? 'inventory'
-                : persistedProductMaster
-                ? 'products'
-                : persistedTargets
-                  ? 'quota'
-                  : persistedSales
-                    ? 'sales'
-                    : null,
+              activeReportType: persistedExchangeRates
+                ? 'exchange-rates'
+                : persistedProjectBillings
+                  ? 'project-billing'
+                  : persistedProjects
+                    ? 'projects'
+                    : persistedInventory
+                      ? 'inventory'
+                      : persistedProductMaster
+                        ? 'products'
+                        : persistedTargets
+                          ? 'quota'
+                          : persistedSales
+                            ? 'sales'
+                            : null,
               importStatus:
                 persistedSales ||
                 persistedTargets ||
                 persistedProductMaster ||
-                persistedInventory
+                persistedInventory ||
+                persistedProjects ||
+                persistedProjectBillings ||
+                persistedExchangeRates
                   ? 'completed'
                   : 'idle',
               fileMetadata: null,
@@ -685,6 +990,18 @@ export const useDataCenterStore =
               normalizedInventory: persistedInventory?.normalizedRows ?? [],
               inventoryLastImportedFile: persistedInventory?.lastImportedFile ?? null,
               inventoryLastImportedAt: persistedInventory?.lastImportedAt ?? null,
+              projectsSummary: persistedProjects?.summary ?? null,
+              normalizedProjects: persistedProjects?.normalizedRows ?? [],
+              projectsLastImportedFile: persistedProjects?.lastImportedFile ?? null,
+              projectsLastImportedAt: persistedProjects?.lastImportedAt ?? null,
+              projectBillingSummary: persistedProjectBillings?.summary ?? null,
+              normalizedProjectBillings: persistedProjectBillings?.normalizedRows ?? [],
+              projectBillingLastImportedFile: persistedProjectBillings?.lastImportedFile ?? null,
+              projectBillingLastImportedAt: persistedProjectBillings?.lastImportedAt ?? null,
+              exchangeRateSummary: persistedExchangeRates?.summary ?? null,
+              normalizedExchangeRates: persistedExchangeRates?.normalizedRows ?? [],
+              exchangeRateLastImportedFile: persistedExchangeRates?.lastImportedFile ?? null,
+              exchangeRateLastImportedAt: persistedExchangeRates?.lastImportedAt ?? null,
               isHydrating: false,
               isHydrated: true,
               persistenceError: null,
@@ -820,13 +1137,34 @@ export const useDataCenterStore =
 
               inventoryLastImportedAt: null,
 
+              projectsSummary: null,
+
+              normalizedProjects: [],
+
+              projectsLastImportedFile: null,
+
+              projectsLastImportedAt: null,
+
+              projectBillingSummary: null,
+
+              normalizedProjectBillings: [],
+
+              projectBillingLastImportedFile: null,
+
+              projectBillingLastImportedAt: null,
+
+              exchangeRateSummary: null,
+
+              normalizedExchangeRates: [],
+
+              exchangeRateLastImportedFile: null,
+
+              exchangeRateLastImportedAt: null,
+
               forecastSummary:
                 null,
 
               quotaSummary: null,
-
-              projectsSummary:
-                null,
 
               pricingSummary: null,
 

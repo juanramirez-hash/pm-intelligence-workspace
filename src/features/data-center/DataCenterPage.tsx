@@ -45,6 +45,22 @@ import {
 } from './components/InventoryImportSummary'
 
 import {
+  ProjectImportSummary,
+} from './components/ProjectImportSummary'
+
+import {
+  ProjectBillingImportSummary,
+} from './components/ProjectBillingImportSummary'
+
+import {
+  ExchangeRateImportSummary,
+} from './components/ExchangeRateImportSummary'
+
+import {
+  ExchangeRateEditor,
+} from './components/ExchangeRateEditor'
+
+import {
   SpreadsheetFileInformation,
 } from './components/SpreadsheetFileInformation'
 
@@ -269,6 +285,8 @@ export function DataCenterPage() {
 
       <DataCatalog />
 
+      <ExchangeRateEditor />
+
       <AtlasCard className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <SectionHeader
@@ -386,6 +404,12 @@ export function DataCenterPage() {
               <ProductMasterImportSummary />
 
               <InventoryImportSummary />
+
+              <ProjectImportSummary />
+
+              <ProjectBillingImportSummary />
+
+              <ExchangeRateImportSummary />
             </>
           )}
         </>
