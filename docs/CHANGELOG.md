@@ -1,3 +1,16 @@
+# 0.49.0-PL-011
+
+- Adds `price-tier-ladder-v1` for commercial ladders where every tier has its own explicit discount and minimum objective.
+- Supports tier objectives for minimum Gross Margin or minimum unit GP without embedding Silver, Gold, Platinum or other numeric policies.
+- Calculates the mathematical list factor required by every product at every tier and identifies the limiting product for each level.
+- Publishes the global minimum factor as the greatest tier minimum and identifies the limiting commercial tier and product.
+- Evaluates optional candidate common factors against the entire `Factor × Tier × Product` matrix while preserving input order.
+- Classifies each factor-tier cell as fully feasible, partially feasible, not feasible or invalid and exposes coverage, GP, margin and exceptions.
+- Adds an interactive discount-ladder builder inside the PL-009 batch workflow with dynamic tiers, explicit objectives and opt-in factor references.
+- Adds a six-sheet Excel export and dedicated print/PDF document, both labeled `SIMULACIÓN SIN EFECTO COMERCIAL`.
+- Preserves simulation isolation: no tier, factor, product, cost or price is persisted, approved, recommended or published.
+- Adds automated coverage for mixed margin/GP tiers, limiting levels, feasibility, validation, draft parsing, export and visual rendering.
+
 # 0.48.0-PL-010
 
 - Adds `price-batch-sensitivity-v1` to evaluate multiple explicit common list factors against every product and discount from a PL-009 batch.

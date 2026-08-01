@@ -412,3 +412,52 @@ The result exposes:
 
 The minimum factor is a mathematical threshold, not a recommendation. The
 engine does not persist, approve, apply or publish factors or prices.
+
+## PL-011 — Multi-Tier Margin Architecture
+
+PL-011 publishes the catalog-independent commercial ladder engine:
+
+```ts
+const ladder = evaluatePriceTierLadder({
+  id: 'NEW-BRAND-LADDER',
+  sourceBatchId: batch.input.id,
+  brandName: batch.input.brandName,
+  currency: batch.input.currency,
+  products: batch.input.products,
+  tiers: [
+    {
+      id: 'COMMERCIAL-32',
+      label: 'Commercial 32',
+      discountRate: 0.32,
+      objective: {
+        type: 'minimum_gross_margin',
+        grossMargin: 0.24,
+      },
+    },
+    {
+      id: 'SILVER',
+      label: 'Silver',
+      discountRate: 0.46,
+      objective: {
+        type: 'minimum_gross_profit',
+        grossProfit: 40,
+      },
+    },
+  ],
+  commonListFactors: [2.0, 2.3, 2.6],
+})
+```
+
+The result exposes:
+
+- mathematical minimum factor per commercial tier;
+- limiting product for every tier;
+- global minimum factor and limiting tier;
+- `Factor × Tier × Product` feasibility cells;
+- factor and tier coverage summaries;
+- aggregate selling price, GP and Gross Margin;
+- deterministic explainability and isolation metadata.
+
+Tier labels do not carry numeric policy. Every discount, objective and candidate
+factor is caller supplied. Mathematical minima are not recommendations, approvals
+or instructions to publish a price.

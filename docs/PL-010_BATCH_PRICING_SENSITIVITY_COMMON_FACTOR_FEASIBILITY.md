@@ -159,3 +159,10 @@ Las pruebas incorporadas validan:
 - exportación Excel de seis hojas;
 - documento imprimible;
 - renderizado del analizador interactivo.
+
+## Continuidad hacia PL-011
+
+PL-011 reutiliza los productos y costos temporales de la matriz PL-009, pero
+reemplaza el objetivo único de PL-010 por una escalera donde cada nivel comercial
+tiene su propio descuento y objetivo mínimo explícito. La sensibilidad de PL-010
+permanece disponible y no se modifica.

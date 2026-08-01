@@ -69,6 +69,10 @@ import {
   PricingBatchSensitivityAnalyzer,
 } from './PricingBatchSensitivityAnalyzer'
 
+import {
+  PricingTierLadderAnalyzer,
+} from './PricingTierLadderAnalyzer'
+
 function updateDraftField<K extends keyof PricingBatchDesignDraft>(
   draft: PricingBatchDesignDraft,
   key: K,
@@ -755,6 +759,11 @@ export function PricingBatchDesigner() {
 
           <PricingBatchSensitivityAnalyzer
             key={result.input.id}
+            source={result}
+          />
+
+          <PricingTierLadderAnalyzer
+            key={`${result.input.id}::tier-ladder`}
             source={result}
           />
 

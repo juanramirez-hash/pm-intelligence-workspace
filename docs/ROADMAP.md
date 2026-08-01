@@ -3,9 +3,9 @@
 ## Estado actual
 
 ```text
-Version: v0.48.0
-Sprint: PL-010 - Batch Pricing Sensitivity & Common Factor Feasibility
-Estado: Pricing Laboratory ampliado con sensibilidad de factores y factibilidad matemática
+Version: v0.49.0
+Sprint: PL-011 - Multi-Tier Margin Architecture & Discount Ladder
+Estado: Pricing Laboratory ampliado con arquitectura comercial multinivel y escalera de descuentos
 ```
 
 ## Orden estratégico de ejecución
@@ -74,6 +74,7 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-008 | New Product & Brand Price Design from Cost | Completado |
 | PL-009 | New Product & Brand Batch Pricing Matrix | Completado |
 | PL-010 | Batch Pricing Sensitivity & Common Factor Feasibility | Completado |
+| PL-011 | Multi-Tier Margin Architecture & Discount Ladder | Completado |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
@@ -99,7 +100,9 @@ PL-009 incorpora `price-batch-design-v1` para calcular una familia completa de p
 
 PL-010 incorpora `price-batch-sensitivity-v1` para evaluar varios factores comunes explícitos contra toda la matriz de productos y descuentos. Publica mínimos matemáticos por descuento y global, cobertura, bandas de factibilidad, excepciones por producto, resúmenes por factor y exportación documental. Ningún mínimo se presenta como recomendación, aprobación o instrucción para publicar precios.
 
-Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo, diseño por lote de nuevas marcas y sensibilidad de factores comunes. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
+PL-011 incorpora `price-tier-ladder-v1` para definir niveles comerciales con descuentos y objetivos distintos. Calcula el factor mínimo por nivel, identifica el nivel y producto limitantes, evalúa factores candidatos contra toda la escalera y exporta cobertura, GP, margen y excepciones. Los nombres Silver, Gold, Platinum u otros funcionan únicamente como etiquetas; todos los descuentos y objetivos siguen siendo explícitos.
+
+Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo, diseño por lote de nuevas marcas, sensibilidad de factores comunes y arquitectura comercial multinivel. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
 
 ## Inventory Workspace — CERRADO
 
