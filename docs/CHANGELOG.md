@@ -1,3 +1,23 @@
+# 0.42.1-PL-004-HOTFIX1
+
+- Corrige la prueba de aislamiento del catálogo de plantillas para evitar optional chaining inseguro antes de mutar la copia de prueba.
+- Conserva la misma verificación de inmutabilidad: modificar una copia no altera una segunda lectura del catálogo.
+- No modifica definiciones, porcentajes, guardrails, motor de escenarios, precios, persistencia ni ningún Workspace.
+- El hotfix es exclusivamente de calidad estática y elimina la advertencia `no-unsafe-optional-chaining` de Oxlint.
+
+# 0.42.0-PL-004
+
+- Adds `pricing-template-v1` for explicit Silver, Gold, Platinum, promotion, project and custom laboratory configurations.
+- Publishes a metadata-only template catalog with no embedded discounts, margins, prices or approval thresholds.
+- Requires every template to provide an explicit Price Engineering basis before evaluation.
+- Adds caller-supplied guardrail profiles and deterministic precedence: defaults, profile, then template-specific overrides.
+- Supports optional brand, product and currency scope so commercial assumptions remain contextual instead of global.
+- Separates evaluated, disabled, not-applicable and invalid template dispositions.
+- Detects duplicate configuration IDs, invalid scopes and missing or duplicated guardrail profiles.
+- Preserves order, source references, notes, explainability and full simulation-only isolation.
+- Adds catalog and engine tests for scope, guardrail precedence, warnings, blocking rules, invalid profiles and immutability.
+- PL-004 does not persist templates, publish prices, approve changes or write to Data Center, Business Repository or any other Workspace.
+
 # 0.41.0-PL-003
 
 - Adds `price-engineering-v1` as a pure, deterministic calculation engine.

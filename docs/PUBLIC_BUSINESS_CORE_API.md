@@ -136,6 +136,44 @@ The engine preserves the source currency and performs no exchange-rate
 conversion. Results are disposable laboratory calculations and are not price
 master changes, approvals or commercial instructions.
 
+### Pricing Group Templates and Commercial Guardrails
+
+PL-004 publishes metadata-only templates and a simulation adapter:
+
+```ts
+getStandardPricingLaboratoryTemplates()
+findPricingLaboratoryTemplateDefinition('SILVER')
+
+evaluatePricingTemplateSet({
+  price,
+  templates,
+  guardrailProfiles,
+  defaultGuardrails,
+})
+
+new PricingTemplateEngine().evaluate({
+  price,
+  templates,
+})
+```
+
+The standard template identifiers are `PROMOTION`, `SILVER`, `GOLD`,
+`PLATINUM`, `PROJECT` and `CUSTOM`. Definitions contain labels, scenario kinds,
+Pricing Group identifiers and suggested basis types only. They never contain
+discounts, prices, margins, GP targets, floor prices or approval thresholds.
+
+Every configuration must provide an explicit `PriceEngineeringScenarioBasis`.
+Optional scope can restrict a simulation by brand, product and currency.
+Guardrail precedence is deterministic and explicit: default guardrails, then
+the selected profile, then template-specific guardrails. More specific layers
+replace a guardrail of the same type and produce an auditable information
+signal.
+
+Template results are classified as `evaluated`, `disabled`, `not_applicable`
+or `invalid`. The adapter delegates calculations to `price-engineering-v1` and
+preserves the same `simulation-only` isolation contract. PL-004 does not
+persist templates or results and cannot update any price or Workspace.
+
 ## Forecast API
 
 `BusinessRepository` expone el baseline oficial mediante:

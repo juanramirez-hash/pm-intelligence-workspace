@@ -67,8 +67,8 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-001 | Data Foundation, contratos, Price Repository, indices y calidad | Completado |
 | PL-002 | Pricing Data Center Import & Reconciliation | Completado |
 | PL-003 | Price Engineering Engine & Scenario Evaluation | Completado |
-| PL-004 | Pricing Group Templates & Commercial Guardrails | Siguiente |
-| PL-005 | Price DNA & Recommendations | Planeado |
+| PL-004 | Pricing Group Templates & Commercial Guardrails | Completado · Hotfix 1 |
+| PL-005 | Price DNA & Recommendations | Siguiente |
 | PL-006 | Pricing Laboratory Workspace UI | Planeado |
 | PL-007 | Executive Export & Closure | Planeado |
 
@@ -80,7 +80,11 @@ PL-002 conecta Data Center con fuentes canonicas y con el reporte ERP de costos 
 
 PL-003 incorpora `price-engineering-v1` como laboratorio puro de calculo. Evalua escenarios descartables por precio, descuento, margen objetivo, GP objetivo, factor o descuento adicional compuesto; compara contra el precio actual y aplica exclusivamente restricciones suministradas por el usuario. El motor no persiste resultados, no modifica BusinessPrice y no escribe en otros dominios.
 
-**Siguiente sprint:** PL-004 - Pricing Group Templates & Commercial Guardrails.
+PL-004 incorpora un catálogo de plantillas Silver, Gold, Platinum, promoción, proyecto y personalizado sin valores numéricos predeterminados. Cada escenario exige una base explícita, puede limitarse por marca, producto y moneda, y combina guardrails suministrados por el caller con precedencia determinística. Los resultados siguen siendo temporales y no escriben precios ni datos fuera del laboratorio.
+
+PL-004 Hotfix 1 elimina una advertencia de análisis estático en la prueba de aislamiento del catálogo. No altera contratos, plantillas, guardrails ni comportamiento productivo.
+
+**Siguiente sprint:** PL-005 - Price DNA & Recommendations.
 
 ## Inventory Workspace — CERRADO
 
