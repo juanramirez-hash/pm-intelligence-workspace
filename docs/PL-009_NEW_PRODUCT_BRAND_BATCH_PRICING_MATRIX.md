@@ -182,3 +182,9 @@ Las pruebas incorporadas validan:
 - libro Excel de cinco hojas;
 - documento imprimible;
 - renderizado de la interfaz por lote.
+
+## Evolución PL-010
+
+PL-010 consume el resultado temporal de esta matriz para evaluar varios factores
+comunes contra todos los descuentos. Publica mínimos matemáticos, cobertura y
+factibilidad sin modificar el lote de origen ni seleccionar un factor ganador.

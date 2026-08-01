@@ -65,6 +65,10 @@ import {
   formatPricingPercentage,
 } from '../utils/pricingLaboratoryFormatters'
 
+import {
+  PricingBatchSensitivityAnalyzer,
+} from './PricingBatchSensitivityAnalyzer'
+
 function updateDraftField<K extends keyof PricingBatchDesignDraft>(
   draft: PricingBatchDesignDraft,
   key: K,
@@ -748,6 +752,11 @@ export function PricingBatchDesigner() {
               </table>
             </div>
           </section>
+
+          <PricingBatchSensitivityAnalyzer
+            key={result.input.id}
+            source={result}
+          />
 
           <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 p-4 text-xs leading-5 text-sky-800">
             <p className="font-semibold">Criterio y trazabilidad</p>

@@ -7,3 +7,5 @@ export * from './PricingScenarioTable'
 export * from './PricingNewProductDesigner'
 
 export * from './PricingBatchDesigner'
+
+export * from './PricingBatchSensitivityAnalyzer'

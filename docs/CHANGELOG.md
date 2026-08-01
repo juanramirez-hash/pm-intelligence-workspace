@@ -1,3 +1,16 @@
+# 0.48.0-PL-010
+
+- Adds `price-batch-sensitivity-v1` to evaluate multiple explicit common list factors against every product and discount from a PL-009 batch.
+- Builds the deterministic `Factor × Discount × Product` calculation matrix by reusing `price-design-v1`.
+- Publishes the mathematical minimum factor per discount and the global minimum across discounts without treating either value as a recommendation or approval.
+- Classifies each Factor × Discount cell as fully feasible, partially feasible, not feasible or invalid and exposes coverage, exceptions and factor gap.
+- Adds aggregate selling price, GP, Gross Margin and minimum/maximum product margin for every sensitivity cell, assuming one unit per product.
+- Adds factor-level summaries for fully feasible discounts, partial coverage, non-feasible discounts and total product exceptions.
+- Extends the PL-009 interface with an explicit factor input, an opt-in action to add the current batch factor, matrix tables and explainability.
+- Adds a six-sheet Excel export and a dedicated print/PDF document, both labeled `SIMULACIÓN SIN EFECTO COMERCIAL`.
+- Preserves simulation isolation: no factor, product, cost or price is persisted, approved, recommended or published.
+- Adds automated coverage for calculations, minimum thresholds, feasibility, validation, draft parsing, export and visual rendering.
+
 # 0.47.0-PL-009
 
 - Adds `price-batch-design-v1` for multi-product price design before catalog creation.

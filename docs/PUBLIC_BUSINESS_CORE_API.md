@@ -382,3 +382,33 @@ Deben consumir la fachada pública o el `index.ts` oficial del módulo.
 - Los contratos exportados por la fachada se consideran públicos.
 - Los archivos internos pueden reorganizarse sin afectar consumidores.
 - Todo breaking change futuro requiere ADR, versión y migración documentada.
+
+## PL-010 — Batch Pricing Sensitivity
+
+PL-010 publishes the catalog-independent sensitivity engine:
+
+```ts
+const sensitivity = evaluatePriceBatchSensitivity({
+  id: 'NEW-BRAND-SENSITIVITY',
+  sourceBatchId: batch.input.id,
+  brandName: batch.input.brandName,
+  currency: batch.input.currency,
+  products: batch.input.products,
+  discountRates: batch.input.discountRates,
+  objective: batch.input.objective,
+  commonListFactors: [1.9, 2.0, 2.1, 2.2],
+})
+```
+
+The result exposes:
+
+- mathematical minimum factor per discount;
+- global mathematical minimum factor;
+- `Factor × Discount` feasibility cells;
+- product-level exceptions and coverage;
+- aggregated selling price, GP and Gross Margin;
+- factor-level feasibility summaries;
+- deterministic explainability and isolation metadata.
+
+The minimum factor is a mathematical threshold, not a recommendation. The
+engine does not persist, approve, apply or publish factors or prices.
