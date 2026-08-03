@@ -572,3 +572,93 @@ The result exposes:
 
 All exchange rates are caller supplied. The engine does not fetch live rates,
 persist assumptions, mutate costs or publish prices.
+
+## PL-014 — Landed Cost & Price Waterfall Simulation
+
+PL-014 publishes the catalog-independent landed-cost engine:
+
+```ts
+const landed = evaluatePriceLandedCost({
+  id: 'NEW-BRAND-LANDED-COST',
+  sourceBatchId: batch.input.id,
+  brandName: batch.input.brandName,
+  sourceCostCurrency: 'USD',
+  reportingCurrency: 'MXN',
+  referenceExchangeRate: 18.5,
+  listPriceBasis: 'reference_landed_cost',
+  products: batch.input.products.map((product) => ({
+    ...product,
+    quantity: 10,
+  })),
+  components: [
+    {
+      id: 'FREIGHT',
+      label: 'Freight',
+      category: 'freight',
+      direction: 'add',
+      calculation: {
+        type: 'percentage_of_purchase_cost',
+        rate: 0.05,
+      },
+      productIds: null,
+    },
+    {
+      id: 'REBATE',
+      label: 'Vendor rebate',
+      category: 'rebate',
+      direction: 'subtract',
+      calculation: {
+        type: 'fixed_per_unit',
+        amount: 2,
+      },
+      productIds: null,
+    },
+  ],
+  scenarios: [
+    {
+      id: 'BASE',
+      label: 'Base',
+      purchaseCostChangeRate: 0,
+      exchangeRate: 18.5,
+      componentChangeRate: 0,
+    },
+    {
+      id: 'STRESS',
+      label: 'Cost +10% / FX 20 / components +15%',
+      purchaseCostChangeRate: 0.10,
+      exchangeRate: 20,
+      componentChangeRate: 0.15,
+    },
+  ],
+  tiers: [
+    {
+      id: 'SILVER',
+      label: 'Silver',
+      discountRate: 0.46,
+      objective: {
+        type: 'minimum_gross_margin',
+        grossMargin: 0.24,
+      },
+    },
+  ],
+  commonListFactors: [2.2, 2.4, 2.6],
+})
+```
+
+The result exposes:
+
+- ordered product-level landed-cost waterfalls;
+- reference and stressed purchase and landed costs;
+- component allocation by quantity or purchase-cost value;
+- component-level cost, GP and margin impact;
+- `Scenario × Factor × Tier × Product` calculation cells;
+- weighted selling value, GP and consolidated Gross Margin;
+- volume-based objective coverage;
+- mathematical factor required and limiting product;
+- critical scenario and factor summaries;
+- deterministic explainability and isolation metadata.
+
+Every component, exchange rate, quantity, discount, objective and factor is caller
+supplied. The engine does not create accounting entries, fetch live rates,
+persist landed cost, mutate costs or publish prices.
+

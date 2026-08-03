@@ -134,3 +134,12 @@ Automated tests validate:
 - draft conversion;
 - six-sheet export;
 - visual component construction.
+
+## PL-014 extension
+
+PL-014 extends the same fixed-list stress principle from a single converted
+purchase cost to an ordered landed-cost waterfall. Purchase-cost and FX stress
+remain explicit, while freight, insurance, tariff, customs, logistics,
+financing and rebates are decomposed as auditable components. PL-013 remains
+unchanged and available as the simpler cost/FX-only stress path.
+

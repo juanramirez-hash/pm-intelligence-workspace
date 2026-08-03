@@ -81,6 +81,10 @@ import {
   PricingCostFxStressAnalyzer,
 } from './PricingCostFxStressAnalyzer'
 
+import {
+  PricingLandedCostAnalyzer,
+} from './PricingLandedCostAnalyzer'
+
 function updateDraftField<K extends keyof PricingBatchDesignDraft>(
   draft: PricingBatchDesignDraft,
   key: K,
@@ -782,6 +786,11 @@ export function PricingBatchDesigner() {
 
           <PricingCostFxStressAnalyzer
             key={`${result.input.id}::cost-fx-stress`}
+            source={result}
+          />
+
+          <PricingLandedCostAnalyzer
+            key={`${result.input.id}::landed-cost`}
             source={result}
           />
 

@@ -1,3 +1,17 @@
+# 0.52.0-PL-014
+
+- Adds `price-landed-cost-waterfall-v1` for explicit landed-cost construction before catalog publication.
+- Applies purchase cost, FX, freight, insurance, tariff, customs, handling, domestic logistics, financing, rebates and other caller-defined components in deterministic order.
+- Supports percentages over purchase cost or accumulated subtotal, fixed amounts per unit, and fixed totals allocated by quantity or purchase-cost value.
+- Keeps candidate list prices fixed against an explicit reference purchase-cost or reference landed-cost basis while stress scenarios vary purchase cost, FX and component magnitude.
+- Builds the deterministic `Scenario × Common List Factor × Commercial Tier × Product` matrix with landed cost, selling value, GP, Gross Margin, objective coverage and mathematical factor requirement.
+- Publishes a product-level waterfall and component-level cost, GP and margin impact without creating accounting entries.
+- Identifies the critical scenario, limiting tier and limiting product without ranking or recommending a commercial decision.
+- Adds an interactive landed-cost builder inside the PL-009 batch workflow with explicit quantities, component scope, scenarios, tiers and factors.
+- Adds a six-sheet Excel export and dedicated print/PDF document, both labeled `SIMULACIÓN SIN EFECTO COMERCIAL`.
+- Preserves strict isolation: no live exchange rate is fetched and no cost, landed cost, component, factor or price is persisted or published.
+- Adds automated coverage for sequential waterfalls, allocations, scoped components, stress behavior, validation, immutability, draft conversion, export and visual construction.
+
 # 0.51.1-PL-013-HOTFIX1
 
 - Corrects the PL-013 automated test expectation for `convertedBaseCost`.
