@@ -10,3 +10,4 @@ export * from './PricingBatchDesigner'
 
 export * from './PricingBatchSensitivityAnalyzer'
 export * from './PricingTierLadderAnalyzer'
+export * from './PricingPortfolioMixAnalyzer'

@@ -150,3 +150,10 @@ Las pruebas incorporadas validan:
 - borrador visual y conversión de porcentajes;
 - exportación Excel de seis hojas;
 - renderizado del analizador interactivo.
+
+## Continuidad con PL-012
+
+PL-011 conserva agregados de una unidad por producto para estudiar la factibilidad
+estructural de la escalera. PL-012 añade una capa separada de cantidades y mezcla
+para medir el impacto ponderado sin modificar la arquitectura ni convertir los
+supuestos en Forecast o presupuesto.

@@ -1,3 +1,17 @@
+# 0.50.0-PL-012
+
+- Adds `price-portfolio-mix-v1` for explicit volume-weighted Pricing Laboratory simulations before catalog creation.
+- Builds the deterministic `Mix × Common List Factor × Discount × Product` matrix by reusing `price-design-v1`.
+- Supports multiple caller-defined mixes with explicit quantities per product; labels such as conservative, target or aggressive contain no numeric policy.
+- Calculates weighted cost, list value, selling value, GP, consolidated Gross Margin, weighted net factor and average selling price.
+- Publishes volume-based objective coverage, which weights compliance by assumed units instead of product count.
+- Identifies the products with the largest sales and GP contribution in every mix-factor-discount cell without ranking a winning scenario.
+- Adds mix-level and factor-level summaries across all captured assumptions.
+- Adds an interactive portfolio-mix builder inside the PL-009 batch workflow.
+- Adds a six-sheet Excel export and dedicated print/PDF document, both labeled `SIMULACIÓN SIN EFECTO COMERCIAL`.
+- Preserves strict isolation: quantities do not create Forecast, budget, demand, inventory, commitments, products, costs or prices.
+- Adds automated coverage for weighting, concentration, volume coverage, validation, immutability, draft conversion, export and visual construction.
+
 # 0.49.0-PL-011
 
 - Adds `price-tier-ladder-v1` for commercial ladders where every tier has its own explicit discount and minimum objective.

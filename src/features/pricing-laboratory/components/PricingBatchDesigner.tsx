@@ -73,6 +73,10 @@ import {
   PricingTierLadderAnalyzer,
 } from './PricingTierLadderAnalyzer'
 
+import {
+  PricingPortfolioMixAnalyzer,
+} from './PricingPortfolioMixAnalyzer'
+
 function updateDraftField<K extends keyof PricingBatchDesignDraft>(
   draft: PricingBatchDesignDraft,
   key: K,
@@ -764,6 +768,11 @@ export function PricingBatchDesigner() {
 
           <PricingTierLadderAnalyzer
             key={`${result.input.id}::tier-ladder`}
+            source={result}
+          />
+
+          <PricingPortfolioMixAnalyzer
+            key={`${result.input.id}::portfolio-mix`}
             source={result}
           />
 

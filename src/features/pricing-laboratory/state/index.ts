@@ -6,3 +6,4 @@ export * from './pricingBatchDesignDraft'
 
 export * from './pricingBatchSensitivityDraft'
 export * from './pricingTierLadderDraft'
+export * from './pricingPortfolioMixDraft'

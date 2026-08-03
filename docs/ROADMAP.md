@@ -4,8 +4,8 @@
 
 ```text
 Version: v0.49.0
-Sprint: PL-011 - Multi-Tier Margin Architecture & Discount Ladder
-Estado: Pricing Laboratory ampliado con arquitectura comercial multinivel y escalera de descuentos
+Sprint: PL-012 - Volume-Weighted Pricing & Portfolio Mix Simulation
+Estado: Pricing Laboratory ampliado con simulación ponderada por volumen y mezcla de portafolio
 ```
 
 ## Orden estratégico de ejecución
@@ -75,6 +75,7 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-009 | New Product & Brand Batch Pricing Matrix | Completado |
 | PL-010 | Batch Pricing Sensitivity & Common Factor Feasibility | Completado |
 | PL-011 | Multi-Tier Margin Architecture & Discount Ladder | Completado |
+| PL-012 | Volume-Weighted Pricing & Portfolio Mix Simulation | Completado |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
@@ -102,7 +103,9 @@ PL-010 incorpora `price-batch-sensitivity-v1` para evaluar varios factores comun
 
 PL-011 incorpora `price-tier-ladder-v1` para definir niveles comerciales con descuentos y objetivos distintos. Calcula el factor mínimo por nivel, identifica el nivel y producto limitantes, evalúa factores candidatos contra toda la escalera y exporta cobertura, GP, margen y excepciones. Los nombres Silver, Gold, Platinum u otros funcionan únicamente como etiquetas; todos los descuentos y objetivos siguen siendo explícitos.
 
-Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo, diseño por lote de nuevas marcas, sensibilidad de factores comunes y arquitectura comercial multinivel. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
+PL-012 incorpora `price-portfolio-mix-v1` para comparar mezclas explícitas de cantidades contra factores y descuentos. Publica venta, GP, margen consolidado, factor neto ponderado, cobertura por volumen y concentración por producto. Las cantidades son supuestos temporales y no crean Forecast, presupuesto, demanda, inventario o compromisos.
+
+Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo, diseño por lote de nuevas marcas, sensibilidad de factores comunes, arquitectura comercial multinivel y simulación ponderada de mezcla. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
 
 ## Inventory Workspace — CERRADO
 

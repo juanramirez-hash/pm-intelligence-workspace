@@ -461,3 +461,44 @@ The result exposes:
 Tier labels do not carry numeric policy. Every discount, objective and candidate
 factor is caller supplied. Mathematical minima are not recommendations, approvals
 or instructions to publish a price.
+
+## PL-012 — Volume-Weighted Pricing & Portfolio Mix
+
+PL-012 publishes the catalog-independent portfolio mix engine:
+
+```ts
+const portfolio = evaluatePricePortfolioMix({
+  id: 'NEW-BRAND-PORTFOLIO',
+  sourceBatchId: batch.input.id,
+  brandName: batch.input.brandName,
+  currency: batch.input.currency,
+  products: batch.input.products,
+  discountRates: batch.input.discountRates,
+  objective: batch.input.objective,
+  commonListFactors: [2.0, 2.2],
+  mixes: [
+    {
+      id: 'TARGET',
+      label: 'Target mix',
+      quantities: [
+        { productId: 'P-1', quantity: 100 },
+        { productId: 'P-2', quantity: 40 },
+      ],
+    },
+  ],
+})
+```
+
+The result exposes:
+
+- `Mix × Factor × Discount × Product` calculation cells;
+- weighted cost, selling value, GP and consolidated Gross Margin;
+- weighted net factor and average selling price;
+- volume-based objective coverage;
+- sales and GP concentration by product;
+- mix and factor summaries;
+- deterministic explainability and isolation metadata.
+
+Quantities are caller-supplied analytical assumptions. They are not Forecast,
+budget, demand, inventory or commitments, and the engine does not persist,
+recommend, approve, apply or publish prices.
