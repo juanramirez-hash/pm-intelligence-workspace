@@ -1,3 +1,16 @@
+# 0.54.0-EW-001
+
+- Establishes `executive-workspace-v1` as an independent Executive Workspace contract instead of an alias of `WorkspaceContextModel`.
+- Adds deterministic readiness for Sales, Inventory, Forecast, Pricing and Purchasing with `ready`, `partial`, `not_available` and `blocked` states.
+- Publishes required, active and missing datasets, last update, freshness and explainable issues for every executive domain.
+- Applies explicit freshness windows of 10 days for weekly sources, 40 days for monthly sources and 400 days for annual sources.
+- Adds domain-level executive health: ready domains, total domains, coverage percentage and Purchasing readiness.
+- Requires normalized purchase orders, purchase requests, Inventory, Product Master and a ready Forecast before Purchasing can be activated.
+- Replaces the Executive hook delegation to `useWorkspaceContext()` with its own builder over Data Center state while preserving existing executive fields.
+- Adds the multidomain readiness panel with coverage, source status, freshness and explicit Purchasing limitations.
+- Preserves read-only behavior: no Purchasing entities, recommendations, dates, persistence or cross-domain writes are introduced.
+- Adds eight automated tests covering readiness, errors, stale data, Purchasing activation, builder integration and visual construction.
+
 # 0.53.0-PL-015
 
 - Adds `price-corridor-margin-floor-v1` for explicit price-floor, maximum-discount and safety-corridor analysis.

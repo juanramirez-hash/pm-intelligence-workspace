@@ -26,6 +26,10 @@ import {
 } from './components/ExecutiveSalesPerformance'
 
 import {
+  ExecutiveDomainReadinessPanel,
+} from './components/ExecutiveDomainReadinessPanel'
+
+import {
   useExecutiveWorkspace,
 } from './hooks/useExecutiveWorkspace'
 
@@ -222,6 +226,13 @@ export function ExecutiveWorkspacePage() {
           null
         }
       />
+
+      {executive.domains && (
+        <ExecutiveDomainReadinessPanel
+          domains={executive.domains}
+          health={executive.health}
+        />
+      )}
 
       <ExecutiveAttentionCenter
         customers={

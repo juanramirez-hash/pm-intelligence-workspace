@@ -3,17 +3,17 @@
 ## Estado actual
 
 ```text
-Version: v0.53.0
-Sprint: PL-015 - Price Corridor, Maximum Discount & Margin Floor Simulation
-Estado: PL-015 completado como simulacion temporal de corredores y pisos
+Version: v0.54.0
+Sprint: EW-001 - Executive Workspace Multi-Domain Foundation & Purchasing Readiness
+Estado: EW-001 completado; Purchasing preparado pero todavia no implementado
 ```
 
 ## Orden estratégico de ejecución
 
-1. Forecast Workspace.
-2. Pricing Laboratory Workspace.
-3. Executive Workspace preparado para Purchasing.
-4. Purchasing Visibility Workspace como módulo consultivo final.
+1. Forecast Workspace — completado.
+2. Pricing Laboratory Workspace — completado.
+3. Executive Workspace preparado para Purchasing — completado con EW-001.
+4. Purchasing Visibility Workspace — siguiente módulo consultivo.
 
 ## Forecast Workspace
 
@@ -118,6 +118,18 @@ Pricing Laboratory queda cubierto para producto existente, diseño individual pr
 
 
 PL-015 convierte los objetivos explícitos de margen y GP en pisos matemáticos por producto. Evalúa el descuento máximo soportado, la distancia de seguridad y el factor mínimo bajo escenarios de costo y tipo de cambio, usando costo de compra convertido o landed cost explícito. No incorpora buffers ocultos, aprobaciones ni persistencia comercial.
+
+## Executive Workspace — PURCHASING READINESS
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| EW-001 | Multi-Domain Foundation & Purchasing Readiness | Completado |
+
+EW-001 independiza `ExecutiveWorkspaceModel` de `WorkspaceContextModel`, integra un builder y un hook ejecutivos propios y publica disponibilidad, cobertura, frescura e incidencias para Sales, Inventory, Forecast, Pricing y Purchasing.
+
+Purchasing sólo queda técnicamente listo cuando existen órdenes y solicitudes de compra normalizadas, Inventory, Product Master y Forecast completo, vigente y sin errores. EW-001 no crea todavía el Workspace de Purchasing ni incorpora decisiones automáticas.
+
+La siguiente iniciativa recomendada es `PVW-001 — Purchasing Data Foundation & Import Contracts`.
 
 ## Inventory Workspace — CERRADO
 

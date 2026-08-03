@@ -1,7 +1,24 @@
 import {
-  useWorkspaceContext,
-} from '../../workspaces/shared/hooks/useWorkspaceContext'
+  useMemo,
+} from 'react'
+
+import {
+  useDataCenterStore,
+} from '../../data-center/store/dataCenterStore'
+
+import {
+  buildExecutiveWorkspace,
+} from '../engine/buildExecutiveWorkspace'
 
 export function useExecutiveWorkspace() {
-  return useWorkspaceContext()
+  const state =
+    useDataCenterStore()
+
+  return useMemo(
+    () =>
+      buildExecutiveWorkspace(
+        state,
+      ),
+    [state],
+  )
 }
