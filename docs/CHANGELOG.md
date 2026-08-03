@@ -1,3 +1,23 @@
+# 0.51.1-PL-013-HOTFIX1
+
+- Corrects the PL-013 automated test expectation for `convertedBaseCost`.
+- Confirms that the converted base cost uses the explicit reference exchange rate: `base cost × reference FX`.
+- Preserves stressed cost calculation as `base cost × (1 + cost change) × scenario FX`.
+- Does not modify `price-cost-fx-stress-v1`, formulas, contracts, UI, exports or architectural isolation.
+
+# 0.51.0-PL-013
+
+- Adds `price-cost-fx-stress-v1` for explicit cost and exchange-rate stress testing before catalog publication.
+- Fixes candidate list prices against the base cost and an explicit reference exchange rate, then measures margin and GP erosion under each stress scenario.
+- Builds the deterministic `Scenario × Common List Factor × Commercial Tier × Product` matrix.
+- Supports multiple explicit cost-change rates, exchange rates, factors, commercial discounts and minimum margin or GP objectives.
+- Calculates weighted cost impact, selling value, GP, consolidated Gross Margin, volume coverage and the mathematical factor required under every scenario.
+- Identifies the critical scenario, tier and product without ranking or recommending a commercial decision.
+- Adds an interactive stress-test builder inside the PL-009 batch workflow with explicit quantities, currencies, reference FX and scenario FX values.
+- Adds a six-sheet Excel export and dedicated print/PDF document, both labeled `SIMULACIÓN SIN EFECTO COMERCIAL`.
+- Preserves strict isolation: no live exchange rate is fetched and no cost, currency, factor or price is persisted or published.
+- Adds automated coverage for fixed-list stress behavior, FX conversion, cost variation, weighted totals, feasibility, validation, immutability, draft conversion, export and visual construction.
+
 # 0.50.0-PL-012
 
 - Adds `price-portfolio-mix-v1` for explicit volume-weighted Pricing Laboratory simulations before catalog creation.

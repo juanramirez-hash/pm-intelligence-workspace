@@ -502,3 +502,73 @@ The result exposes:
 Quantities are caller-supplied analytical assumptions. They are not Forecast,
 budget, demand, inventory or commitments, and the engine does not persist,
 recommend, approve, apply or publish prices.
+
+## PL-013 — Cost & Exchange Rate Sensitivity Stress Test
+
+PL-013 publishes the catalog-independent stress engine:
+
+```ts
+const stress = evaluatePriceCostFxStress({
+  id: 'NEW-BRAND-COST-FX-STRESS',
+  sourceBatchId: batch.input.id,
+  brandName: batch.input.brandName,
+  sourceCostCurrency: 'USD',
+  reportingCurrency: 'MXN',
+  referenceExchangeRate: 18.5,
+  products: batch.input.products.map((product) => ({
+    ...product,
+    quantity: 10,
+  })),
+  scenarios: [
+    {
+      id: 'BASE',
+      label: 'Base',
+      costChangeRate: 0,
+      exchangeRate: 18.5,
+    },
+    {
+      id: 'STRESS',
+      label: 'Cost +10% / FX 20.00',
+      costChangeRate: 0.10,
+      exchangeRate: 20,
+    },
+  ],
+  tiers: [
+    {
+      id: 'SILVER',
+      label: 'Silver',
+      discountRate: 0.46,
+      objective: {
+        type: 'minimum_gross_margin',
+        grossMargin: 0.24,
+      },
+    },
+  ],
+  commonListFactors: [2.2, 2.4, 2.6],
+})
+```
+
+The candidate list price is fixed from:
+
+```text
+Base cost × reference exchange rate × common list factor
+```
+
+Each scenario then stresses cost with:
+
+```text
+Base cost × (1 + cost change) × scenario exchange rate
+```
+
+The result exposes:
+
+- `Scenario × Factor × Tier × Product` calculation cells;
+- weighted cost impact, selling value, GP and consolidated Gross Margin;
+- volume-based objective coverage;
+- mathematical factor required under every stress scenario;
+- critical scenario, tier and product;
+- scenario and factor summaries;
+- deterministic explainability and isolation metadata.
+
+All exchange rates are caller supplied. The engine does not fetch live rates,
+persist assumptions, mutate costs or publish prices.

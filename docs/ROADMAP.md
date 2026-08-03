@@ -3,9 +3,9 @@
 ## Estado actual
 
 ```text
-Version: v0.49.0
-Sprint: PL-012 - Volume-Weighted Pricing & Portfolio Mix Simulation
-Estado: Pricing Laboratory ampliado con simulación ponderada por volumen y mezcla de portafolio
+Version: v0.51.1
+Sprint: PL-013 Hotfix 1 - Reference FX test expectation
+Estado: PL-013 validado con expectativa de TC de referencia corregida
 ```
 
 ## Orden estratégico de ejecución
@@ -76,6 +76,7 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-010 | Batch Pricing Sensitivity & Common Factor Feasibility | Completado |
 | PL-011 | Multi-Tier Margin Architecture & Discount Ladder | Completado |
 | PL-012 | Volume-Weighted Pricing & Portfolio Mix Simulation | Completado |
+| PL-013 | Cost & Exchange Rate Sensitivity Stress Test | Completado |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
@@ -104,6 +105,10 @@ PL-010 incorpora `price-batch-sensitivity-v1` para evaluar varios factores comun
 PL-011 incorpora `price-tier-ladder-v1` para definir niveles comerciales con descuentos y objetivos distintos. Calcula el factor mínimo por nivel, identifica el nivel y producto limitantes, evalúa factores candidatos contra toda la escalera y exporta cobertura, GP, margen y excepciones. Los nombres Silver, Gold, Platinum u otros funcionan únicamente como etiquetas; todos los descuentos y objetivos siguen siendo explícitos.
 
 PL-012 incorpora `price-portfolio-mix-v1` para comparar mezclas explícitas de cantidades contra factores y descuentos. Publica venta, GP, margen consolidado, factor neto ponderado, cobertura por volumen y concentración por producto. Las cantidades son supuestos temporales y no crean Forecast, presupuesto, demanda, inventario o compromisos.
+
+PL-013 incorpora `price-cost-fx-stress-v1` para fijar precios de lista candidatos con costo base y tipo de cambio de referencia, y después medir su exposición bajo variaciones explícitas de costo y tipo de cambio. Publica impacto ponderado, GP, margen, cobertura, factor mínimo requerido y escenario crítico sin consultar tasas en vivo ni modificar costos o precios.
+
+PL-013 Hotfix 1 corrige únicamente la expectativa automatizada de `convertedBaseCost`: el costo base convertido usa el tipo de cambio de referencia, mientras el costo estresado usa la variación de costo y el tipo de cambio del escenario. El motor productivo no cambia.
 
 Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo, diseño por lote de nuevas marcas, sensibilidad de factores comunes, arquitectura comercial multinivel y simulación ponderada de mezcla. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
 

@@ -77,6 +77,10 @@ import {
   PricingPortfolioMixAnalyzer,
 } from './PricingPortfolioMixAnalyzer'
 
+import {
+  PricingCostFxStressAnalyzer,
+} from './PricingCostFxStressAnalyzer'
+
 function updateDraftField<K extends keyof PricingBatchDesignDraft>(
   draft: PricingBatchDesignDraft,
   key: K,
@@ -773,6 +777,11 @@ export function PricingBatchDesigner() {
 
           <PricingPortfolioMixAnalyzer
             key={`${result.input.id}::portfolio-mix`}
+            source={result}
+          />
+
+          <PricingCostFxStressAnalyzer
+            key={`${result.input.id}::cost-fx-stress`}
             source={result}
           />
 

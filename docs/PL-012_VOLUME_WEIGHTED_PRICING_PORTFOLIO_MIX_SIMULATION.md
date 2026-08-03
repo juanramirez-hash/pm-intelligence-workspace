@@ -147,3 +147,7 @@ Automated tests validate:
 - draft conversion;
 - six-sheet export;
 - visual component construction.
+
+## PL-013 continuation
+
+PL-013 reuses the explicit product quantities and weighting principles established here, but adds fixed-list cost and exchange-rate stress. The PL-013 engine does not mutate or persist PL-012 mixes and does not write Forecast data.
