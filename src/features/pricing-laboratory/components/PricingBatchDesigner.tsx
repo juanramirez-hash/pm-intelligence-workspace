@@ -85,6 +85,10 @@ import {
   PricingLandedCostAnalyzer,
 } from './PricingLandedCostAnalyzer'
 
+import {
+  PricingPriceCorridorAnalyzer,
+} from './PricingPriceCorridorAnalyzer'
+
 function updateDraftField<K extends keyof PricingBatchDesignDraft>(
   draft: PricingBatchDesignDraft,
   key: K,
@@ -791,6 +795,11 @@ export function PricingBatchDesigner() {
 
           <PricingLandedCostAnalyzer
             key={`${result.input.id}::landed-cost`}
+            source={result}
+          />
+
+          <PricingPriceCorridorAnalyzer
+            key={`${result.input.id}::price-corridor`}
             source={result}
           />
 

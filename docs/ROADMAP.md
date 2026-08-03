@@ -3,9 +3,9 @@
 ## Estado actual
 
 ```text
-Version: v0.52.0
-Sprint: PL-014 - Landed Cost & Price Waterfall Simulation
-Estado: PL-014 completado como simulacion temporal de costo aterrizado
+Version: v0.53.0
+Sprint: PL-015 - Price Corridor, Maximum Discount & Margin Floor Simulation
+Estado: PL-015 completado como simulacion temporal de corredores y pisos
 ```
 
 ## Orden estratégico de ejecución
@@ -78,6 +78,7 @@ FW-010 Hotfix 3 corrige la cobertura del periodo actual cuando no existen docume
 | PL-012 | Volume-Weighted Pricing & Portfolio Mix Simulation | Completado |
 | PL-013 | Cost & Exchange Rate Sensitivity Stress Test | Completado · Hotfix 1 |
 | PL-014 | Landed Cost & Price Waterfall Simulation | Completado |
+| PL-015 | Price Corridor, Maximum Discount & Margin Floor Simulation | Completado |
 
 PL-001 incorpora `BusinessPrice` y `BusinessPriceScenario` como contratos publicos del Business Core. Los precios conservan costo, lista, venta, moneda, vigencia y trazabilidad; GP, margen, descuento y factor se derivan mediante invariantes deterministicas. Los escenarios se almacenan separados y nunca alteran el precio base.
 
@@ -114,6 +115,9 @@ PL-013 Hotfix 1 corrige únicamente la expectativa automatizada de `convertedBas
 PL-014 incorpora `price-landed-cost-waterfall-v1` para construir costo aterrizado mediante componentes explícitos y secuenciales. Soporta porcentajes sobre compra o subtotal acumulado, cargos por unidad, totales distribuidos por cantidad o valor, rebates, alcance por producto, escenarios de costo/TC/componentes y trazabilidad del impacto sobre GP y margen. No crea registros contables ni persiste costos.
 
 Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo, diseño por lote de nuevas marcas, sensibilidad de factores comunes, arquitectura comercial multinivel, simulación ponderada de mezcla, stress de costo/TC y construcción de costo aterrizado. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
+
+
+PL-015 convierte los objetivos explícitos de margen y GP en pisos matemáticos por producto. Evalúa el descuento máximo soportado, la distancia de seguridad y el factor mínimo bajo escenarios de costo y tipo de cambio, usando costo de compra convertido o landed cost explícito. No incorpora buffers ocultos, aprobaciones ni persistencia comercial.
 
 ## Inventory Workspace — CERRADO
 

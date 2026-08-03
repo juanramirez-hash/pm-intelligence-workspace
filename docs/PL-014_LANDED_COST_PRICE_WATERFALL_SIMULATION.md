@@ -199,3 +199,12 @@ Automated tests validate:
 - draft conversion;
 - six-sheet export;
 - visual component construction.
+
+## Continuity with PL-015
+
+PL-015 can use an explicit reference landed cost per product as its analytical
+cost basis. The value remains a caller-supplied simulation input; PL-014 does
+not persist or transfer landed cost automatically. PL-015 then derives price
+floors, maximum supported discounts, corridor width and safety distance under
+explicit cost and exchange-rate scenarios.
+

@@ -1,3 +1,17 @@
+# 0.53.0-PL-015
+
+- Adds `price-corridor-margin-floor-v1` for explicit price-floor, maximum-discount and safety-corridor analysis.
+- Supports reference purchase cost or explicit landed cost as the analytical cost basis.
+- Keeps candidate list prices fixed from the reference cost and evaluates cost and exchange-rate stress without repricing automatically.
+- Supports simultaneous minimum Gross Margin and minimum unit GP floors; the governing floor is the greater calculated net price.
+- Calculates product-level price floor, maximum supported discount, corridor width, safety distance, required list factor, GP and Gross Margin.
+- Builds the deterministic `Scenario × Common List Factor × Commercial Tier × Product` matrix with volume-weighted coverage and limiting-product detection.
+- Classifies every product as above floor, exactly at floor or below floor without hidden commercial buffers.
+- Adds an interactive corridor builder inside the PL-009 batch workflow with explicit quantities, cost basis, scenarios, tiers, floors and factors.
+- Adds a six-sheet Excel export and dedicated print/PDF document, both labeled `SIMULACIÓN SIN EFECTO COMERCIAL`.
+- Preserves strict isolation: no live exchange rate is fetched and no floor, discount, factor, cost or price is approved, persisted or published.
+- Adds automated coverage for governing floors, maximum discounts, FX stress, required factors, validation, immutability, draft conversion, export and visual construction.
+
 # 0.52.0-PL-014
 
 - Adds `price-landed-cost-waterfall-v1` for explicit landed-cost construction before catalog publication.

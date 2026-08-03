@@ -662,3 +662,81 @@ Every component, exchange rate, quantity, discount, objective and factor is call
 supplied. The engine does not create accounting entries, fetch live rates,
 persist landed cost, mutate costs or publish prices.
 
+## PL-015 — Price Corridor API
+
+PL-015 publishes a pure simulation engine:
+
+```ts
+import {
+  evaluatePriceCorridor,
+} from '@/core/business/pricing'
+
+const result = evaluatePriceCorridor({
+  id: 'CORRIDOR-001',
+  sourceBatchId: batch.input.id,
+  brandName: batch.input.brandName,
+  sourceCostCurrency: 'USD',
+  reportingCurrency: 'MXN',
+  referenceExchangeRate: 18.5,
+  costBasis: 'reference_landed_cost',
+  products: batch.input.products.map((product) => ({
+    ...product,
+    quantity: 10,
+    explicitLandedCost: 220,
+  })),
+  scenarios: [
+    {
+      id: 'BASE',
+      label: 'Base',
+      costChangeRate: 0,
+      exchangeRate: 18.5,
+    },
+    {
+      id: 'STRESS',
+      label: 'Cost +10% / FX 20',
+      costChangeRate: 0.10,
+      exchangeRate: 20,
+    },
+  ],
+  tiers: [
+    {
+      id: 'SILVER',
+      label: 'Silver',
+      discountRate: 0.46,
+      minimumGrossMargin: 0.24,
+      minimumGrossProfit: null,
+    },
+    {
+      id: 'PROJECT',
+      label: 'Project',
+      discountRate: 0.48,
+      minimumGrossMargin: 0.22,
+      minimumGrossProfit: 40,
+    },
+  ],
+  commonListFactors: [2.2, 2.4, 2.6],
+})
+```
+
+The result exposes:
+
+- reference and stressed cost per product;
+- floor from minimum Gross Margin;
+- floor from minimum unit GP;
+- governing price floor when both constraints exist;
+- candidate list and net selling price;
+- maximum mathematically supported discount;
+- corridor width and safety distance;
+- minimum list factor required at the evaluated tier;
+- product, scenario and factor summaries;
+- volume-weighted coverage and limiting-product detection;
+- deterministic explainability and isolation metadata.
+
+For `reference_purchase_cost`, source cost is converted with the explicit
+exchange rate. For `reference_landed_cost`, the caller supplies the reference
+landed cost and stress uses the scenario-to-reference FX ratio.
+
+PL-015 does not fetch exchange rates, approve discounts, persist floors or
+modify catalog prices. A maximum supported discount is a mathematical boundary,
+not a commercial authorization.
+
