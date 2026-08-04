@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   ArrowDownRight,
+  ArrowRight,
   ArrowUpRight,
   Building2,
   CheckCircle2,
@@ -8,6 +9,10 @@ import {
   RefreshCw,
   Sparkles,
 } from 'lucide-react'
+
+import {
+  Link,
+} from 'react-router-dom'
 
 import type {
   BrandIntelligenceItem,
@@ -29,6 +34,10 @@ import {
 interface ExecutiveBrandOverviewProps {
   brands:
     BrandIntelligenceSummary | null
+
+  currentPeriodLabel?: string
+
+  comparisonPeriodLabel?: string
 }
 
 function getLifecycleLabel(
@@ -204,6 +213,8 @@ function BrandRankingCard({
 
 export function ExecutiveBrandOverview({
   brands,
+  currentPeriodLabel,
+  comparisonPeriodLabel,
 }: ExecutiveBrandOverviewProps) {
   if (!brands) {
     return (
@@ -216,6 +227,15 @@ export function ExecutiveBrandOverview({
           <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
             Desempeño de marcas
           </h2>
+
+          <Link
+            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-violet-700 hover:text-violet-800"
+            to="/brands"
+          >
+            Abrir Brand Workspace
+
+            <ArrowRight size={15} />
+          </Link>
         </div>
 
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
@@ -255,30 +275,44 @@ export function ExecutiveBrandOverview({
 
           <p className="mt-1 text-sm text-slate-500">
             Comparativo de{' '}
-            {brands.currentPeriodId} contra{' '}
-            {brands.previousPeriodId}.
+            {currentPeriodLabel ??
+              brands.currentPeriodId}{' '}
+            contra{' '}
+            {comparisonPeriodLabel ??
+              brands.previousPeriodId}.
           </p>
         </div>
 
-        <div
-          className={[
-            'inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold',
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
+            to="/brands"
+          >
+            Abrir Brand Workspace
 
-            variationIsPositive
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-rose-200 bg-rose-50 text-rose-700',
-          ].join(' ')}
-        >
-          {variationIsPositive ? (
-            <ArrowUpRight size={14} />
-          ) : (
-            <ArrowDownRight size={14} />
-          )}
+            <ArrowRight size={14} />
+          </Link>
 
-          {formatBrandPercentage(
-            brands
-              .revenueVariationPercentage,
-          )}
+          <div
+            className={[
+              'inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold',
+
+              variationIsPositive
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-rose-200 bg-rose-50 text-rose-700',
+            ].join(' ')}
+          >
+            {variationIsPositive ? (
+              <ArrowUpRight size={14} />
+            ) : (
+              <ArrowDownRight size={14} />
+            )}
+
+            {formatBrandPercentage(
+              brands
+                .revenueVariationPercentage,
+            )}
+          </div>
         </div>
       </div>
 
@@ -383,8 +417,8 @@ export function ExecutiveBrandOverview({
           </p>
 
           <p className="mt-1 text-xs text-slate-500">
-            Periodo{' '}
-            {brands.currentPeriodId}
+            {currentPeriodLabel ??
+              `Periodo ${brands.currentPeriodId}`}
           </p>
         </article>
 
@@ -400,8 +434,8 @@ export function ExecutiveBrandOverview({
           </p>
 
           <p className="mt-1 text-xs text-slate-500">
-            Periodo{' '}
-            {brands.previousPeriodId}
+            {comparisonPeriodLabel ??
+              `Periodo ${brands.previousPeriodId}`}
           </p>
         </article>
 

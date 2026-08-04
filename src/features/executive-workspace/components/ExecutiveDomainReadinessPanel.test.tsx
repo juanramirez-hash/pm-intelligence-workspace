@@ -3,6 +3,10 @@ import {
 } from 'react-dom/server'
 
 import {
+  MemoryRouter,
+} from 'react-router-dom'
+
+import {
   describe,
   expect,
   it,
@@ -106,10 +110,12 @@ describe(
     it('renders domain coverage and Purchasing limitations', () => {
       const markup =
         renderToStaticMarkup(
-          <ExecutiveDomainReadinessPanel
-            domains={domains}
-            health={health}
-          />,
+          <MemoryRouter>
+            <ExecutiveDomainReadinessPanel
+              domains={domains}
+              health={health}
+            />
+          </MemoryRouter>,
         )
 
       expect(markup).toContain(
@@ -130,6 +136,26 @@ describe(
 
       expect(markup).toContain(
         'No hay órdenes de compra normalizadas.',
+      )
+
+      expect(markup).toContain(
+        'href="/sales"',
+      )
+
+      expect(markup).toContain(
+        'href="/inventory"',
+      )
+
+      expect(markup).toContain(
+        'href="/forecast"',
+      )
+
+      expect(markup).toContain(
+        'href="/pricing"',
+      )
+
+      expect(markup).toContain(
+        'href="/purchasing"',
       )
     })
   },

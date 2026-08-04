@@ -1,3 +1,22 @@
+# 0.54.1-EW-001-HOTFIX1
+
+- Converts Executive Workspace from a passive dashboard into an operational navigation layer with direct access to Sales, Inventory, Forecast, Pricing, Purchasing preparation and Data Center.
+- Replaces the former Trends placeholders with real monthly sales evolution and a real Top 10 customer ranking derived from Business Repository data.
+- Consolidates duplicated data-health content into a compact executive summary while keeping dataset-level administration inside Data Center.
+- Reorders the executive page so the analysis period and commercial priorities appear before technical readiness and platform health.
+- Adds a global analysis-period selector for one month, trailing three months, trailing six months and current year, with previous/next navigation over available periods.
+- Applies the selected period consistently to commercial performance, products, brands, customers, trends and Brand Intelligence.
+- Separates the attention KPI from the analyzed universe so totals no longer masquerade as commercial priorities.
+- Adds product attention analysis with growing, declining, recovered, new and inactive-or-lost classifications.
+- Corrects customer lifecycle semantics using historical first purchase, prior activity and explicit inactivity thresholds of 90 days and loss thresholds of 180 days.
+- Prevents a customer from being marked lost merely because they did not purchase in the immediately following month.
+- Publishes the exact entity IDs behind every attention KPI and preserves those IDs as read-only output contracts.
+- Adds contextual attention queues for products, brands and customers, carrying the selected period and comparison through the URL.
+- Ensures each attention card opens the exact filtered records represented by its KPI instead of the complete directory.
+- Adds search, pagination, attention reasons, return navigation and record-level drill-down inside the contextual queues.
+- Preserves read-only behavior: the hotfix does not modify Business Repository facts, persist classifications or automate commercial actions.
+- Confirms production build, lint and directed tests without errors after the read-only entity ID construction fix.
+
 # 0.54.0-EW-001
 
 - Establishes `executive-workspace-v1` as an independent Executive Workspace contract instead of an alias of `WorkspaceContextModel`.

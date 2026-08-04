@@ -29,6 +29,12 @@ const mocks = vi.hoisted(() => ({
 
   buildExecutiveDomainHealth:
     vi.fn(),
+
+  buildExecutiveCommercialTrends:
+    vi.fn(),
+
+  buildExecutiveProductAttention:
+    vi.fn(),
 }))
 
 vi.mock(
@@ -47,6 +53,23 @@ vi.mock(
 
     buildExecutiveDomainHealth:
       mocks.buildExecutiveDomainHealth,
+  }),
+)
+
+
+vi.mock(
+  './executiveCommercialTrends',
+  () => ({
+    buildExecutiveCommercialTrends:
+      mocks.buildExecutiveCommercialTrends,
+  }),
+)
+
+vi.mock(
+  './executiveProductAttention',
+  () => ({
+    buildExecutiveProductAttention:
+      mocks.buildExecutiveProductAttention,
   }),
 )
 
@@ -151,6 +174,27 @@ const enrichedHealth:
   purchasingReady: false,
 }
 
+
+const commercialTrends = {
+  monthlyRevenue: [],
+  topCustomers: [],
+  totalCustomerRevenue: 0,
+  periodCount: 0,
+}
+
+const productAttention = {
+  currentPeriodId: '2026-07',
+  previousPeriodId: '2026-06',
+  totalProducts: 10,
+  activeProducts: 8,
+  productsRequiringAttention: 4,
+  growingProducts: 3,
+  decliningProducts: 2,
+  recoveredProducts: 1,
+  newProducts: 1,
+  inactiveOrLostProducts: 2,
+}
+
 describe(
   'EW-001 Executive workspace builder',
   () => {
@@ -171,6 +215,16 @@ describe(
       mocks.buildExecutiveDomainHealth
         .mockReturnValue(
           enrichedHealth,
+        )
+
+      mocks.buildExecutiveCommercialTrends
+        .mockReturnValue(
+          commercialTrends,
+        )
+
+      mocks.buildExecutiveProductAttention
+        .mockReturnValue(
+          productAttention,
         )
     })
 
@@ -217,11 +271,26 @@ describe(
         domains,
       )
 
+      expect(
+        mocks.buildExecutiveProductAttention,
+      ).toHaveBeenCalledWith(
+        workspace.repository,
+        workspace.currentPeriodId,
+      )
+
+      expect(
+        mocks.buildExecutiveCommercialTrends,
+      ).toHaveBeenCalledWith(
+        workspace.repository,
+      )
+
       expect(result).toMatchObject({
         health: enrichedHealth,
         domains,
         purchasingReadiness:
           domains.purchasing,
+        productAttention,
+        commercialTrends,
         generatedAt:
           '2026-08-03T18:00:00.000Z',
         methodology:

@@ -6,10 +6,19 @@ import type {
   DataCenterState,
 } from '../../data-center/store/dataCenterStore'
 
+
+import {
+  buildExecutiveCommercialTrends,
+} from './executiveCommercialTrends'
+
 import {
   buildExecutiveDomainHealth,
   buildExecutiveDomainRegistry,
 } from './executiveDomainReadiness'
+
+import {
+  buildExecutiveProductAttention,
+} from './executiveProductAttention'
 
 import type {
   ExecutiveDomainReadinessOptions,
@@ -111,6 +120,17 @@ export function buildExecutiveWorkspace(
 
     purchasingReadiness:
       domains.purchasing,
+
+    productAttention:
+      buildExecutiveProductAttention(
+        workspace.repository,
+        workspace.currentPeriodId,
+      ),
+
+    commercialTrends:
+      buildExecutiveCommercialTrends(
+        workspace.repository,
+      ),
 
     generatedAt:
       referenceDate.toISOString(),

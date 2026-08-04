@@ -3,16 +3,16 @@
 ## Estado actual
 
 ```text
-Version: v0.54.0
-Sprint: EW-001 - Executive Workspace Multi-Domain Foundation & Purchasing Readiness
-Estado: EW-001 completado; Purchasing preparado pero todavia no implementado
+Version: v0.54.1
+Sprint: EW-001-HOTFIX1 - Executive Navigation, Period Context & Attention Queues
+Estado: EW-001 corregido y completado como antesala operativa; Purchasing preparado pero todavia no implementado
 ```
 
 ## Orden estratégico de ejecución
 
 1. Forecast Workspace — completado.
 2. Pricing Laboratory Workspace — completado.
-3. Executive Workspace preparado para Purchasing — completado con EW-001.
+3. Executive Workspace preparado para Purchasing — completado con EW-001 y corregido funcionalmente con EW-001-HOTFIX1.
 4. Purchasing Visibility Workspace — siguiente módulo consultivo.
 
 ## Forecast Workspace
@@ -124,10 +124,13 @@ PL-015 convierte los objetivos explícitos de margen y GP en pisos matemáticos 
 | Entrega | Alcance | Estado |
 |---|---|---|
 | EW-001 | Multi-Domain Foundation & Purchasing Readiness | Completado |
+| EW-001-HOTFIX1 | Executive Navigation, Global Period Context & Contextual Attention Queues | Completado |
 
 EW-001 independiza `ExecutiveWorkspaceModel` de `WorkspaceContextModel`, integra un builder y un hook ejecutivos propios y publica disponibilidad, cobertura, frescura e incidencias para Sales, Inventory, Forecast, Pricing y Purchasing.
 
-Purchasing sólo queda técnicamente listo cuando existen órdenes y solicitudes de compra normalizadas, Inventory, Product Master y Forecast completo, vigente y sin errores. EW-001 no crea todavía el Workspace de Purchasing ni incorpora decisiones automáticas.
+EW-001-HOTFIX1 convierte la pantalla ejecutiva en una antesala operativa: incorpora navegación real, tendencias comerciales, selector global de periodo, semántica correcta de atención y colas contextuales que abren exactamente los productos, marcas o clientes representados por cada KPI. La clasificación de clientes utiliza historial real y umbrales de 90 días para inactividad y 180 días para pérdida.
+
+Purchasing sólo queda técnicamente listo cuando existen órdenes y solicitudes de compra normalizadas, Inventory, Product Master y Forecast completo, vigente y sin errores. EW-001 y su hotfix no crean todavía el Workspace de Purchasing ni incorporan decisiones automáticas.
 
 La siguiente iniciativa recomendada es `PVW-001 — Purchasing Data Foundation & Import Contracts`.
 

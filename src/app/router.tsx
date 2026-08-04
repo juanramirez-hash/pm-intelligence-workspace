@@ -22,6 +22,18 @@ const loadExecutiveWorkspace = async () => {
   }
 }
 
+const loadExecutiveAttentionQueue = async () => {
+  const module =
+    await import(
+      '../features/executive-workspace/pages/ExecutiveAttentionQueuePage'
+    )
+
+  return {
+    Component:
+      module.ExecutiveAttentionQueuePage,
+  }
+}
+
 const loadSalesWorkspace = async () => {
   const module =
     await import(
@@ -175,6 +187,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         lazy: loadExecutiveWorkspace,
+      },
+      {
+        path: 'attention/:domain',
+        lazy: loadExecutiveAttentionQueue,
       },
       {
         path: 'sales',

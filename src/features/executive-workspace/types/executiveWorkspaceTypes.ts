@@ -39,6 +39,244 @@ import type {
   SalesDatasetSummary,
 } from '../../data-center/types/reportTypes'
 
+export interface ExecutiveRevenueTrendPoint {
+  periodId: string
+
+  year: number
+
+  month: number
+
+  revenue: number
+
+  grossProfit: number
+
+  grossMargin: number
+
+  customerCount: number
+
+  brandCount: number
+
+  productCount: number
+}
+
+export interface ExecutiveCustomerConcentrationItem {
+  customerId: string
+
+  customerName: string
+
+  revenue: number
+
+  grossProfit: number
+
+  grossMargin: number
+
+  documents: number
+
+  activePeriods: number
+
+  revenueShare: number
+}
+
+export interface ExecutiveCommercialTrends {
+  monthlyRevenue:
+    ExecutiveRevenueTrendPoint[]
+
+  topCustomers:
+    ExecutiveCustomerConcentrationItem[]
+
+  totalCustomerRevenue: number
+
+  periodCount: number
+}
+
+export interface ExecutiveProductAttentionSummary {
+  currentPeriodId: string
+
+  previousPeriodId:
+    string | null
+
+  totalProducts: number
+
+  activeProducts: number
+
+  productsRequiringAttention: number
+
+  growingProducts: number
+
+  decliningProducts: number
+
+  recoveredProducts: number
+
+  newProducts: number
+
+  inactiveOrLostProducts: number
+}
+
+export type ExecutivePeriodPreset =
+  | 'month'
+  | 'last_3_months'
+  | 'last_6_months'
+  | 'year_to_date'
+
+export interface ExecutivePeriodOption {
+  id: string
+
+  year: number
+
+  month: number
+
+  label: string
+}
+
+export interface ExecutivePeriodSelection {
+  preset: ExecutivePeriodPreset
+
+  presetLabel: string
+
+  anchorPeriodId: string | null
+
+  availablePeriods:
+    readonly ExecutivePeriodOption[]
+
+  currentPeriodIds:
+    readonly string[]
+
+  comparisonPeriodIds:
+    readonly string[]
+
+  priorYearPeriodIds:
+    readonly string[]
+
+  currentLabel: string
+
+  comparisonLabel: string
+
+  priorYearLabel: string
+
+  currentStartPeriodId:
+    string | null
+
+  currentEndPeriodId:
+    string | null
+
+  comparisonStartPeriodId:
+    string | null
+
+  comparisonEndPeriodId:
+    string | null
+
+  previousAnchorPeriodId:
+    string | null
+
+  nextAnchorPeriodId:
+    string | null
+}
+
+export interface ExecutiveComparisonMetric {
+  currentValue: number | null
+
+  comparisonValue: number | null
+
+  variationPercentage: number | null
+}
+
+export interface ExecutiveSalesPeriodPerformance {
+  hasData: boolean
+
+  currentRevenue: number | null
+
+  currentGrossProfit: number | null
+
+  grossMargin: number | null
+
+  averageMonthlyRevenue: number | null
+
+  periodCount: number
+
+  currentLabel: string
+
+  comparisonLabel: string
+
+  priorYearLabel: string
+
+  comparison:
+    ExecutiveComparisonMetric
+
+  priorYearComparison:
+    ExecutiveComparisonMetric
+}
+
+export interface ExecutiveEntityAttentionIds {
+  analyzed: readonly string[]
+
+  active: readonly string[]
+
+  requiringAttention: readonly string[]
+
+  growing: readonly string[]
+
+  declining: readonly string[]
+
+  stable: readonly string[]
+
+  recovered: readonly string[]
+
+  new: readonly string[]
+
+  inactiveOrLost: readonly string[]
+}
+
+export interface ExecutiveEntityAttentionSummary {
+  totalAnalyzed: number
+
+  activeEntities: number
+
+  entitiesRequiringAttention: number
+
+  growingEntities: number
+
+  decliningEntities: number
+
+  stableEntities: number
+
+  recoveredEntities: number
+
+  newEntities: number
+
+  inactiveOrLostEntities: number
+
+  entityIds?:
+    ExecutiveEntityAttentionIds
+}
+
+export interface ExecutiveAttentionSummary {
+  products:
+    ExecutiveEntityAttentionSummary
+
+  brands:
+    ExecutiveEntityAttentionSummary
+
+  customers:
+    ExecutiveEntityAttentionSummary
+}
+
+export interface ExecutivePeriodView {
+  selection:
+    ExecutivePeriodSelection
+
+  salesPerformance:
+    ExecutiveSalesPeriodPerformance
+
+  attention:
+    ExecutiveAttentionSummary
+
+  brands:
+    BrandIntelligenceSummary | null
+
+  commercialTrends:
+    ExecutiveCommercialTrends
+}
+
 export type ExecutiveDomainId =
   | 'sales'
   | 'inventory'
@@ -181,6 +419,12 @@ export interface ExecutiveWorkspaceModel {
 
   purchasingReadiness?:
     ExecutivePurchasingReadiness
+
+  productAttention:
+    ExecutiveProductAttentionSummary | null
+
+  commercialTrends:
+    ExecutiveCommercialTrends
 
   generatedAt?: string
 
