@@ -60,6 +60,15 @@ import type {
 } from '../entities/projectBilling'
 
 import type {
+  BusinessPurchaseOrder,
+  BusinessPurchaseOrderLine,
+} from '../entities/purchaseOrder'
+
+import type {
+  BusinessPurchaseRequest,
+} from '../entities/purchaseRequest'
+
+import type {
   BusinessExchangeRate,
 } from '../entities/exchangeRate'
 
@@ -172,6 +181,18 @@ export interface BusinessDataModel {
   /** Auditable item-level project billing lines. */
   projectBillingLines?:
     Map<string, BusinessProjectBillingLine>
+
+  /** Purchase orders materialized from the operational PO report. */
+  purchaseOrders?:
+    Map<string, BusinessPurchaseOrder>
+
+  /** Auditable purchase-order lines keyed by lineKey. */
+  purchaseOrderLines?:
+    Map<string, BusinessPurchaseOrderLine>
+
+  /** Purchase requests keyed by the canonical SC number. */
+  purchaseRequests?:
+    Map<string, BusinessPurchaseRequest>
 
   /** Monthly exchange rates used for open pipeline conversion. */
   exchangeRates?:

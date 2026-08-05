@@ -71,6 +71,14 @@ import {
 } from './projectBillingQueries'
 
 import {
+  PurchaseOrderQueries,
+} from './purchaseOrderQueries'
+
+import {
+  PurchaseRequestQueries,
+} from './purchaseRequestQueries'
+
+import {
   ExchangeRateQueries,
 } from './exchangeRateQueries'
 
@@ -132,6 +140,12 @@ export class BusinessRepository {
 
   readonly projectBillings:
     ProjectBillingQueries
+
+  readonly purchaseOrders:
+    PurchaseOrderQueries
+
+  readonly purchaseRequests:
+    PurchaseRequestQueries
 
   readonly exchangeRates:
     ExchangeRateQueries
@@ -209,6 +223,12 @@ export class BusinessRepository {
     this.projectBillings =
       new ProjectBillingQueries(model)
 
+    this.purchaseOrders =
+      new PurchaseOrderQueries(model)
+
+    this.purchaseRequests =
+      new PurchaseRequestQueries(model)
+
     this.exchangeRates =
       new ExchangeRateQueries(model)
 
@@ -267,6 +287,26 @@ export class BusinessRepository {
 
   getProjectBillingDocuments() {
     return this.projectBillings.getAllDocuments()
+  }
+
+  getPurchaseOrders() {
+    return this.purchaseOrders.getAll()
+  }
+
+  getPurchaseOrderLines() {
+    return this.purchaseOrders.getAllLines()
+  }
+
+  getPurchaseOrderQualityReport() {
+    return this.purchaseOrders.getQualityReport()
+  }
+
+  getPurchaseRequests() {
+    return this.purchaseRequests.getAll()
+  }
+
+  getPurchaseRequestQualityReport() {
+    return this.purchaseRequests.getQualityReport()
   }
 
   getExchangeRates() {
