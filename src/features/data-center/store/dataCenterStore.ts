@@ -32,6 +32,16 @@ import type {
   InventoryDatasetSummary,
   NormalizedInventoryRow,
 } from '../importers/inventory/inventoryTypes'
+
+import type {
+  NormalizedPurchaseOrderRow,
+  PurchaseOrderDatasetSummary,
+} from '../importers/purchases/purchaseOrderTypes'
+import type {
+  NormalizedPurchaseRequestRow,
+  PurchaseRequestDatasetSummary,
+} from '../importers/purchase-requests/purchaseRequestTypes'
+
 import type {
   NormalizedProjectRow,
   ProjectDatasetSummary,
@@ -70,6 +80,15 @@ import {
 import {
   indexedDbDataRepository,
 } from '../repositories/indexedDbDataRepository'
+
+import {
+  buildPurchaseOrderBusinessModel,
+  mergePurchaseOrderRows,
+} from '../importers/purchases/purchaseOrderBusinessModel'
+import {
+  buildPurchaseRequestBusinessModel,
+  mergePurchaseRequestRows,
+} from '../importers/purchase-requests/purchaseRequestBusinessModel'
 
 export interface DataCenterState {
   activeReportType: ReportType | null
@@ -119,6 +138,30 @@ export interface DataCenterState {
   inventoryLastImportedFile: string | null
 
   inventoryLastImportedAt: string | null
+
+  purchaseOrderSummary:
+    PurchaseOrderDatasetSummary | null
+
+  normalizedPurchaseOrders:
+    NormalizedPurchaseOrderRow[]
+
+  purchaseOrderLastImportedFile:
+    string | null
+
+  purchaseOrderLastImportedAt:
+    string | null
+
+  purchaseRequestSummary:
+    PurchaseRequestDatasetSummary | null
+
+  normalizedPurchaseRequests:
+    NormalizedPurchaseRequestRow[]
+
+  purchaseRequestLastImportedFile:
+    string | null
+
+  purchaseRequestLastImportedAt:
+    string | null
 
   projectsSummary: ProjectDatasetSummary | null
 
@@ -213,6 +256,24 @@ export interface DataCenterState {
 
   setNormalizedInventory: (
     rows: NormalizedInventoryRow[],
+  ) => void
+
+  setPurchaseOrderSummary: (
+    summary:
+      PurchaseOrderDatasetSummary | null,
+  ) => void
+
+  setNormalizedPurchaseOrders: (
+    rows: NormalizedPurchaseOrderRow[],
+  ) => void
+
+  setPurchaseRequestSummary: (
+    summary:
+      PurchaseRequestDatasetSummary | null,
+  ) => void
+
+  setNormalizedPurchaseRequests: (
+    rows: NormalizedPurchaseRequestRow[],
   ) => void
 
   setForecastSummary: (
@@ -335,6 +396,22 @@ export const useDataCenterStore =
 
       inventoryLastImportedAt: null,
 
+      purchaseOrderSummary: null,
+
+      normalizedPurchaseOrders: [],
+
+      purchaseOrderLastImportedFile: null,
+
+      purchaseOrderLastImportedAt: null,
+
+      purchaseRequestSummary: null,
+
+      normalizedPurchaseRequests: [],
+
+      purchaseRequestLastImportedFile: null,
+
+      purchaseRequestLastImportedAt: null,
+
       projectsSummary: null,
 
       normalizedProjects: [],
@@ -440,6 +517,26 @@ export const useDataCenterStore =
 
       setNormalizedInventory: (rows) =>
         set({ normalizedInventory: rows }),
+
+      setPurchaseOrderSummary: (summary) =>
+        set({
+          purchaseOrderSummary: summary,
+        }),
+
+      setNormalizedPurchaseOrders: (rows) =>
+        set({
+          normalizedPurchaseOrders: rows,
+        }),
+
+      setPurchaseRequestSummary: (summary) =>
+        set({
+          purchaseRequestSummary: summary,
+        }),
+
+      setNormalizedPurchaseRequests: (rows) =>
+        set({
+          normalizedPurchaseRequests: rows,
+        }),
 
       setForecastSummary: (
         summary,
@@ -719,6 +816,128 @@ export const useDataCenterStore =
                       persistenceError,
                       'No fue posible guardar el inventario.',
                     ),
+                  })
+                })
+
+              break
+            }
+
+            case 'purchases': {
+              const importedAt =
+                new Date().toISOString()
+
+              const mergedRows =
+                mergePurchaseOrderRows(
+                  get().normalizedPurchaseOrders,
+                  result.normalizedRows,
+                )
+
+              const businessModel =
+                buildPurchaseOrderBusinessModel(
+                  mergedRows,
+                  result.ignoredRows,
+                )
+
+              set({
+                purchaseOrderSummary:
+                  businessModel.summary,
+                normalizedPurchaseOrders:
+                  businessModel.lines,
+                purchaseOrderLastImportedFile:
+                  metadata.fileName,
+                purchaseOrderLastImportedAt:
+                  importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .savePurchaseOrderDataset({
+                  summary:
+                    businessModel.summary,
+                  normalizedRows:
+                    businessModel.lines,
+                  lastImportedFile:
+                    metadata.fileName,
+                  lastImportedAt:
+                    importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError:
+                      getErrorMessage(
+                        persistenceError,
+                        'No fue posible guardar las órdenes de compra.',
+                      ),
+                  })
+                })
+
+              break
+            }
+
+            case 'purchase-requests': {
+              const importedAt =
+                new Date().toISOString()
+
+              const mergedRows =
+                mergePurchaseRequestRows(
+                  get().normalizedPurchaseRequests,
+                  result.normalizedRows,
+                )
+
+              const businessModel =
+                buildPurchaseRequestBusinessModel(
+                  mergedRows,
+                  result.ignoredRows,
+                )
+
+              set({
+                purchaseRequestSummary:
+                  businessModel.summary,
+                normalizedPurchaseRequests:
+                  businessModel.requests,
+                purchaseRequestLastImportedFile:
+                  metadata.fileName,
+                purchaseRequestLastImportedAt:
+                  importedAt,
+                importStatus: 'completed',
+                importErrors: [],
+                isPersisting: true,
+              })
+
+              void indexedDbDataRepository
+                .savePurchaseRequestDataset({
+                  summary:
+                    businessModel.summary,
+                  normalizedRows:
+                    businessModel.requests,
+                  lastImportedFile:
+                    metadata.fileName,
+                  lastImportedAt:
+                    importedAt,
+                })
+                .then(() => {
+                  set({
+                    isPersisting: false,
+                    persistenceError: null,
+                  })
+                })
+                .catch((persistenceError) => {
+                  set({
+                    isPersisting: false,
+                    persistenceError:
+                      getErrorMessage(
+                        persistenceError,
+                        'No fue posible guardar las solicitudes de compra.',
+                      ),
                   })
                 })
 
@@ -1030,6 +1249,8 @@ export const useDataCenterStore =
               persistedTargets,
               persistedProductMaster,
               persistedInventory,
+              persistedPurchaseOrders,
+              persistedPurchaseRequests,
               persistedProjects,
               persistedProjectBillings,
               persistedExchangeRates,
@@ -1039,6 +1260,8 @@ export const useDataCenterStore =
               indexedDbDataRepository.loadTargetDataset(),
               indexedDbDataRepository.loadProductMasterDataset(),
               indexedDbDataRepository.loadInventoryDataset(),
+              indexedDbDataRepository.loadPurchaseOrderDataset(),
+              indexedDbDataRepository.loadPurchaseRequestDataset(),
               indexedDbDataRepository.loadProjectDataset(),
               indexedDbDataRepository.loadProjectBillingDataset(),
               indexedDbDataRepository.loadExchangeRateDataset(),
@@ -1062,20 +1285,27 @@ export const useDataCenterStore =
                     ? 'project-billing'
                     : persistedProjects
                       ? 'projects'
-                      : persistedInventory
-                        ? 'inventory'
-                        : persistedProductMaster
-                          ? 'products'
-                          : persistedTargets
-                            ? 'quota'
-                            : persistedSales
-                              ? 'sales'
-                              : null,
+                      : persistedPurchaseRequests
+                        ? 'purchase-requests'
+                        : persistedPurchaseOrders
+                          ? 'purchases'
+                          : persistedInventory
+                            ? 'inventory'
+                            : persistedProductMaster
+                              ? 'products'
+                              : persistedTargets
+                                ? 'quota'
+                                : persistedSales
+                                  ? 'sales'
+                                  : null,
+
               importStatus:
                 persistedSales ||
                 persistedTargets ||
                 persistedProductMaster ||
                 persistedInventory ||
+                persistedPurchaseOrders ||
+                persistedPurchaseRequests ||
                 persistedProjects ||
                 persistedProjectBillings ||
                 persistedExchangeRates ||
@@ -1100,6 +1330,25 @@ export const useDataCenterStore =
               normalizedInventory: persistedInventory?.normalizedRows ?? [],
               inventoryLastImportedFile: persistedInventory?.lastImportedFile ?? null,
               inventoryLastImportedAt: persistedInventory?.lastImportedAt ?? null,
+
+              purchaseOrderSummary:
+                persistedPurchaseOrders?.summary ?? null,
+              normalizedPurchaseOrders:
+                persistedPurchaseOrders?.normalizedRows ?? [],
+              purchaseOrderLastImportedFile:
+                persistedPurchaseOrders?.lastImportedFile ?? null,
+              purchaseOrderLastImportedAt:
+                persistedPurchaseOrders?.lastImportedAt ?? null,
+
+              purchaseRequestSummary:
+                persistedPurchaseRequests?.summary ?? null,
+              normalizedPurchaseRequests:
+                persistedPurchaseRequests?.normalizedRows ?? [],
+              purchaseRequestLastImportedFile:
+                persistedPurchaseRequests?.lastImportedFile ?? null,
+              purchaseRequestLastImportedAt:
+                persistedPurchaseRequests?.lastImportedAt ?? null,
+
               projectsSummary: persistedProjects?.summary ?? null,
               normalizedProjects: persistedProjects?.normalizedRows ?? [],
               projectsLastImportedFile: persistedProjects?.lastImportedFile ?? null,
@@ -1250,6 +1499,22 @@ export const useDataCenterStore =
               inventoryLastImportedFile: null,
 
               inventoryLastImportedAt: null,
+
+              purchaseOrderSummary: null,
+
+              normalizedPurchaseOrders: [],
+
+              purchaseOrderLastImportedFile: null,
+
+              purchaseOrderLastImportedAt: null,
+
+              purchaseRequestSummary: null,
+
+              normalizedPurchaseRequests: [],
+
+              purchaseRequestLastImportedFile: null,
+
+              purchaseRequestLastImportedAt: null,
 
               projectsSummary: null,
 

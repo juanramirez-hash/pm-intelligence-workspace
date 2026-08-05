@@ -6,6 +6,8 @@ import type {
   PersistedProjectBillingDataset,
   PersistedProjectDataset,
   PersistedPricingDataset,
+  PersistedPurchaseOrderDataset,
+  PersistedPurchaseRequestDataset,
   PersistedSalesDataset,
   PersistedTargetDataset,
 } from './dataRepository'
@@ -19,6 +21,9 @@ import {
   PROJECT_BILLING_METADATA_KEY,
   PROJECT_METADATA_KEY,
   PRICING_METADATA_KEY,
+  PURCHASE_ORDER_CHUNK_SIZE,
+  PURCHASE_ORDER_METADATA_KEY,
+  PURCHASE_REQUEST_METADATA_KEY,
   SALES_CHUNK_SIZE,
   SALES_METADATA_KEY,
   TARGET_METADATA_KEY,
@@ -29,6 +34,9 @@ import {
   type PersistedProjectBillingMetadata,
   type PersistedProjectMetadata,
   type PersistedPricingMetadata,
+  type PersistedPurchaseOrderChunk,
+  type PersistedPurchaseOrderMetadata,
+  type PersistedPurchaseRequestMetadata,
   type PersistedSalesChunk,
   type PersistedSalesMetadata,
   type PersistedTargetMetadata,
@@ -49,6 +57,32 @@ function createSalesChunks(
     chunks.push({
       chunkIndex,
       rows: rows.slice(startIndex, startIndex + SALES_CHUNK_SIZE),
+    })
+  }
+
+  return chunks
+}
+
+function createPurchaseOrderChunks(
+  rows: PersistedPurchaseOrderDataset['normalizedRows'],
+): PersistedPurchaseOrderChunk[] {
+  const chunks: PersistedPurchaseOrderChunk[] = []
+
+  for (
+    let startIndex = 0;
+    startIndex < rows.length;
+    startIndex += PURCHASE_ORDER_CHUNK_SIZE
+  ) {
+    const chunkIndex = Math.floor(
+      startIndex / PURCHASE_ORDER_CHUNK_SIZE,
+    )
+
+    chunks.push({
+      chunkIndex,
+      rows: rows.slice(
+        startIndex,
+        startIndex + PURCHASE_ORDER_CHUNK_SIZE,
+      ),
     })
   }
 
@@ -261,6 +295,172 @@ export const indexedDbDataRepository:
     }
   },
 
+  async savePurchaseOrderDataset(
+    dataset: PersistedPurchaseOrderDataset,
+  ) {
+    const database =
+      await getDataCenterDatabase()
+
+    const chunks =
+      createPurchaseOrderChunks(
+        dataset.normalizedRows,
+      )
+
+    const metadata:
+      PersistedPurchaseOrderMetadata = {
+      id: PURCHASE_ORDER_METADATA_KEY,
+      summary: dataset.summary,
+      lastImportedFile:
+        dataset.lastImportedFile,
+      lastImportedAt:
+        dataset.lastImportedAt,
+      totalRows:
+        dataset.normalizedRows.length,
+      totalChunks:
+        chunks.length,
+      persistenceVersion: 1,
+    }
+
+    const transaction =
+      database.transaction(
+        [
+          'purchaseOrderMetadata',
+          'purchaseOrderChunks',
+        ],
+        'readwrite',
+      )
+
+    await transaction
+      .objectStore('purchaseOrderChunks')
+      .clear()
+
+    await Promise.all(
+      chunks.map((chunk) =>
+        transaction
+          .objectStore(
+            'purchaseOrderChunks',
+          )
+          .put(
+            chunk,
+            chunk.chunkIndex,
+          ),
+      ),
+    )
+
+    await transaction
+      .objectStore(
+        'purchaseOrderMetadata',
+      )
+      .put(
+        metadata,
+        PURCHASE_ORDER_METADATA_KEY,
+      )
+
+    await transaction.done
+  },
+
+  async loadPurchaseOrderDataset() {
+    const database =
+      await getDataCenterDatabase()
+
+    const metadata =
+      await database.get(
+        'purchaseOrderMetadata',
+        PURCHASE_ORDER_METADATA_KEY,
+      )
+
+    if (!metadata) {
+      return null
+    }
+
+    const chunks =
+      await database.getAll(
+        'purchaseOrderChunks',
+      )
+
+    const normalizedRows =
+      [...chunks]
+        .sort(
+          (left, right) =>
+            left.chunkIndex -
+            right.chunkIndex,
+        )
+        .flatMap(
+          (chunk) => chunk.rows,
+        )
+
+    if (
+      normalizedRows.length !==
+      metadata.totalRows
+    ) {
+      throw new Error(
+        `Las órdenes de compra persistidas están incompletas. Se esperaban ${metadata.totalRows.toLocaleString()} líneas y se recuperaron ${normalizedRows.length.toLocaleString()}.`,
+      )
+    }
+
+    return {
+      summary:
+        metadata.summary,
+      normalizedRows,
+      lastImportedFile:
+        metadata.lastImportedFile,
+      lastImportedAt:
+        metadata.lastImportedAt,
+    }
+  },
+
+  async savePurchaseRequestDataset(
+    dataset: PersistedPurchaseRequestDataset,
+  ) {
+    const database =
+      await getDataCenterDatabase()
+
+    const metadata:
+      PersistedPurchaseRequestMetadata = {
+      id: PURCHASE_REQUEST_METADATA_KEY,
+      summary: dataset.summary,
+      normalizedRows:
+        dataset.normalizedRows,
+      lastImportedFile:
+        dataset.lastImportedFile,
+      lastImportedAt:
+        dataset.lastImportedAt,
+      persistenceVersion: 1,
+    }
+
+    await database.put(
+      'purchaseRequestMetadata',
+      metadata,
+      PURCHASE_REQUEST_METADATA_KEY,
+    )
+  },
+
+  async loadPurchaseRequestDataset() {
+    const database =
+      await getDataCenterDatabase()
+
+    const metadata =
+      await database.get(
+        'purchaseRequestMetadata',
+        PURCHASE_REQUEST_METADATA_KEY,
+      )
+
+    if (!metadata) {
+      return null
+    }
+
+    return {
+      summary:
+        metadata.summary,
+      normalizedRows:
+        metadata.normalizedRows,
+      lastImportedFile:
+        metadata.lastImportedFile,
+      lastImportedAt:
+        metadata.lastImportedAt,
+    }
+  },
+
   async saveProjectDataset(
     dataset: PersistedProjectDataset,
   ) {
@@ -448,35 +648,70 @@ export const indexedDbDataRepository:
     }
   },
 
-  async clearAllData() {
-    const database = await getDataCenterDatabase()
-    const transaction = database.transaction(
-      [
-        'salesMetadata',
-        'salesChunks',
-        'targetMetadata',
-        'productMetadata',
-        'inventoryMetadata',
-        'projectMetadata',
-        'projectBillingMetadata',
-        'projectBillingChunks',
-        'exchangeRateMetadata',
-        'pricingMetadata',
-      ],
-      'readwrite',
-    )
+   async clearAllData() {
+    const database =
+      await getDataCenterDatabase()
+
+    const transaction =
+      database.transaction(
+        [
+          'salesMetadata',
+          'salesChunks',
+          'targetMetadata',
+          'productMetadata',
+          'inventoryMetadata',
+          'purchaseOrderMetadata',
+          'purchaseOrderChunks',
+          'purchaseRequestMetadata',
+          'projectMetadata',
+          'projectBillingMetadata',
+          'projectBillingChunks',
+          'exchangeRateMetadata',
+          'pricingMetadata',
+        ],
+        'readwrite',
+      )
 
     await Promise.all([
-      transaction.objectStore('salesMetadata').clear(),
-      transaction.objectStore('salesChunks').clear(),
-      transaction.objectStore('targetMetadata').clear(),
-      transaction.objectStore('productMetadata').clear(),
-      transaction.objectStore('inventoryMetadata').clear(),
-      transaction.objectStore('projectMetadata').clear(),
-      transaction.objectStore('projectBillingMetadata').clear(),
-      transaction.objectStore('projectBillingChunks').clear(),
-      transaction.objectStore('exchangeRateMetadata').clear(),
-      transaction.objectStore('pricingMetadata').clear(),
+      transaction
+        .objectStore('salesMetadata')
+        .clear(),
+      transaction
+        .objectStore('salesChunks')
+        .clear(),
+      transaction
+        .objectStore('targetMetadata')
+        .clear(),
+      transaction
+        .objectStore('productMetadata')
+        .clear(),
+      transaction
+        .objectStore('inventoryMetadata')
+        .clear(),
+      transaction
+        .objectStore('purchaseOrderMetadata')
+        .clear(),
+      transaction
+        .objectStore('purchaseOrderChunks')
+        .clear(),
+      transaction
+        .objectStore('purchaseRequestMetadata')
+        .clear(),
+      transaction
+        .objectStore('projectMetadata')
+        .clear(),
+      transaction
+        .objectStore('projectBillingMetadata')
+        .clear(),
+      transaction
+        .objectStore('projectBillingChunks')
+        .clear(),
+      transaction
+        .objectStore('exchangeRateMetadata')
+        .clear(),
+      transaction
+        .objectStore('pricingMetadata')
+        .clear(),
     ])
 
     await transaction.done

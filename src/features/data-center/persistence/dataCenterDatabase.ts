@@ -23,6 +23,14 @@ import type {
   NormalizedInventoryRow,
 } from '../importers/inventory/inventoryTypes'
 import type {
+  NormalizedPurchaseOrderRow,
+  PurchaseOrderDatasetSummary,
+} from '../importers/purchases/purchaseOrderTypes'
+import type {
+  NormalizedPurchaseRequestRow,
+  PurchaseRequestDatasetSummary,
+} from '../importers/purchase-requests/purchaseRequestTypes'
+import type {
   NormalizedProjectRow,
   ProjectDatasetSummary,
 } from '../importers/projects/projectTypes'
@@ -42,7 +50,7 @@ import type {
 export const DATA_CENTER_DATABASE_NAME =
   'pm-intelligence-workspace'
 
-export const DATA_CENTER_DATABASE_VERSION = 8
+export const DATA_CENTER_DATABASE_VERSION = 9
 
 export const SALES_METADATA_KEY =
   'current-sales-dataset'
@@ -52,6 +60,10 @@ export const PRODUCT_METADATA_KEY =
   'current-product-master-dataset'
 export const INVENTORY_METADATA_KEY =
   'current-inventory-dataset'
+export const PURCHASE_ORDER_METADATA_KEY =
+  'current-purchase-order-dataset'
+export const PURCHASE_REQUEST_METADATA_KEY =
+  'current-purchase-request-dataset'
 export const PROJECT_METADATA_KEY =
   'current-project-dataset'
 export const PROJECT_BILLING_METADATA_KEY =
@@ -62,6 +74,7 @@ export const PRICING_METADATA_KEY =
   'current-pricing-dataset'
 
 export const SALES_CHUNK_SIZE = 5_000
+export const PURCHASE_ORDER_CHUNK_SIZE = 2_500
 export const PROJECT_BILLING_CHUNK_SIZE = 2_500
 
 export interface PersistedSalesMetadata {
@@ -101,6 +114,30 @@ export interface PersistedInventoryMetadata {
   id: string
   summary: InventoryDatasetSummary
   normalizedRows: NormalizedInventoryRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+  persistenceVersion: number
+}
+
+export interface PersistedPurchaseOrderMetadata {
+  id: string
+  summary: PurchaseOrderDatasetSummary
+  lastImportedFile: string
+  lastImportedAt: string
+  totalRows: number
+  totalChunks: number
+  persistenceVersion: number
+}
+
+export interface PersistedPurchaseOrderChunk {
+  chunkIndex: number
+  rows: NormalizedPurchaseOrderRow[]
+}
+
+export interface PersistedPurchaseRequestMetadata {
+  id: string
+  summary: PurchaseRequestDatasetSummary
+  normalizedRows: NormalizedPurchaseRequestRow[]
   lastImportedFile: string
   lastImportedAt: string
   persistenceVersion: number
@@ -175,6 +212,21 @@ interface DataCenterDatabaseSchema
     value: PersistedInventoryMetadata
   }
 
+  purchaseOrderMetadata: {
+    key: string
+    value: PersistedPurchaseOrderMetadata
+  }
+
+  purchaseOrderChunks: {
+    key: number
+    value: PersistedPurchaseOrderChunk
+  }
+
+  purchaseRequestMetadata: {
+    key: string
+    value: PersistedPurchaseRequestMetadata
+  }
+
   projectMetadata: {
     key: string
     value: PersistedProjectMetadata
@@ -217,44 +269,121 @@ export function getDataCenterDatabase():
         DATA_CENTER_DATABASE_VERSION,
         {
           upgrade(database) {
-            if (!database.objectStoreNames.contains('salesMetadata')) {
-              database.createObjectStore('salesMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('salesMetadata')
+            ) {
+              database.createObjectStore(
+                'salesMetadata',
+              )
             }
 
-            if (!database.objectStoreNames.contains('salesChunks')) {
-              database.createObjectStore('salesChunks')
+            if (
+              !database.objectStoreNames
+                .contains('salesChunks')
+            ) {
+              database.createObjectStore(
+                'salesChunks',
+              )
             }
 
-            if (!database.objectStoreNames.contains('targetMetadata')) {
-              database.createObjectStore('targetMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('targetMetadata')
+            ) {
+              database.createObjectStore(
+                'targetMetadata',
+              )
             }
 
-            if (!database.objectStoreNames.contains('productMetadata')) {
-              database.createObjectStore('productMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('productMetadata')
+            ) {
+              database.createObjectStore(
+                'productMetadata',
+              )
             }
 
-            if (!database.objectStoreNames.contains('inventoryMetadata')) {
-              database.createObjectStore('inventoryMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('inventoryMetadata')
+            ) {
+              database.createObjectStore(
+                'inventoryMetadata',
+              )
             }
 
-            if (!database.objectStoreNames.contains('projectMetadata')) {
-              database.createObjectStore('projectMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('purchaseOrderMetadata')
+            ) {
+              database.createObjectStore(
+                'purchaseOrderMetadata',
+              )
             }
 
-            if (!database.objectStoreNames.contains('projectBillingMetadata')) {
-              database.createObjectStore('projectBillingMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('purchaseOrderChunks')
+            ) {
+              database.createObjectStore(
+                'purchaseOrderChunks',
+              )
             }
 
-            if (!database.objectStoreNames.contains('projectBillingChunks')) {
-              database.createObjectStore('projectBillingChunks')
+            if (
+              !database.objectStoreNames
+                .contains('purchaseRequestMetadata')
+            ) {
+              database.createObjectStore(
+                'purchaseRequestMetadata',
+              )
             }
 
-            if (!database.objectStoreNames.contains('exchangeRateMetadata')) {
-              database.createObjectStore('exchangeRateMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('projectMetadata')
+            ) {
+              database.createObjectStore(
+                'projectMetadata',
+              )
             }
 
-            if (!database.objectStoreNames.contains('pricingMetadata')) {
-              database.createObjectStore('pricingMetadata')
+            if (
+              !database.objectStoreNames
+                .contains('projectBillingMetadata')
+            ) {
+              database.createObjectStore(
+                'projectBillingMetadata',
+              )
+            }
+
+            if (
+              !database.objectStoreNames
+                .contains('projectBillingChunks')
+            ) {
+              database.createObjectStore(
+                'projectBillingChunks',
+              )
+            }
+
+            if (
+              !database.objectStoreNames
+                .contains('exchangeRateMetadata')
+            ) {
+              database.createObjectStore(
+                'exchangeRateMetadata',
+              )
+            }
+
+            if (
+              !database.objectStoreNames
+                .contains('pricingMetadata')
+            ) {
+              database.createObjectStore(
+                'pricingMetadata',
+              )
             }
           },
         },

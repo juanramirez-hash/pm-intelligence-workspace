@@ -21,6 +21,22 @@ import type {
   NormalizedInventoryRow,
   InventoryDatasetSummary,
 } from '../importers/inventory/inventoryTypes'
+
+import type {
+  NormalizedPurchaseOrderRow,
+  PurchaseOrderDatasetSummary,
+} from '../importers/purchases/purchaseOrderTypes'
+import type {
+  PurchaseOrderBusinessModel,
+} from '../importers/purchases/purchaseOrderBusinessModel'
+import type {
+  NormalizedPurchaseRequestRow,
+  PurchaseRequestDatasetSummary,
+} from '../importers/purchase-requests/purchaseRequestTypes'
+import type {
+  PurchaseRequestBusinessModel,
+} from '../importers/purchase-requests/purchaseRequestBusinessModel'
+
 import type {
   NormalizedProjectRow,
   ProjectDatasetSummary,
@@ -45,6 +61,14 @@ import { salesImportPlugin } from '../importers/sales/salesPlugin'
 import { targetImportPlugin } from '../importers/targets/targetPlugin'
 import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
 import { inventoryImportPlugin } from '../importers/inventory/inventoryPlugin'
+
+import {
+  purchaseOrderImportPlugin,
+} from '../importers/purchases/purchaseOrderPlugin'
+import {
+  purchaseRequestImportPlugin,
+} from '../importers/purchase-requests/purchaseRequestPlugin'
+
 import { projectImportPlugin } from '../importers/projects/projectPlugin'
 import { projectBillingImportPlugin } from '../importers/project-billings/projectBillingPlugin'
 import { exchangeRateImportPlugin } from '../importers/exchange-rates/exchangeRatePlugin'
@@ -78,6 +102,20 @@ export type InventoryImportResult = ImportEngineResult<
   InventoryBusinessModel
 > & { reportType: 'inventory' }
 
+export type PurchaseOrderImportResult =
+  ImportEngineResult<
+    PurchaseOrderDatasetSummary,
+    NormalizedPurchaseOrderRow,
+    PurchaseOrderBusinessModel
+  > & { reportType: 'purchases' }
+
+export type PurchaseRequestImportResult =
+  ImportEngineResult<
+    PurchaseRequestDatasetSummary,
+    NormalizedPurchaseRequestRow,
+    PurchaseRequestBusinessModel
+  > & { reportType: 'purchase-requests' }
+
 export type ProjectImportResult = ImportEngineResult<
   ProjectDatasetSummary,
   NormalizedProjectRow,
@@ -107,6 +145,8 @@ export type DataCenterImportResult =
   | TargetImportResult
   | ProductMasterImportResult
   | InventoryImportResult
+  |PurchaseOrderImportResult
+  | PurchaseRequestImportResult
   | ProjectImportResult
   | ProjectBillingImportResult
   | ExchangeRateImportResult
@@ -204,6 +244,20 @@ export function runDataCenterImport(
         rows,
         headers,
       ) as InventoryImportResult
+
+    case 'purchases':
+      return runImportEngine(
+        purchaseOrderImportPlugin,
+        rows,
+        headers,
+      ) as PurchaseOrderImportResult
+
+    case 'purchase-requests':
+      return runImportEngine(
+        purchaseRequestImportPlugin,
+        rows,
+        headers,
+      ) as PurchaseRequestImportResult
 
     case 'projects':
       return runImportEngine(
