@@ -17,6 +17,14 @@ import type {
   NormalizedInventoryRow,
 } from '../importers/inventory/inventoryTypes'
 import type {
+  NormalizedPurchaseOrderRow,
+  PurchaseOrderDatasetSummary,
+} from '../importers/purchases/purchaseOrderTypes'
+import type {
+  NormalizedPurchaseRequestRow,
+  PurchaseRequestDatasetSummary,
+} from '../importers/purchase-requests/purchaseRequestTypes'
+import type {
   NormalizedProjectRow,
   ProjectDatasetSummary,
 } from '../importers/projects/projectTypes'
@@ -57,6 +65,20 @@ export interface PersistedProductMasterDataset {
 export interface PersistedInventoryDataset {
   summary: InventoryDatasetSummary
   normalizedRows: NormalizedInventoryRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedPurchaseOrderDataset {
+  summary: PurchaseOrderDatasetSummary
+  normalizedRows: NormalizedPurchaseOrderRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedPurchaseRequestDataset {
+  summary: PurchaseRequestDatasetSummary
+  normalizedRows: NormalizedPurchaseRequestRow[]
   lastImportedFile: string
   lastImportedAt: string
 }
@@ -117,6 +139,20 @@ export interface DataRepository {
 
   loadInventoryDataset: () =>
     Promise<PersistedInventoryDataset | null>
+
+  savePurchaseOrderDataset: (
+    dataset: PersistedPurchaseOrderDataset,
+  ) => Promise<void>
+
+  loadPurchaseOrderDataset: () =>
+    Promise<PersistedPurchaseOrderDataset | null>
+
+  savePurchaseRequestDataset: (
+    dataset: PersistedPurchaseRequestDataset,
+  ) => Promise<void>
+
+  loadPurchaseRequestDataset: () =>
+    Promise<PersistedPurchaseRequestDataset | null>
 
   saveProjectDataset: (
     dataset: PersistedProjectDataset,
