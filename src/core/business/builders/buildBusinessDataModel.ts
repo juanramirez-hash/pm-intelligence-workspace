@@ -11,6 +11,14 @@ import type {
 } from '../../../features/data-center/importers/inventory/inventoryTypes'
 
 import type {
+  NormalizedPurchaseOrderRow,
+} from '../../../features/data-center/importers/purchases/purchaseOrderTypes'
+
+import type {
+  NormalizedPurchaseRequestRow,
+} from '../../../features/data-center/importers/purchase-requests/purchaseRequestTypes'
+
+import type {
   NormalizedProjectRow,
 } from '../../../features/data-center/importers/projects/projectTypes'
 
@@ -100,6 +108,14 @@ import {
 import {
   buildBusinessProjectBillings,
 } from './buildBusinessProjectBillings'
+
+import {
+  buildBusinessPurchaseOrders,
+} from './buildBusinessPurchaseOrders'
+
+import {
+  buildBusinessPurchaseRequests,
+} from './buildBusinessPurchaseRequests'
 
 import {
   buildBusinessExchangeRates,
@@ -705,6 +721,13 @@ export interface BuildBusinessDataModelOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
   productMaster?: readonly NormalizedProductMasterRow[]
   inventory?: readonly NormalizedInventoryRow[]
+
+  purchaseOrders?:
+    readonly NormalizedPurchaseOrderRow[]
+
+  purchaseRequests?:
+    readonly NormalizedPurchaseRequestRow[]
+
   projects?: readonly NormalizedProjectRow[]
   projectBillings?: readonly NormalizedProjectBillingRow[]
   exchangeRates?: readonly NormalizedExchangeRateRow[]
@@ -816,6 +839,15 @@ export function buildBusinessDataModel(
     projectBillingLines:
       new Map(),
 
+    purchaseOrders:
+      new Map(),
+
+    purchaseOrderLines:
+      new Map(),
+
+    purchaseRequests:
+      new Map(),
+
     exchangeRates:
       new Map(),
 
@@ -918,6 +950,26 @@ export function buildBusinessDataModel(
 
   model.projectBillings = projectBillings.documents
   model.projectBillingLines = projectBillings.lines
+
+  const purchaseOrders =
+    buildBusinessPurchaseOrders(
+      options.purchaseOrders ?? [],
+    )
+
+  model.purchaseOrders =
+    purchaseOrders.orders
+
+  model.purchaseOrderLines =
+    purchaseOrders.lines
+
+  const purchaseRequests =
+    buildBusinessPurchaseRequests(
+      options.purchaseRequests ?? [],
+    )
+
+  model.purchaseRequests =
+    purchaseRequests.requests
+
   model.exchangeRates = buildBusinessExchangeRates(
     options.exchangeRates ?? [],
   )

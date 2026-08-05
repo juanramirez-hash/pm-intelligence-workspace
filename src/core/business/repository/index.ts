@@ -98,6 +98,38 @@ export type {
   ProjectBillingIndexes,
 } from './projectBillingIndexes'
 
+export {
+  PurchaseOrderQueries,
+} from './purchaseOrderQueries'
+
+export type {
+  PurchaseOrderDataQualityReport,
+} from './purchaseOrderQueries'
+
+export {
+  buildPurchaseOrderIndexes,
+} from './purchaseOrderIndexes'
+
+export type {
+  PurchaseOrderIndexes,
+} from './purchaseOrderIndexes'
+
+export {
+  PurchaseRequestQueries,
+} from './purchaseRequestQueries'
+
+export type {
+  PurchaseRequestDataQualityReport,
+} from './purchaseRequestQueries'
+
+export {
+  buildPurchaseRequestIndexes,
+} from './purchaseRequestIndexes'
+
+export type {
+  PurchaseRequestIndexes,
+} from './purchaseRequestIndexes'
+
 export { ExchangeRateQueries } from './exchangeRateQueries'
 export type {
   ExchangeRateConversionResult,

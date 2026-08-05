@@ -77,6 +77,17 @@ export type {
   BusinessProjectBillingDocument,
   BusinessProjectBillingLine,
 } from './entities/projectBilling'
+
+export type {
+  BusinessPurchaseOrder,
+  BusinessPurchaseOrderLine,
+  BusinessPurchaseOrderLineType,
+} from './entities/purchaseOrder'
+
+export type {
+  BusinessPurchaseRequest,
+} from './entities/purchaseRequest'
+
 export type { BusinessExchangeRate } from './entities/exchangeRate'
 
 
