@@ -3,9 +3,9 @@
 ## Estado actual
 
 ```text
-Version: v0.54.1
-Sprint: EW-001-HOTFIX1 - Executive Navigation, Period Context & Attention Queues
-Estado: EW-001 corregido y completado como antesala operativa; Purchasing preparado pero todavia no implementado
+Version: v0.55.0
+Sprint: PVW-001 - Purchasing Data Foundation & Import Contracts
+Estado: PVW-001 completado; foundation de Purchasing integrada y evolución consultiva pendiente
 ```
 
 ## Orden estratégico de ejecución
@@ -13,7 +13,7 @@ Estado: EW-001 corregido y completado como antesala operativa; Purchasing prepar
 1. Forecast Workspace — completado.
 2. Pricing Laboratory Workspace — completado.
 3. Executive Workspace preparado para Purchasing — completado con EW-001 y corregido funcionalmente con EW-001-HOTFIX1.
-4. Purchasing Visibility Workspace — siguiente módulo consultivo.
+4. Purchasing Visibility Workspace — foundation completada con PVW-001; evolución consultiva pendiente.
 
 ## Forecast Workspace
 
@@ -116,7 +116,6 @@ PL-014 incorpora `price-landed-cost-waterfall-v1` para construir costo aterrizad
 
 Pricing Laboratory queda cubierto para producto existente, diseño individual previo al catálogo, diseño por lote de nuevas marcas, sensibilidad de factores comunes, arquitectura comercial multinivel, simulación ponderada de mezcla, stress de costo/TC y construcción de costo aterrizado. Price DNA, recomendaciones automáticas, aprobaciones y publicación de precios permanecen fuera del alcance vigente. Cualquier evolución futura debe preservar el carácter temporal, explicable y no transaccional del laboratorio.
 
-
 PL-015 convierte los objetivos explícitos de margen y GP en pisos matemáticos por producto. Evalúa el descuento máximo soportado, la distancia de seguridad y el factor mínimo bajo escenarios de costo y tipo de cambio, usando costo de compra convertido o landed cost explícito. No incorpora buffers ocultos, aprobaciones ni persistencia comercial.
 
 ## Executive Workspace — PURCHASING READINESS
@@ -130,9 +129,19 @@ EW-001 independiza `ExecutiveWorkspaceModel` de `WorkspaceContextModel`, integra
 
 EW-001-HOTFIX1 convierte la pantalla ejecutiva en una antesala operativa: incorpora navegación real, tendencias comerciales, selector global de periodo, semántica correcta de atención y colas contextuales que abren exactamente los productos, marcas o clientes representados por cada KPI. La clasificación de clientes utiliza historial real y umbrales de 90 días para inactividad y 180 días para pérdida.
 
-Purchasing sólo queda técnicamente listo cuando existen órdenes y solicitudes de compra normalizadas, Inventory, Product Master y Forecast completo, vigente y sin errores. EW-001 y su hotfix no crean todavía el Workspace de Purchasing ni incorporan decisiones automáticas.
+Purchasing queda técnicamente listo para evolución consultiva con órdenes y solicitudes de compra normalizadas, Inventory, Product Master y Forecast completo. EW-001 y su hotfix no crean el Workspace de Purchasing ni incorporan decisiones automáticas.
 
-La siguiente iniciativa recomendada es `PVW-001 — Purchasing Data Foundation & Import Contracts`.
+## Purchasing Visibility Workspace — FOUNDATION COMPLETADA
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| PVW-001 | Purchasing Data Foundation & Import Contracts | Completado |
+
+PVW-001 incorpora contratos e importadores normalizados para órdenes de compra y solicitudes de compra, persistencia e hidratación desde Data Center, entidades y builders del Business Core, índices derivados, queries y reportes de calidad.
+
+La identidad operativa canónica utiliza `purchaseOrderNumber` —procedente de `Document Number`— para órdenes de compra y `purchaseRequestNumber` —procedente de `ID`— para solicitudes de compra. Los campos `Internal ID` se conservan únicamente para trazabilidad técnica y no funcionan como identidad primaria de negocio.
+
+El Workspace visual de Purchasing, sus analíticas consultivas y cualquier motor de decisiones permanecen fuera del alcance de PVW-001. No se define todavía una entrega PVW posterior.
 
 ## Inventory Workspace — CERRADO
 
