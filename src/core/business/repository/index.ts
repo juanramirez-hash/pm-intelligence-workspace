@@ -17,6 +17,7 @@ export {
 export type {
   RevenuePeriodSummary,
 } from './revenueQueries'
+
 export {
   CommercialTargetQueries,
 } from './commercialTargetQueries'
@@ -71,29 +72,58 @@ export {
   ProductIdentityQualityQueries,
 } from './productIdentityQualityQueries'
 
-export { InventoryQueries } from './inventoryQueries'
-export { buildInventoryIndexes } from './inventoryIndexes'
-export type { InventoryIndexes } from './inventoryIndexes'
+export {
+  InventoryQueries,
+} from './inventoryQueries'
 
-export { InventoryAnalyticsQueries } from './inventoryAnalyticsQueries'
+export {
+  buildInventoryIndexes,
+} from './inventoryIndexes'
+
+export type {
+  InventoryIndexes,
+} from './inventoryIndexes'
+
+export {
+  InventoryAnalyticsQueries,
+} from './inventoryAnalyticsQueries'
 
 export {
   InventoryRiskOpportunityQueries,
 } from './inventoryRiskOpportunityQueries'
-export { ForecastDataQueries } from './forecastDataQueries'
 
-export { ProjectQueries } from './projectQueries'
-export type { ProjectDataQualityReport } from './projectQueries'
-export { buildProjectIndexes } from './projectIndexes'
-export type { ProjectIndexes } from './projectIndexes'
+export {
+  ForecastDataQueries,
+} from './forecastDataQueries'
 
-export { ProjectBillingQueries } from './projectBillingQueries'
+export {
+  ProjectQueries,
+} from './projectQueries'
+
+export type {
+  ProjectDataQualityReport,
+} from './projectQueries'
+
+export {
+  buildProjectIndexes,
+} from './projectIndexes'
+
+export type {
+  ProjectIndexes,
+} from './projectIndexes'
+
+export {
+  ProjectBillingQueries,
+} from './projectBillingQueries'
+
 export type {
   ProjectBillingDataQualityReport,
 } from './projectBillingQueries'
+
 export {
   buildProjectBillingIndexes,
 } from './projectBillingIndexes'
+
 export type {
   ProjectBillingIndexes,
 } from './projectBillingIndexes'
@@ -130,22 +160,34 @@ export type {
   PurchaseRequestIndexes,
 } from './purchaseRequestIndexes'
 
-export { ExchangeRateQueries } from './exchangeRateQueries'
+export {
+  PurchasingAnalyticsQueries,
+} from './purchasingAnalyticsQueries'
+
+export {
+  ExchangeRateQueries,
+} from './exchangeRateQueries'
+
 export type {
   ExchangeRateConversionResult,
 } from './exchangeRateQueries'
+
 export {
   buildExchangeRateIndexes,
 } from './exchangeRateIndexes'
+
 export type {
   ExchangeRateIndexes,
 } from './exchangeRateIndexes'
 
+export {
+  SalesTransactionQueries,
+} from './salesTransactionQueries'
 
-export { SalesTransactionQueries } from './salesTransactionQueries'
 export {
   buildSalesTransactionIndexes,
 } from './salesTransactionIndexes'
+
 export type {
   SalesTransactionIndexes,
 } from './salesTransactionIndexes'
@@ -154,9 +196,15 @@ export {
   ProjectBillingReconciliationQueries,
 } from './projectBillingReconciliationQueries'
 
-export { PriceQueries } from './priceQueries'
+export {
+  PriceQueries,
+} from './priceQueries'
+
 export {
   buildPriceIndexes,
   buildPriceProductCurrencyKey,
 } from './priceIndexes'
-export type { PriceIndexes } from './priceIndexes'
+
+export type {
+  PriceIndexes,
+} from './priceIndexes'

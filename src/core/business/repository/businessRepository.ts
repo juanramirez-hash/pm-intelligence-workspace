@@ -79,6 +79,10 @@ import {
 } from './purchaseRequestQueries'
 
 import {
+  PurchasingAnalyticsQueries,
+} from './purchasingAnalyticsQueries'
+
+import {
   ExchangeRateQueries,
 } from './exchangeRateQueries'
 
@@ -119,7 +123,6 @@ export class BusinessRepository {
   readonly salesSegmentation:
     SalesSegmentationQueries
 
-
   readonly productIdentityQuality:
     ProductIdentityQualityQueries
 
@@ -146,6 +149,9 @@ export class BusinessRepository {
 
   readonly purchaseRequests:
     PurchaseRequestQueries
+
+  readonly purchasingAnalytics:
+    PurchasingAnalyticsQueries
 
   readonly exchangeRates:
     ExchangeRateQueries
@@ -199,7 +205,6 @@ export class BusinessRepository {
         model,
       )
 
-
     this.productIdentityQuality =
       new ProductIdentityQualityQueries(
         model,
@@ -228,6 +233,9 @@ export class BusinessRepository {
 
     this.purchaseRequests =
       new PurchaseRequestQueries(model)
+
+    this.purchasingAnalytics =
+      new PurchasingAnalyticsQueries(model)
 
     this.exchangeRates =
       new ExchangeRateQueries(model)
@@ -307,6 +315,10 @@ export class BusinessRepository {
 
   getPurchaseRequestQualityReport() {
     return this.purchaseRequests.getQualityReport()
+  }
+
+  getPurchasingAnalyticsReport() {
+    return this.purchasingAnalytics.getReport()
   }
 
   getExchangeRates() {

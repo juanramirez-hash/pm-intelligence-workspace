@@ -6,6 +6,7 @@
  * part of the stable API.
  */
 export * from './analytics/inventory'
+export * from './analytics/purchasing'
 export * from './attainment'
 export * from './builders'
 export * from './cube'
@@ -42,7 +43,6 @@ export type {
   ExecutiveBriefSeverity,
 } from './executiveBrief'
 
-
 export {
   OpportunityEngine,
   buildCoverageOpportunity,
@@ -67,12 +67,27 @@ export type {
   OpportunityType,
 } from './opportunityRadar'
 
-export type { BusinessInventoryPosition, BusinessInventoryIdentityStatus } from './entities/inventoryPosition'
-export type { BusinessInventorySnapshot } from './entities/inventorySnapshot'
-export { buildBusinessInventory } from './builders/buildBusinessInventory'
-export type { BusinessInventoryBuildResult } from './builders/buildBusinessInventory'
+export type {
+  BusinessInventoryPosition,
+  BusinessInventoryIdentityStatus,
+} from './entities/inventoryPosition'
 
-export type { BusinessProject } from './entities/project'
+export type {
+  BusinessInventorySnapshot,
+} from './entities/inventorySnapshot'
+
+export {
+  buildBusinessInventory,
+} from './builders/buildBusinessInventory'
+
+export type {
+  BusinessInventoryBuildResult,
+} from './builders/buildBusinessInventory'
+
+export type {
+  BusinessProject,
+} from './entities/project'
+
 export type {
   BusinessProjectBillingDocument,
   BusinessProjectBillingLine,
@@ -88,8 +103,9 @@ export type {
   BusinessPurchaseRequest,
 } from './entities/purchaseRequest'
 
-export type { BusinessExchangeRate } from './entities/exchangeRate'
-
+export type {
+  BusinessExchangeRate,
+} from './entities/exchangeRate'
 
 export type {
   BusinessSalesTransactionDocument,
