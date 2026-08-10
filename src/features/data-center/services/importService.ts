@@ -145,7 +145,7 @@ export type DataCenterImportResult =
   | TargetImportResult
   | ProductMasterImportResult
   | InventoryImportResult
-  |PurchaseOrderImportResult
+  | PurchaseOrderImportResult
   | PurchaseRequestImportResult
   | ProjectImportResult
   | ProjectBillingImportResult
@@ -178,8 +178,50 @@ export function isSupportedReportType(
   )
 }
 
+function resolveReportType(
+  headers: string[],
+  selectedReportType?: ReportType,
+): ReportType {
+  if (selectedReportType) {
+    if (!isSupportedReportType(selectedReportType)) {
+      throw new Error(
+        `El destino "${selectedReportType}" no tiene un importador registrado.`,
+      )
+    }
+
+    return selectedReportType
+  }
+
+  const detection = detectReportType(headers)
+
+  if (detection.detectedReportType) {
+    return detection.detectedReportType
+  }
+
+  const bestCandidate = detection.candidates[0]
+
+  if (bestCandidate) {
+    const missingFields =
+      bestCandidate.missingRequiredFields
+
+    const missingFieldsText =
+      missingFields.length > 0
+        ? ` Faltan las columnas obligatorias: ${missingFields.join(', ')}.`
+        : ''
+
+    throw new Error(
+      `No fue posible identificar automáticamente el tipo de reporte. La mejor coincidencia fue "${bestCandidate.reportType}" con ${bestCandidate.confidence}% de confianza.${missingFieldsText}`,
+    )
+  }
+
+  throw new Error(
+    'No fue posible identificar automáticamente el tipo de reporte porque el archivo no coincide con ningún importador registrado.',
+  )
+}
+
 export function runDataCenterImport(
   rows: SpreadsheetRow[],
+  selectedReportType?: ReportType,
 ): DataCenterImportResult {
   if (rows.length === 0) {
     throw new Error(
@@ -195,28 +237,12 @@ export function runDataCenterImport(
     )
   }
 
-  const detection = detectReportType(headers)
+  const reportType = resolveReportType(
+    headers,
+    selectedReportType,
+  )
 
-  if (!detection.detectedReportType) {
-    const bestCandidate = detection.candidates[0]
-
-    if (bestCandidate) {
-      const missingFields = bestCandidate.missingRequiredFields
-      const missingFieldsText = missingFields.length > 0
-        ? ` Faltan las columnas obligatorias: ${missingFields.join(', ')}.`
-        : ''
-
-      throw new Error(
-        `No fue posible identificar automáticamente el tipo de reporte. La mejor coincidencia fue "${bestCandidate.reportType}" con ${bestCandidate.confidence}% de confianza.${missingFieldsText}`,
-      )
-    }
-
-    throw new Error(
-      'No fue posible identificar automáticamente el tipo de reporte porque el archivo no coincide con ningún importador registrado.',
-    )
-  }
-
-  switch (detection.detectedReportType) {
+  switch (reportType) {
     case 'sales':
       return runImportEngine(
         salesImportPlugin,
@@ -289,7 +315,7 @@ export function runDataCenterImport(
 
     default:
       throw new Error(
-        `El reporte "${detection.detectedReportType}" fue detectado, pero no existe un plugin registrado para procesarlo.`,
+        `El reporte "${reportType}" no tiene un plugin registrado para procesarlo.`,
       )
   }
 }

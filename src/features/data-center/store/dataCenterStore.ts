@@ -327,6 +327,7 @@ export interface DataCenterState {
   executeImport: (
     rows: SpreadsheetRow[],
     metadata: FileMetadata,
+    selectedReportType?: ReportType,
   ) => DataCenterImportResult | null
 
   hydratePersistedData:
@@ -630,6 +631,7 @@ export const useDataCenterStore =
       executeImport: (
         rows,
         metadata,
+        selectedReportType,
       ) => {
         set({
           activeReportType: null,
@@ -648,6 +650,7 @@ export const useDataCenterStore =
           const result =
             runDataCenterImport(
               rows,
+              selectedReportType,
             )
 
           set({

@@ -130,7 +130,6 @@ const loadProductIdentityQuality = async () => {
   }
 }
 
-
 const loadPricingLaboratory = async () => {
   const module =
     await import(
@@ -164,6 +163,18 @@ const loadInventoryWorkspace = async () => {
   return {
     Component:
       module.InventoryWorkspacePage,
+  }
+}
+
+const loadPurchasingWorkspace = async () => {
+  const module =
+    await import(
+      '../features/purchasing-workspace/pages/PurchasingWorkspacePage'
+    )
+
+  return {
+    Component:
+      module.PurchasingWorkspacePage,
   }
 }
 
@@ -234,12 +245,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'purchasing',
-        element: (
-          <PlaceholderPage
-            title="Purchasing Workspace"
-            description="Órdenes, solicitudes y seguimiento de abastecimiento."
-          />
-        ),
+        lazy: loadPurchasingWorkspace,
       },
       {
         path: 'data-center',

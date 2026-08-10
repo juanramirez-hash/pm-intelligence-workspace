@@ -287,17 +287,20 @@ export function DataCatalog() {
 
   const targetSummary =
     useDataCenterStore(
-      (state) => state.targetSummary,
+      (state) =>
+        state.targetSummary,
     )
 
   const targetsLastImportedFile =
     useDataCenterStore(
-      (state) => state.targetsLastImportedFile,
+      (state) =>
+        state.targetsLastImportedFile,
     )
 
   const targetsLastImportedAt =
     useDataCenterStore(
-      (state) => state.targetsLastImportedAt,
+      (state) =>
+        state.targetsLastImportedAt,
     )
 
   const lastImportedFile =
@@ -312,88 +315,159 @@ export function DataCatalog() {
         state.lastImportedAt,
     )
 
-  const inventorySummary = useDataCenterStore(
-    (state) => state.inventorySummary,
-  )
+  const inventorySummary =
+    useDataCenterStore(
+      (state) =>
+        state.inventorySummary,
+    )
 
-  const inventoryLastImportedFile = useDataCenterStore(
-    (state) => state.inventoryLastImportedFile,
-  )
+  const inventoryLastImportedFile =
+    useDataCenterStore(
+      (state) =>
+        state.inventoryLastImportedFile,
+    )
 
-  const inventoryLastImportedAt = useDataCenterStore(
-    (state) => state.inventoryLastImportedAt,
-  )
+  const inventoryLastImportedAt =
+    useDataCenterStore(
+      (state) =>
+        state.inventoryLastImportedAt,
+    )
 
   const productMasterSummary =
     useDataCenterStore(
-      (state) => state.productMasterSummary,
+      (state) =>
+        state.productMasterSummary,
     )
 
   const productMasterLastImportedFile =
     useDataCenterStore(
-      (state) => state.productMasterLastImportedFile,
+      (state) =>
+        state.productMasterLastImportedFile,
     )
 
   const productMasterLastImportedAt =
     useDataCenterStore(
-      (state) => state.productMasterLastImportedAt,
+      (state) =>
+        state.productMasterLastImportedAt,
     )
 
-  const projectsSummary = useDataCenterStore(
-    (state) => state.projectsSummary,
-  )
+  const purchaseOrderSummary =
+    useDataCenterStore(
+      (state) =>
+        state.purchaseOrderSummary,
+    )
 
-  const projectsLastImportedFile = useDataCenterStore(
-    (state) => state.projectsLastImportedFile,
-  )
+  const purchaseOrderLastImportedFile =
+    useDataCenterStore(
+      (state) =>
+        state.purchaseOrderLastImportedFile,
+    )
 
-  const projectsLastImportedAt = useDataCenterStore(
-    (state) => state.projectsLastImportedAt,
-  )
+  const purchaseOrderLastImportedAt =
+    useDataCenterStore(
+      (state) =>
+        state.purchaseOrderLastImportedAt,
+    )
 
-  const projectBillingSummary = useDataCenterStore(
-    (state) => state.projectBillingSummary,
-  )
+  const purchaseRequestSummary =
+    useDataCenterStore(
+      (state) =>
+        state.purchaseRequestSummary,
+    )
 
-  const projectBillingLastImportedFile = useDataCenterStore(
-    (state) => state.projectBillingLastImportedFile,
-  )
+  const purchaseRequestLastImportedFile =
+    useDataCenterStore(
+      (state) =>
+        state.purchaseRequestLastImportedFile,
+    )
 
-  const projectBillingLastImportedAt = useDataCenterStore(
-    (state) => state.projectBillingLastImportedAt,
-  )
+  const purchaseRequestLastImportedAt =
+    useDataCenterStore(
+      (state) =>
+        state.purchaseRequestLastImportedAt,
+    )
 
-  const exchangeRateSummary = useDataCenterStore(
-    (state) => state.exchangeRateSummary,
-  )
+  const projectsSummary =
+    useDataCenterStore(
+      (state) =>
+        state.projectsSummary,
+    )
 
-  const exchangeRateLastImportedFile = useDataCenterStore(
-    (state) => state.exchangeRateLastImportedFile,
-  )
+  const projectsLastImportedFile =
+    useDataCenterStore(
+      (state) =>
+        state.projectsLastImportedFile,
+    )
 
-  const exchangeRateLastImportedAt = useDataCenterStore(
-    (state) => state.exchangeRateLastImportedAt,
-  )
+  const projectsLastImportedAt =
+    useDataCenterStore(
+      (state) =>
+        state.projectsLastImportedAt,
+    )
 
-  const pricingSummary = useDataCenterStore(
-    (state) => state.pricingSummary,
-  )
+  const projectBillingSummary =
+    useDataCenterStore(
+      (state) =>
+        state.projectBillingSummary,
+    )
 
-  const pricingLastImportedFile = useDataCenterStore(
-    (state) => state.pricingLastImportedFile,
-  )
+  const projectBillingLastImportedFile =
+    useDataCenterStore(
+      (state) =>
+        state.projectBillingLastImportedFile,
+    )
 
-  const pricingLastImportedAt = useDataCenterStore(
-    (state) => state.pricingLastImportedAt,
-  )
+  const projectBillingLastImportedAt =
+    useDataCenterStore(
+      (state) =>
+        state.projectBillingLastImportedAt,
+    )
+
+  const exchangeRateSummary =
+    useDataCenterStore(
+      (state) =>
+        state.exchangeRateSummary,
+    )
+
+  const exchangeRateLastImportedFile =
+    useDataCenterStore(
+      (state) =>
+        state.exchangeRateLastImportedFile,
+    )
+
+  const exchangeRateLastImportedAt =
+    useDataCenterStore(
+      (state) =>
+        state.exchangeRateLastImportedAt,
+    )
+
+  const pricingSummary =
+    useDataCenterStore(
+      (state) =>
+        state.pricingSummary,
+    )
+
+  const pricingLastImportedFile =
+    useDataCenterStore(
+      (state) =>
+        state.pricingLastImportedFile,
+    )
+
+  const pricingLastImportedAt =
+    useDataCenterStore(
+      (state) =>
+        state.pricingLastImportedAt,
+    )
 
   const datasets =
     useMemo(
       () =>
         buildDatasetRegistry({
           salesSummary,
-          salesLastImportedFile: lastImportedFile,
-          salesLastImportedAt: lastImportedAt,
+          salesLastImportedFile:
+            lastImportedFile,
+          salesLastImportedAt:
+            lastImportedAt,
           targetSummary,
           targetsLastImportedFile,
           targetsLastImportedAt,
@@ -403,6 +477,12 @@ export function DataCatalog() {
           inventorySummary,
           inventoryLastImportedFile,
           inventoryLastImportedAt,
+          purchaseOrderSummary,
+          purchaseOrderLastImportedFile,
+          purchaseOrderLastImportedAt,
+          purchaseRequestSummary,
+          purchaseRequestLastImportedFile,
+          purchaseRequestLastImportedAt,
           projectsSummary,
           projectsLastImportedFile,
           projectsLastImportedAt,
@@ -429,6 +509,12 @@ export function DataCatalog() {
         inventorySummary,
         inventoryLastImportedFile,
         inventoryLastImportedAt,
+        purchaseOrderSummary,
+        purchaseOrderLastImportedFile,
+        purchaseOrderLastImportedAt,
+        purchaseRequestSummary,
+        purchaseRequestLastImportedFile,
+        purchaseRequestLastImportedAt,
         projectsSummary,
         projectsLastImportedFile,
         projectsLastImportedAt,

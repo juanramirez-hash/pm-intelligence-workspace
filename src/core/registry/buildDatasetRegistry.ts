@@ -2,21 +2,35 @@ import type {
   SalesDatasetSummary,
   TargetDatasetSummary,
 } from '../../features/data-center/types/reportTypes'
+
 import type {
   ProductMasterDatasetSummary,
 } from '../../features/data-center/importers/products/productMasterTypes'
+
 import type {
   InventoryDatasetSummary,
 } from '../../features/data-center/importers/inventory/inventoryTypes'
+
+import type {
+  PurchaseOrderDatasetSummary,
+} from '../../features/data-center/importers/purchases/purchaseOrderTypes'
+
+import type {
+  PurchaseRequestDatasetSummary,
+} from '../../features/data-center/importers/purchase-requests/purchaseRequestTypes'
+
 import type {
   ProjectDatasetSummary,
 } from '../../features/data-center/importers/projects/projectTypes'
+
 import type {
   ProjectBillingDatasetSummary,
 } from '../../features/data-center/importers/project-billings/projectBillingTypes'
+
 import type {
   ExchangeRateDatasetSummary,
 } from '../../features/data-center/importers/exchange-rates/exchangeRateTypes'
+
 import type {
   PricingDatasetSummary,
 } from '../../features/data-center/importers/pricing/pricingTypes'
@@ -34,24 +48,39 @@ export interface BuildDatasetRegistryInput {
   salesSummary: SalesDatasetSummary | null
   salesLastImportedFile: string | null
   salesLastImportedAt: string | null
+
   targetSummary: TargetDatasetSummary | null
   targetsLastImportedFile: string | null
   targetsLastImportedAt: string | null
+
   productMasterSummary: ProductMasterDatasetSummary | null
   productMasterLastImportedFile: string | null
   productMasterLastImportedAt: string | null
+
   inventorySummary: InventoryDatasetSummary | null
   inventoryLastImportedFile: string | null
   inventoryLastImportedAt: string | null
+
+  purchaseOrderSummary?: PurchaseOrderDatasetSummary | null
+  purchaseOrderLastImportedFile?: string | null
+  purchaseOrderLastImportedAt?: string | null
+
+  purchaseRequestSummary?: PurchaseRequestDatasetSummary | null
+  purchaseRequestLastImportedFile?: string | null
+  purchaseRequestLastImportedAt?: string | null
+
   projectsSummary?: ProjectDatasetSummary | null
   projectsLastImportedFile?: string | null
   projectsLastImportedAt?: string | null
+
   projectBillingSummary?: ProjectBillingDatasetSummary | null
   projectBillingLastImportedFile?: string | null
   projectBillingLastImportedAt?: string | null
+
   exchangeRateSummary?: ExchangeRateDatasetSummary | null
   exchangeRateLastImportedFile?: string | null
   exchangeRateLastImportedAt?: string | null
+
   pricingSummary?: PricingDatasetSummary | null
   pricingLastImportedFile?: string | null
   pricingLastImportedAt?: string | null
@@ -90,7 +119,9 @@ function activateDataset(
     lastImportedAt: string | null
   },
 ): void {
-  const index = registry.findIndex((dataset) => dataset.type === type)
+  const index = registry.findIndex(
+    (dataset) => dataset.type === type,
+  )
 
   if (index < 0) {
     return
@@ -113,7 +144,9 @@ function activateDataset(
 export function buildDatasetRegistry(
   input: BuildDatasetRegistryInput,
 ): DatasetRegistryItem[] {
-  const registry = DATASET_DEFINITIONS.map(createEmptyRegistryItem)
+  const registry = DATASET_DEFINITIONS.map(
+    createEmptyRegistryItem,
+  )
 
   if (input.salesSummary) {
     activateDataset(registry, 'sales', {
@@ -156,6 +189,28 @@ export function buildDatasetRegistry(
       periodEnd: null,
       lastImportedFile: input.productMasterLastImportedFile,
       lastImportedAt: input.productMasterLastImportedAt,
+    })
+  }
+
+  if (input.purchaseOrderSummary) {
+    activateDataset(registry, 'purchases', {
+      totalRows: input.purchaseOrderSummary.processedRows,
+      ignoredRows: input.purchaseOrderSummary.ignoredRows,
+      periodStart: input.purchaseOrderSummary.periodStart,
+      periodEnd: input.purchaseOrderSummary.periodEnd,
+      lastImportedFile: input.purchaseOrderLastImportedFile ?? null,
+      lastImportedAt: input.purchaseOrderLastImportedAt ?? null,
+    })
+  }
+
+  if (input.purchaseRequestSummary) {
+    activateDataset(registry, 'purchaseRequests', {
+      totalRows: input.purchaseRequestSummary.processedRows,
+      ignoredRows: input.purchaseRequestSummary.ignoredRows,
+      periodStart: input.purchaseRequestSummary.periodStart,
+      periodEnd: input.purchaseRequestSummary.periodEnd,
+      lastImportedFile: input.purchaseRequestLastImportedFile ?? null,
+      lastImportedAt: input.purchaseRequestLastImportedAt ?? null,
     })
   }
 
