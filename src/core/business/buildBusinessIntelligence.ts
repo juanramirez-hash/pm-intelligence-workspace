@@ -23,6 +23,14 @@ import type {
 } from '../../features/data-center/importers/inventory/inventoryTypes'
 
 import type {
+  NormalizedPurchaseOrderRow,
+} from '../../features/data-center/importers/purchases/purchaseOrderTypes'
+
+import type {
+  NormalizedPurchaseRequestRow,
+} from '../../features/data-center/importers/purchase-requests/purchaseRequestTypes'
+
+import type {
   NormalizedProjectRow,
 } from '../../features/data-center/importers/projects/projectTypes'
 
@@ -42,7 +50,9 @@ import type {
   BusinessIntelligenceModel,
 } from './businessIntelligenceModel'
 
-import type { BusinessBrandTargetInput } from './targets'
+import type {
+  BusinessBrandTargetInput,
+} from './targets'
 
 import {
   buildBusinessDataModel,
@@ -60,6 +70,8 @@ export interface BuildBusinessIntelligenceOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
   productMaster?: readonly NormalizedProductMasterRow[]
   inventory?: readonly NormalizedInventoryRow[]
+  purchaseOrders?: readonly NormalizedPurchaseOrderRow[]
+  purchaseRequests?: readonly NormalizedPurchaseRequestRow[]
   projects?: readonly NormalizedProjectRow[]
   projectBillings?: readonly NormalizedProjectBillingRow[]
   exchangeRates?: readonly NormalizedExchangeRateRow[]
@@ -70,52 +82,52 @@ export function buildBusinessIntelligence(
   rows: NormalizedSalesRow[],
   options: BuildBusinessIntelligenceOptions = {},
 ): BusinessIntelligenceModel {
-  // 1. Construye el modelo central
-  // de datos.
   const data =
     buildBusinessDataModel(
       rows,
       {
-        brandTargets: options.brandTargets,
-        productMaster: options.productMaster,
-        inventory: options.inventory,
-        projects: options.projects,
-        projectBillings: options.projectBillings,
-        exchangeRates: options.exchangeRates,
-        prices: options.prices,
+        brandTargets:
+          options.brandTargets,
+        productMaster:
+          options.productMaster,
+        inventory:
+          options.inventory,
+        purchaseOrders:
+          options.purchaseOrders,
+        purchaseRequests:
+          options.purchaseRequests,
+        projects:
+          options.projects,
+        projectBillings:
+          options.projectBillings,
+        exchangeRates:
+          options.exchangeRates,
+        prices:
+          options.prices,
       },
     )
 
-  // 2. Crea una única instancia
-  // del repositorio.
   const repository =
     new BusinessRepository(
       data,
     )
 
-  // 3. Construye las métricas
-  // utilizando el repositorio.
   const metrics =
     buildBusinessMetrics(
       repository,
     )
 
-  // 4. Customer Intelligence
-  // consume el BusinessRepository.
   const customers =
     buildCustomerIntelligence(
       repository,
       data.periodEnd,
     )
 
-  // 5. Brand Intelligence
-  // consume el BusinessRepository.
   const brands =
     buildBrandIntelligence(
       repository,
     )
 
-  // 6. Genera los insights actuales.
   const insights =
     buildInsights(
       customers,

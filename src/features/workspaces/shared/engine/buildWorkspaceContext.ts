@@ -46,6 +46,14 @@ type WorkspaceContextState =
   Partial<
     Pick<
       DataCenterState,
+      | 'purchaseOrderSummary'
+      | 'normalizedPurchaseOrders'
+      | 'purchaseOrderLastImportedAt'
+      | 'purchaseOrderLastImportedFile'
+      | 'purchaseRequestSummary'
+      | 'normalizedPurchaseRequests'
+      | 'purchaseRequestLastImportedAt'
+      | 'purchaseRequestLastImportedFile'
       | 'projectsSummary'
       | 'normalizedProjects'
       | 'projectsLastImportedAt'
@@ -91,34 +99,72 @@ export function buildWorkspaceContext(
 ): WorkspaceContextModel {
   const datasets =
     buildDatasetRegistry({
-      salesSummary: state.salesSummary,
-      salesLastImportedAt: state.lastImportedAt,
-      salesLastImportedFile: state.lastImportedFile,
-      targetSummary: state.targetSummary,
-      targetsLastImportedAt: state.targetsLastImportedAt,
-      targetsLastImportedFile: state.targetsLastImportedFile,
-      productMasterSummary: state.productMasterSummary,
-      productMasterLastImportedAt: state.productMasterLastImportedAt,
-      productMasterLastImportedFile: state.productMasterLastImportedFile,
-      inventorySummary: state.inventorySummary,
-      inventoryLastImportedAt: state.inventoryLastImportedAt,
-      inventoryLastImportedFile: state.inventoryLastImportedFile,
-      projectsSummary: state.projectsSummary ?? null,
-      projectsLastImportedAt: state.projectsLastImportedAt ?? null,
-      projectsLastImportedFile: state.projectsLastImportedFile ?? null,
-      projectBillingSummary: state.projectBillingSummary ?? null,
-      projectBillingLastImportedAt: state.projectBillingLastImportedAt ?? null,
-      projectBillingLastImportedFile: state.projectBillingLastImportedFile ?? null,
-      exchangeRateSummary: state.exchangeRateSummary ?? null,
-      exchangeRateLastImportedAt: state.exchangeRateLastImportedAt ?? null,
-      exchangeRateLastImportedFile: state.exchangeRateLastImportedFile ?? null,
-      pricingSummary: state.pricingSummary ?? null,
-      pricingLastImportedAt: state.pricingLastImportedAt ?? null,
-      pricingLastImportedFile: state.pricingLastImportedFile ?? null,
+      salesSummary:
+        state.salesSummary,
+      salesLastImportedAt:
+        state.lastImportedAt,
+      salesLastImportedFile:
+        state.lastImportedFile,
+      targetSummary:
+        state.targetSummary,
+      targetsLastImportedAt:
+        state.targetsLastImportedAt,
+      targetsLastImportedFile:
+        state.targetsLastImportedFile,
+      productMasterSummary:
+        state.productMasterSummary,
+      productMasterLastImportedAt:
+        state.productMasterLastImportedAt,
+      productMasterLastImportedFile:
+        state.productMasterLastImportedFile,
+      inventorySummary:
+        state.inventorySummary,
+      inventoryLastImportedAt:
+        state.inventoryLastImportedAt,
+      inventoryLastImportedFile:
+        state.inventoryLastImportedFile,
+      purchaseOrderSummary:
+        state.purchaseOrderSummary ?? null,
+      purchaseOrderLastImportedAt:
+        state.purchaseOrderLastImportedAt ?? null,
+      purchaseOrderLastImportedFile:
+        state.purchaseOrderLastImportedFile ?? null,
+      purchaseRequestSummary:
+        state.purchaseRequestSummary ?? null,
+      purchaseRequestLastImportedAt:
+        state.purchaseRequestLastImportedAt ?? null,
+      purchaseRequestLastImportedFile:
+        state.purchaseRequestLastImportedFile ?? null,
+      projectsSummary:
+        state.projectsSummary ?? null,
+      projectsLastImportedAt:
+        state.projectsLastImportedAt ?? null,
+      projectsLastImportedFile:
+        state.projectsLastImportedFile ?? null,
+      projectBillingSummary:
+        state.projectBillingSummary ?? null,
+      projectBillingLastImportedAt:
+        state.projectBillingLastImportedAt ?? null,
+      projectBillingLastImportedFile:
+        state.projectBillingLastImportedFile ?? null,
+      exchangeRateSummary:
+        state.exchangeRateSummary ?? null,
+      exchangeRateLastImportedAt:
+        state.exchangeRateLastImportedAt ?? null,
+      exchangeRateLastImportedFile:
+        state.exchangeRateLastImportedFile ?? null,
+      pricingSummary:
+        state.pricingSummary ?? null,
+      pricingLastImportedAt:
+        state.pricingLastImportedAt ?? null,
+      pricingLastImportedFile:
+        state.pricingLastImportedFile ?? null,
     })
 
   const hasBusinessData =
     state.normalizedSales.length > 0 ||
+    (state.normalizedPurchaseOrders?.length ?? 0) > 0 ||
+    (state.normalizedPurchaseRequests?.length ?? 0) > 0 ||
     (state.normalizedProjects?.length ?? 0) > 0 ||
     (state.normalizedProjectBillings?.length ?? 0) > 0 ||
     (state.normalizedExchangeRates?.length ?? 0) > 0 ||
@@ -129,19 +175,32 @@ export function buildWorkspaceContext(
       ? buildBusinessIntelligence(
           state.normalizedSales,
           {
-            brandTargets: state.normalizedTargets,
-            productMaster: state.normalizedProductMaster,
-            inventory: state.normalizedInventory,
-            projects: state.normalizedProjects ?? [],
-            projectBillings: state.normalizedProjectBillings ?? [],
-            exchangeRates: state.normalizedExchangeRates ?? [],
-            prices: state.normalizedPricing ?? [],
+            brandTargets:
+              state.normalizedTargets,
+            productMaster:
+              state.normalizedProductMaster,
+            inventory:
+              state.normalizedInventory,
+            purchaseOrders:
+              state.normalizedPurchaseOrders ?? [],
+            purchaseRequests:
+              state.normalizedPurchaseRequests ?? [],
+            projects:
+              state.normalizedProjects ?? [],
+            projectBillings:
+              state.normalizedProjectBillings ?? [],
+            exchangeRates:
+              state.normalizedExchangeRates ?? [],
+            prices:
+              state.normalizedPricing ?? [],
           },
         )
       : null
 
   const currentPeriodId =
-    resolveCurrentPeriodId(business)
+    resolveCurrentPeriodId(
+      business,
+    )
 
   const executiveBrief =
     business?.brands
@@ -162,7 +221,8 @@ export function buildWorkspaceContext(
   const readyDatasets =
     datasets.filter(
       (dataset) =>
-        dataset.status === 'active',
+        dataset.status ===
+        'active',
     ).length
 
   const totalDatasets =
