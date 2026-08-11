@@ -9,8 +9,8 @@ export default defineConfig({
     globals: false,
 
     include: [
-      'src/**/*.test.ts',
-      'tests/**/*.test.ts',
+      'src/**/*.test.{ts,tsx}',
+      'tests/**/*.test.{ts,tsx}',
     ],
 
     coverage: {

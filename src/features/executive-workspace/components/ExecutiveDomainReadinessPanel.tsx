@@ -232,9 +232,7 @@ function DomainCard({
   const Icon = presentation.icon
 
   const actionLabel =
-    domain.id === 'purchasing'
-      ? 'Abrir preparación'
-      : 'Abrir Workspace'
+    'Abrir Workspace'
 
   return (
     <Link
@@ -319,7 +317,7 @@ function DomainCard({
             <p className="mt-2 text-xs leading-5 text-slate-600">
               {domain.missingDatasets
                 .map(getDatasetLabel)
-                .join(' · ')}
+                .join(' ┬À ')}
             </p>
           </div>
         ) : (
@@ -383,8 +381,8 @@ export function ExecutiveDomainReadinessPanel({
 
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
             Disponibilidad operativa de Sales,
-            Inventory, Forecast, Pricing y la
-            futura capacidad de Purchasing.
+            Inventory, Forecast, Pricing y
+            Purchasing.
           </p>
         </div>
 
@@ -466,8 +464,8 @@ export function ExecutiveDomainReadinessPanel({
 
               <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
                 {purchasing.canActivateWorkspace
-                  ? 'Las fuentes directas y Forecast cumplen las condiciones de consumo ejecutivo.'
-                  : 'La plataforma conserva el módulo bloqueado hasta contar con sus fuentes mínimas y Forecast listo.'}
+                  ? 'Las fuentes directas de Purchasing cumplen las condiciones de consumo ejecutivo.'
+                  : 'La plataforma conserva el módulo bloqueado hasta contar con sus fuentes mínimas.'}
               </p>
             </div>
           </div>

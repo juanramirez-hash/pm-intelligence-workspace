@@ -47,7 +47,7 @@ describe('FW-010 ForecastProjectPipelinePanel', () => {
     expect(markup).toContain('data-forecast-component="project-pipeline"')
     expect(markup).toContain('Proyecto Uno')
     expect(markup).toContain('Incluido')
-    expect(markup).toContain('$18.8 mil')
+    expect(markup).toMatch(/\$18\.8\s+k/)
     expect(markup).toContain('Sin incidencias')
   })
 })

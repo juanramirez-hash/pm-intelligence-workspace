@@ -83,8 +83,6 @@ const PURCHASING_DIRECT_DATASETS:
   readonly DatasetType[] = [
   'purchases',
   'purchaseRequests',
-  'inventory',
-  'products',
 ]
 
 function normalizeReferenceDate(
@@ -169,6 +167,16 @@ function findDataset(
     (dataset) =>
       dataset.type === type,
   )
+}
+
+function isDatasetActive(
+  datasets: readonly DatasetRegistryItem[],
+  type: DatasetType,
+): boolean {
+  return findDataset(
+    datasets,
+    type,
+  )?.status === 'active'
 }
 
 function resolveLastUpdatedAt(
@@ -387,52 +395,45 @@ function buildDomainReadiness(
   }
 }
 
-function uniqueDatasetTypes(
-  values: readonly DatasetType[],
-): DatasetType[] {
-  return [...new Set(values)]
-}
-
 function buildPurchasingReadiness(
   datasets: readonly DatasetRegistryItem[],
   forecast:
     ExecutiveDomainReadiness,
   referenceDate: Date,
 ): ExecutivePurchasingReadiness {
-  const requiredDatasets =
-    uniqueDatasetTypes([
-      ...PURCHASING_DIRECT_DATASETS,
-      ...forecast.requiredDatasets,
-    ])
-
   const base =
     buildDomainReadiness(
       {
         id: 'purchasing',
         label: 'Purchasing Workspace',
-        requiredDatasets,
+        requiredDatasets:
+          PURCHASING_DIRECT_DATASETS,
       },
       datasets,
       referenceDate,
     )
 
   const purchaseOrdersAvailable =
-    base.activeDatasets.includes(
+    isDatasetActive(
+      datasets,
       'purchases',
     )
 
   const purchaseRequestsAvailable =
-    base.activeDatasets.includes(
+    isDatasetActive(
+      datasets,
       'purchaseRequests',
     )
 
   const inventoryAvailable =
-    base.activeDatasets.includes(
+    isDatasetActive(
+      datasets,
       'inventory',
     )
 
   const productMasterAvailable =
-    base.activeDatasets.includes(
+    isDatasetActive(
+      datasets,
       'products',
     )
 
@@ -441,13 +442,10 @@ function buildPurchasingReadiness(
 
   const directSourcesReady =
     purchaseOrdersAvailable &&
-    purchaseRequestsAvailable &&
-    inventoryAvailable &&
-    productMasterAvailable
+    purchaseRequestsAvailable
 
   const canActivateWorkspace =
     directSourcesReady &&
-    forecastAvailable &&
     base.freshness === 'current' &&
     base.status !== 'blocked'
 
@@ -477,24 +475,6 @@ function buildPurchasingReadiness(
   if (!purchaseRequestsAvailable) {
     limitations.push(
       'No hay solicitudes de compra normalizadas.',
-    )
-  }
-
-  if (!inventoryAvailable) {
-    limitations.push(
-      'Inventory Workspace no tiene una fuente activa.',
-    )
-  }
-
-  if (!productMasterAvailable) {
-    limitations.push(
-      'El maestro de productos no está disponible.',
-    )
-  }
-
-  if (!forecastAvailable) {
-    limitations.push(
-      'Forecast Workspace todavía no está listo para consumo ejecutivo.',
     )
   }
 
