@@ -68,6 +68,19 @@ const baseInput = {
       projectedPeriodEnd: 1_466_666.67,
       projectedAttainment: 122.22,
     },
+    forecast: {
+      available: true,
+      officialAvailable: true,
+      status: 'ready' as const,
+      periodId: '2026-03',
+      dataCutoff: '2026-03-20',
+      expectedRevenue: 1_350_000,
+      expectedGrossProfit: 320_000,
+      expectedAttainment: 112.5,
+      confidenceScore: 0.88,
+      confidenceLevel: 'high' as const,
+      unavailableReason: null,
+    },
     coverage: {
       targetedBrands: 5,
       activeBrands: 5,
@@ -227,7 +240,8 @@ describe('SW-006 Sales Executive Summary', () => {
     expect(summary.title).toContain('Marzo de 2026')
     expect(summary.overview).toContain('La venta del periodo')
     expect(summary.overview).toContain('creció')
-    expect(summary.outlook).toContain('proyección de cierre')
+    expect(summary.outlook).toContain('Forecast esperado')
+    expect(summary.outlook).toContain('cierre por ritmo actual')
     expect(
       summary.findings.some(
         (finding) =>

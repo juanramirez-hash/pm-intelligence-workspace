@@ -37,6 +37,7 @@ import type {
   SalesWorkspaceFilterDimension,
   SalesWorkspaceFilterOptions,
   SalesWorkspaceFilters,
+  SalesWorkspaceForecast,
   SalesWorkspacePerformance,
   SalesWorkspaceRankingItem,
   SalesWorkspaceSnapshot,
@@ -855,9 +856,107 @@ function buildTargetCoverage(
   }
 }
 
+function buildEmptyForecast(
+  unavailableReason: string | null = null,
+): SalesWorkspaceForecast {
+  return {
+    available: false,
+    officialAvailable: false,
+    status: 'unavailable',
+    periodId: null,
+    dataCutoff: null,
+    expectedRevenue: null,
+    expectedGrossProfit: null,
+    expectedAttainment: null,
+    confidenceScore: null,
+    confidenceLevel: null,
+    unavailableReason,
+  }
+}
+
+function buildForecast(
+  repository: BusinessRepository,
+  period: RevenuePeriodSummary,
+  targetRevenue: number | null,
+  scopeBlocked: boolean,
+  selectedBrandIds: readonly string[] = [],
+): SalesWorkspaceForecast {
+  if (scopeBlocked) {
+    return buildEmptyForecast(
+      'El Forecast Project-Aware no se aplica a filtros por cliente, producto, ubicación, vendedor o búsqueda para evitar mezclar una proyección consolidada con un segmento parcial.',
+    )
+  }
+
+  if (selectedBrandIds.length > 1) {
+    return buildEmptyForecast(
+      'El Forecast Project-Aware no se publica para selecciones de múltiples marcas hasta contar con una agregación explícita y validada.',
+    )
+  }
+
+  const projection =
+    selectedBrandIds.length === 1
+      ? repository.forecast.findProjectAwareBrandProjection(
+          selectedBrandIds[0]!,
+        )
+      : repository.forecast.getProjectAwarePortfolioProjection()
+
+  if (!projection) {
+    return buildEmptyForecast(
+      'No existe una proyección Project-Aware disponible.',
+    )
+  }
+
+  if (projection.currentPeriodId !== period.id) {
+    return buildEmptyForecast(
+      `El Forecast Project-Aware corresponde a ${projection.currentPeriodId} y no al periodo seleccionado ${period.id}.`,
+    )
+  }
+
+  const expectedRevenue =
+    projection.officialAvailable
+      ? projection.expected.revenue
+      : null
+
+  const expectedGrossProfit =
+    projection.officialAvailable
+      ? projection.expected.grossProfit
+      : null
+
+  return {
+    available: true,
+    officialAvailable:
+      projection.officialAvailable,
+    status: projection.status,
+    periodId:
+      projection.currentPeriodId,
+    dataCutoff:
+      projection.dataCutoff,
+    expectedRevenue,
+    expectedGrossProfit,
+    expectedAttainment:
+      expectedRevenue !== null &&
+      targetRevenue !== null &&
+      targetRevenue !== 0
+        ? (
+            expectedRevenue /
+            targetRevenue
+          ) * 100
+        : null,
+    confidenceScore:
+      projection.confidence.score,
+    confidenceLevel:
+      projection.confidence.level,
+    unavailableReason:
+      projection.officialAvailable
+        ? null
+        : 'El Forecast Project-Aware existe, pero su estado actual no permite publicarlo como forecast oficial.',
+  }
+}
+
 function buildEmptyPerformance(
   period: RevenuePeriodSummary | null,
   unavailableReason: string | null = null,
+  forecast: SalesWorkspaceForecast = buildEmptyForecast(),
 ): SalesWorkspacePerformance {
   const revenue =
     period?.revenue ?? 0
@@ -904,6 +1003,7 @@ function buildEmptyPerformance(
       projectedPeriodEnd: null,
       projectedAttainment: null,
     },
+    forecast,
     coverage: {
       targetedBrands: 0,
       activeBrands:
@@ -921,10 +1021,30 @@ function buildPerformance(
   period: RevenuePeriodSummary,
   targets: BusinessBrandTarget[],
   activeBrandIds: readonly string[],
+  selectedBrandIds: readonly string[],
 ): SalesWorkspacePerformance {
+  const targetRevenue =
+    sumNullable(
+      targets.map(
+        (target) =>
+          target.targetRevenue,
+      ),
+    )
+
+  const forecast =
+    buildForecast(
+      repository,
+      period,
+      targetRevenue,
+      false,
+      selectedBrandIds,
+    )
+
   if (targets.length === 0) {
     return buildEmptyPerformance(
       period,
+      null,
+      forecast,
     )
   }
 
@@ -932,14 +1052,6 @@ function buildPerformance(
     resolvePeriodCutoff(
       repository,
       period,
-    )
-
-  const targetRevenue =
-    sumNullable(
-      targets.map(
-        (target) =>
-          target.targetRevenue,
-      ),
     )
 
   const targetGrossProfit =
@@ -1064,6 +1176,7 @@ function buildPerformance(
               targetRevenue
             ) * 100,
     },
+    forecast,
     coverage:
       buildTargetCoverage(
         period,
@@ -1450,6 +1563,13 @@ export function buildSalesWorkspace(
       ? buildEmptyPerformance(
           selectedPeriod,
           'Los objetivos mensuales están definidos por marca. Al filtrar por cliente, producto, ubicación, vendedor o búsqueda, el cumplimiento se desactiva para evitar comparar un segmento parcial contra una cuota completa.',
+          buildForecast(
+            repository,
+            selectedPeriod,
+            null,
+            true,
+            selectedBrandIds,
+          ),
         )
       : buildPerformance(
           repository,
@@ -1458,6 +1578,7 @@ export function buildSalesWorkspace(
           activeBrandGroups.map(
             (group) => group.id,
           ),
+          selectedBrandIds,
         )
 
   const brandPerformance =

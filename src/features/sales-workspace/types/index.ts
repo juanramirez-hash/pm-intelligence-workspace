@@ -24,6 +24,7 @@ export type {
   SalesWorkspaceFilterOption,
   SalesWorkspaceFilterOptions,
   SalesWorkspaceFilters,
+  SalesWorkspaceForecast,
   SalesWorkspacePace,
   SalesWorkspacePerformance,
   SalesWorkspacePeriodOption,

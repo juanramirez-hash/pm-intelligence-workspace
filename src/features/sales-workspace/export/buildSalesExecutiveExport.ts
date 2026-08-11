@@ -34,10 +34,17 @@ function sanitizeFilePart(
 function metricRows(
   workspace: SalesWorkspaceViewModel,
 ): SalesExportCell[][] {
-  const current = workspace.current
+  const current =
+    workspace.current
 
   return [
-    ['Métrica', 'Valor actual', 'Objetivo', 'Cumplimiento', 'Variación comparable'],
+    [
+      'Métrica',
+      'Valor actual',
+      'Objetivo',
+      'Cumplimiento',
+      'Variación comparable',
+    ],
     [
       'Venta',
       current?.revenue ?? 0,
@@ -58,6 +65,20 @@ function metricRows(
       workspace.performance.grossMargin.target,
       workspace.performance.grossMargin.attainment,
       workspace.comparison.marginPointVariation,
+    ],
+    [
+      'Forecast esperado',
+      workspace.performance.forecast.expectedRevenue,
+      workspace.performance.revenue.target,
+      workspace.performance.forecast.expectedAttainment,
+      null,
+    ],
+    [
+      'Cierre por ritmo actual',
+      workspace.performance.pace.projectedPeriodEnd,
+      workspace.performance.revenue.target,
+      workspace.performance.pace.projectedAttainment,
+      null,
     ],
     [
       'Cantidad',
@@ -101,14 +122,17 @@ function summaryRows(
     ['PM Intelligence Workspace'],
     ['Sales Workspace · Reporte ejecutivo'],
     ['Periodo', workspace.selectedPeriodLabel],
-    ['Periodo comparable', workspace.comparison.previousPeriodLabel],
+    [
+      'Periodo comparable',
+      workspace.comparison.previousPeriodLabel,
+    ],
     ['Generado', generatedAt.toISOString()],
     ['Contexto', summary.filterContext],
     [],
     ['Resumen ejecutivo'],
     [summary.overview],
     [],
-    ['Proyección y perspectiva'],
+    ['Forecast y perspectiva'],
     [summary.outlook],
     [],
     ['Hallazgo', 'Valor', 'Detalle', 'Tono'],
@@ -134,8 +158,8 @@ function brandPerformanceRows(
       'Cumplimiento %',
       'Esperado al corte',
       'Brecha contra ritmo',
-      'Proyección',
-      'Cumplimiento proyectado %',
+      'Cierre por ritmo actual',
+      'Cumplimiento por ritmo actual %',
       'Margen actual %',
       'Margen objetivo %',
       'Variación margen pp',
@@ -322,11 +346,26 @@ function reconciliationRows(
 ): SalesExportCell[][] {
   return [
     ['Métrica', 'Valor'],
-    ['Filas evaluadas', workspace.reconciliation.totalRows],
-    ['Filas conciliadas', workspace.reconciliation.matchedRows],
-    ['Filas ambiguas', workspace.reconciliation.ambiguousRows],
-    ['Filas sin correspondencia', workspace.reconciliation.unmatchedRows],
-    ['Tasa de conciliación %', workspace.reconciliation.matchRate],
+    [
+      'Filas evaluadas',
+      workspace.reconciliation.totalRows,
+    ],
+    [
+      'Filas conciliadas',
+      workspace.reconciliation.matchedRows,
+    ],
+    [
+      'Filas ambiguas',
+      workspace.reconciliation.ambiguousRows,
+    ],
+    [
+      'Filas sin correspondencia',
+      workspace.reconciliation.unmatchedRows,
+    ],
+    [
+      'Tasa de conciliación %',
+      workspace.reconciliation.matchRate,
+    ],
   ]
 }
 
@@ -337,7 +376,7 @@ export function buildSalesExecutiveExport(
   const periodPart =
     sanitizeFilePart(
       workspace.selectedPeriodId ??
-        workspace.selectedPeriodLabel,
+      workspace.selectedPeriodLabel,
     ) || 'sin-periodo'
 
   return {
@@ -360,22 +399,77 @@ export function buildSalesExecutiveExport(
       {
         name: 'Desempeño marcas',
         rows: brandPerformanceRows(workspace),
-        columnWidths: [24, 16, 16, 18, 18, 20, 16, 24, 18, 18, 20, 18],
+        columnWidths: [
+          24,
+          16,
+          16,
+          18,
+          18,
+          20,
+          24,
+          30,
+          18,
+          18,
+          20,
+          18,
+        ],
       },
       {
         name: 'Oportunidades',
         rows: opportunityRows(workspace),
-        columnWidths: [14, 20, 24, 42, 58, 58, 18, 12, 12, 12, 22],
+        columnWidths: [
+          14,
+          20,
+          24,
+          42,
+          58,
+          58,
+          18,
+          12,
+          12,
+          12,
+          22,
+        ],
       },
       {
         name: 'Contribuciones',
         rows: varianceRows(workspace),
-        columnWidths: [14, 14, 30, 16, 18, 16, 18, 16, 18, 20, 22, 26, 20, 22],
+        columnWidths: [
+          14,
+          14,
+          30,
+          16,
+          18,
+          16,
+          18,
+          16,
+          18,
+          20,
+          22,
+          26,
+          20,
+          22,
+        ],
       },
       {
         name: 'Detalle',
         rows: detailRows(workspace),
-        columnWidths: [12, 20, 16, 34, 16, 30, 18, 24, 16, 16, 14, 14, 14, 14],
+        columnWidths: [
+          12,
+          20,
+          16,
+          34,
+          16,
+          30,
+          18,
+          24,
+          16,
+          16,
+          14,
+          14,
+          14,
+          14,
+        ],
       },
       {
         name: 'Conciliación',

@@ -85,14 +85,9 @@ function buildComparisonSentence(
   return `La venta se mantuvo estable frente a ${comparison.previousPeriodLabel}.`
 }
 
-function buildOutlook(
+function buildRunRateSentence(
   performance: SalesWorkspacePerformance,
-): string {
-  if (!performance.available) {
-    return performance.unavailableReason ??
-      'La proyección de cierre no está disponible para el segmento seleccionado.'
-  }
-
+): string | null {
   const projectedAttainment =
     performance.pace.projectedAttainment
 
@@ -103,14 +98,60 @@ function buildOutlook(
     projectedAttainment === null ||
     projectedPeriodEnd === null
   ) {
-    return 'La cuota está disponible, pero aún no existe información suficiente para proyectar el cierre mensual.'
+    return null
   }
 
-  if (projectedAttainment >= 100) {
-    return `La proyección de cierre es ${formatCurrency(projectedPeriodEnd)}, equivalente a ${formatPercentage(projectedAttainment)} de la cuota mensual.`
+  return `El cierre por ritmo actual apunta a ${formatCurrency(projectedPeriodEnd)}, equivalente a ${formatPercentage(projectedAttainment)} de la cuota mensual.`
+}
+
+function buildOutlook(
+  performance: SalesWorkspacePerformance,
+): string {
+  if (!performance.available) {
+    return performance.unavailableReason ??
+      'El desempeño contra cuota no está disponible para el segmento seleccionado.'
   }
 
-  return `La proyección de cierre es ${formatCurrency(projectedPeriodEnd)} y alcanzaría ${formatPercentage(projectedAttainment)} de la cuota mensual.`
+  const forecast =
+    performance.forecast
+
+  const runRateSentence =
+    buildRunRateSentence(performance)
+
+  if (
+    forecast.officialAvailable &&
+    forecast.expectedRevenue !== null
+  ) {
+    const attainmentSentence =
+      forecast.expectedAttainment === null
+        ? ''
+        : `, equivalente a ${formatPercentage(forecast.expectedAttainment)} de la cuota mensual`
+
+    const forecastSentence =
+      `El Forecast esperado es ${formatCurrency(forecast.expectedRevenue)}${attainmentSentence}.`
+
+    return runRateSentence
+      ? `${forecastSentence} ${runRateSentence}`
+      : forecastSentence
+  }
+
+  if (
+    forecast.available &&
+    !forecast.officialAvailable
+  ) {
+    const forecastStatusSentence =
+      `El Forecast Project-Aware está en estado ${forecast.status} y no está disponible como forecast oficial.`
+
+    return runRateSentence
+      ? `${forecastStatusSentence} ${runRateSentence}`
+      : forecastStatusSentence
+  }
+
+  if (runRateSentence) {
+    return runRateSentence
+  }
+
+  return 'La cuota está disponible, pero aún no existe información suficiente para estimar el cierre mensual.'
 }
 
 function buildFilterContext(
@@ -139,22 +180,35 @@ function buildPerformanceFinding(
     return null
   }
 
-  const projectedAttainment =
+  const forecastAttainment =
+    performance.forecast.officialAvailable
+      ? performance.forecast.expectedAttainment
+      : null
+
+  const runRateAttainment =
     performance.pace.projectedAttainment
+
+  const referenceAttainment =
+    forecastAttainment ??
+    runRateAttainment
+
+  const detail =
+    forecastAttainment !== null
+      ? `Forecast esperado en ${formatPercentage(forecastAttainment)} de la cuota.`
+      : runRateAttainment !== null
+        ? `Cierre por ritmo actual en ${formatPercentage(runRateAttainment)}.`
+        : 'Sin estimación de cierre disponible.'
 
   return {
     id: 'performance',
     label: 'Cumplimiento de cuota',
     value: formatPercentage(attainment),
-    detail:
-      projectedAttainment === null
-        ? 'Sin proyección de cierre disponible.'
-        : `Cierre proyectado en ${formatPercentage(projectedAttainment)}.`,
+    detail,
     tone:
       attainment >= 100
         ? 'positive'
-        : projectedAttainment !== null &&
-            projectedAttainment >= 100
+        : referenceAttainment !== null &&
+            referenceAttainment >= 100
           ? 'attention'
           : 'critical',
   }
@@ -168,6 +222,7 @@ function buildVarianceFindings(
   }
 
   const findings: SalesExecutiveFinding[] = []
+
   const positive = analysis.brands.positive[0]
   const negative = analysis.brands.negative[0]
 
@@ -255,19 +310,22 @@ export function buildSalesExecutiveSummary({
       available: false,
       title: 'Resumen ejecutivo no disponible',
       overview: 'Importa información de ventas para generar una lectura ejecutiva del periodo.',
-      outlook: 'Sin datos suficientes para calcular desempeño, proyección y prioridades.',
+      outlook: 'Sin datos suficientes para calcular desempeño, Forecast y prioridades.',
       filterContext: buildFilterContext(activeFilters),
       findings: [],
     }
   }
 
   const findings: SalesExecutiveFinding[] = []
+
   const performanceFinding =
     buildPerformanceFinding(performance)
+
   const opportunityFinding =
     buildOpportunityFinding(
       commercialOpportunities,
     )
+
   const reconciliationFinding =
     buildReconciliationFinding(
       reconciliation,

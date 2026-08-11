@@ -1,3 +1,8 @@
+import type {
+  ForecastConfidenceLevel,
+  ProjectAwareForecastStatus,
+} from '../../../core/business/forecast'
+
 export type SalesComparisonMode =
   | 'previous-period'
   | 'previous-year'
@@ -126,6 +131,20 @@ export interface SalesWorkspacePace {
   projectedAttainment: number | null
 }
 
+export interface SalesWorkspaceForecast {
+  available: boolean
+  officialAvailable: boolean
+  status: ProjectAwareForecastStatus
+  periodId: string | null
+  dataCutoff: string | null
+  expectedRevenue: number | null
+  expectedGrossProfit: number | null
+  expectedAttainment: number | null
+  confidenceScore: number | null
+  confidenceLevel: ForecastConfidenceLevel | null
+  unavailableReason: string | null
+}
+
 export interface SalesWorkspaceTargetCoverage {
   targetedBrands: number
   activeBrands: number
@@ -141,6 +160,7 @@ export interface SalesWorkspacePerformance {
   grossProfit: SalesWorkspaceTargetMetric
   grossMargin: SalesWorkspaceTargetMetric
   pace: SalesWorkspacePace
+  forecast: SalesWorkspaceForecast
   coverage: SalesWorkspaceTargetCoverage
 }
 
@@ -180,8 +200,6 @@ export interface SalesWorkspaceDetailRow {
   documents: number
   rowCount: number
 }
-
-
 
 export type SalesVarianceDimension =
   | 'brand'
@@ -346,7 +364,6 @@ export interface SalesCommercialOpportunitySummary {
   requiredDailyRevenue: number | null
   opportunities: SalesCommercialOpportunity[]
 }
-
 
 export type SalesExecutiveFindingTone =
   | 'positive'

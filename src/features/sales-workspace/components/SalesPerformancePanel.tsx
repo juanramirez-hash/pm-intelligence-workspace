@@ -35,6 +35,19 @@ const statusLabels: Record<
   achieved: 'Objetivo alcanzado',
 }
 
+const forecastStatusLabels = {
+  unavailable: 'No disponible',
+  blocked: 'Bloqueado',
+  partial: 'Parcial',
+  ready: 'Listo',
+} as const
+
+const forecastConfidenceLabels = {
+  low: 'Baja',
+  medium: 'Media',
+  high: 'Alta',
+} as const
+
 function getStatusTone(
   status: SalesPerformanceStatus,
 ) {
@@ -122,28 +135,49 @@ export function SalesPerformancePanel({
   const pace =
     performance.pace
 
+  const forecast =
+    performance.forecast
+
   if (!performance.available) {
     return (
       <ExecutivePanel
         className="h-full"
         icon={<Target size={19} />}
-        subtitle="Compara la venta real contra la cuota mensual y el avance esperado por día laboral."
+        subtitle="Compara la venta real contra la cuota mensual, el ritmo laboral y el Forecast Project-Aware cuando está disponible."
         title="Desempeño contra objetivo"
         tone="attention"
       >
-        <div className="flex min-h-64 items-center justify-center rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 px-6 text-center">
-          <div>
-            <p className="text-sm font-semibold text-amber-900">
-              {performance.unavailableReason
-                ? 'Objetivo no evaluable con este segmento.'
-                : 'No hay objetivos para el periodo seleccionado.'}
-            </p>
+        <div className="space-y-4">
+          <div className="flex min-h-48 items-center justify-center rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 px-6 text-center">
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                {performance.unavailableReason
+                  ? 'Objetivo no evaluable con este segmento.'
+                  : 'No hay objetivos para el periodo seleccionado.'}
+              </p>
 
-            <p className="mt-2 max-w-xl text-xs leading-5 text-amber-700">
-              {performance.unavailableReason ??
-                'Importa la cuota mensual por marca y los días laborables para activar cumplimiento, ritmo diario y proyección de cierre.'}
-            </p>
+              <p className="mt-2 max-w-xl text-xs leading-5 text-amber-700">
+                {performance.unavailableReason ??
+                  'Importa la cuota mensual por marca y los días laborables para activar cumplimiento y ritmo diario.'}
+              </p>
+            </div>
           </div>
+
+          {forecast.officialAvailable &&
+            forecast.expectedRevenue !== null && (
+              <Metric
+                helper={[
+                  `Estado ${forecastStatusLabels[forecast.status]}.`,
+                  forecast.confidenceLevel
+                    ? `Confianza ${forecastConfidenceLabels[forecast.confidenceLevel]}.`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                label="Forecast esperado"
+                value={formatSalesCurrency(forecast.expectedRevenue)}
+              />
+            )}
         </div>
       </ExecutivePanel>
     )
@@ -152,8 +186,27 @@ export function SalesPerformancePanel({
   const attainment =
     performance.revenue.attainment
 
-  const projection =
+  const runRateProjection =
     pace.projectedAttainment
+
+  const forecastHelper =
+    forecast.officialAvailable &&
+    forecast.expectedRevenue !== null
+      ? [
+          forecast.expectedAttainment === null
+            ? null
+            : `${formatSalesPercentage(forecast.expectedAttainment)} del objetivo`,
+          `Estado ${forecastStatusLabels[forecast.status]}`,
+          forecast.confidenceLevel
+            ? `Confianza ${forecastConfidenceLabels[forecast.confidenceLevel]}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : forecast.available
+        ? `Forecast ${forecastStatusLabels[forecast.status].toLowerCase()}; no disponible como forecast oficial.`
+        : forecast.unavailableReason ??
+          'Sin Forecast Project-Aware para este periodo.'
 
   return (
     <ExecutivePanel
@@ -165,7 +218,7 @@ export function SalesPerformancePanel({
           : 'Sin fecha de corte disponible.'
       }
       icon={<Target size={19} />}
-      subtitle="Objetivo consolidado de las marcas cargadas para el periodo seleccionado."
+      subtitle="Objetivo consolidado, ritmo laboral y Forecast Project-Aware del periodo seleccionado."
       title="Desempeño contra objetivo"
       tone={getStatusTone(pace.status)}
     >
@@ -217,7 +270,7 @@ export function SalesPerformancePanel({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Metric
           helper={pace.expectedToDate === null
             ? 'Requiere objetivo y días laborables.'
@@ -249,13 +302,24 @@ export function SalesPerformancePanel({
         />
 
         <Metric
-          helper={projection === null
-            ? 'Sin proyección evaluable.'
-            : `${formatSalesPercentage(projection)} del objetivo`}
-          label="Proyección de cierre"
+          helper={runRateProjection === null
+            ? 'Sin run-rate evaluable.'
+            : `${formatSalesPercentage(runRateProjection)} del objetivo`}
+          label="Cierre por ritmo actual"
           value={pace.projectedPeriodEnd === null
             ? 'No disponible'
             : formatSalesCurrency(pace.projectedPeriodEnd)}
+        />
+
+        <Metric
+          helper={forecastHelper}
+          label="Forecast esperado"
+          value={
+            forecast.officialAvailable &&
+            forecast.expectedRevenue !== null
+              ? formatSalesCurrency(forecast.expectedRevenue)
+              : 'No disponible'
+          }
         />
       </div>
 

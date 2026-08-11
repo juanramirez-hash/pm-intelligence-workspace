@@ -597,11 +597,11 @@ export function SalesWorkspacePage() {
           </p>
 
           <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
-            Objetivo, ritmo laboral y proyección de cierre
+            Objetivo, ritmo laboral y Forecast esperado
           </h2>
 
           <p className="mt-1 text-sm text-slate-500">
-            Consolida las cuotas mensuales por marca y mide el avance contra los días laborables transcurridos al corte de ventas.
+            Consolida las cuotas mensuales por marca, separa el cierre por ritmo actual del Forecast Project-Aware y mide el avance contra los días laborables transcurridos al corte de ventas.
           </p>
         </div>
 
