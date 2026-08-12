@@ -21,6 +21,8 @@ interface BuildSalesVarianceContributionInput {
   currentPeriodId: string
   comparisonPeriodId: string | null
   comparisonLabel: string
+  currentDateTo?: string
+  comparisonDateTo?: string
 }
 
 interface InternalContributionBreakdown {
@@ -149,9 +151,11 @@ function buildMetric(
 function buildSegmentationFilter(
   filters: SalesWorkspaceFilters,
   periodIds: readonly string[],
+  dateTo?: string,
 ): SalesSegmentationFilter {
   return {
     periodIds,
+    dateTo,
     brandIds: filters.brandIds,
     customerIds: filters.customerIds,
     productIds: filters.productIds,
@@ -549,6 +553,8 @@ export function buildSalesVarianceContributionAnalysis({
   currentPeriodId,
   comparisonPeriodId,
   comparisonLabel,
+  currentDateTo,
+  comparisonDateTo,
 }: BuildSalesVarianceContributionInput): SalesVarianceContributionAnalysis {
   if (!comparisonPeriodId) {
     return createEmptySalesVarianceContributionAnalysis(
@@ -561,12 +567,14 @@ export function buildSalesVarianceContributionAnalysis({
     buildSegmentationFilter(
       filters,
       [currentPeriodId],
+      currentDateTo,
     )
 
   const comparisonFilter =
     buildSegmentationFilter(
       filters,
       [comparisonPeriodId],
+      comparisonDateTo,
     )
 
   const currentSummary =

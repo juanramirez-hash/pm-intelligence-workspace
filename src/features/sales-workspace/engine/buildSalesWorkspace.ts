@@ -269,9 +269,13 @@ function buildSegmentationFilter(
   filters: SalesWorkspaceFilters,
   periodIds?: readonly string[],
   omitDimension?: SalesWorkspaceFilterDimension,
+  dateFrom?: string,
+  dateTo?: string,
 ): SalesSegmentationFilter {
   return {
     periodIds,
+    dateFrom,
+    dateTo,
     brandIds:
       omitDimension === 'brand'
         ? undefined
@@ -301,12 +305,16 @@ function buildFilteredPeriod(
   repository: BusinessRepository,
   period: RevenuePeriodSummary,
   filters: SalesWorkspaceFilters,
+  dateTo?: string,
 ): RevenuePeriodSummary {
   const summary =
     repository.salesSegmentation.summarize(
       buildSegmentationFilter(
         filters,
         [period.id],
+        undefined,
+        undefined,
+        dateTo,
       ),
     )
 
@@ -794,6 +802,97 @@ function resolveElapsedWorkingDays(
     calendarWeekdays,
     workingDays,
   )
+}
+
+function isOpenSelectedPeriod(
+  repository: BusinessRepository,
+  period: RevenuePeriodSummary,
+): boolean {
+  const dataPeriodEnd =
+    repository.getDataPeriodEnd()
+
+  return Boolean(
+    dataPeriodEnd?.startsWith(
+      `${period.id}-`,
+    ) &&
+    dataPeriodEnd < period.periodEnd,
+  )
+}
+
+function resolveEquivalentWorkingDayCutoff(
+  sourcePeriod: RevenuePeriodSummary,
+  sourceCutoff: string,
+  comparisonPeriod: RevenuePeriodSummary,
+): string | null {
+  const elapsedWeekdays =
+    countWeekdaysInclusive(
+      `${sourcePeriod.id}-01`,
+      sourceCutoff,
+    )
+
+  if (
+    elapsedWeekdays === null ||
+    elapsedWeekdays <= 0
+  ) {
+    return null
+  }
+
+  const comparisonStart =
+    parseIsoDate(
+      `${comparisonPeriod.id}-01`,
+    )
+
+  const comparisonEnd =
+    parseIsoDate(
+      comparisonPeriod.periodEnd,
+    )
+
+  if (
+    !comparisonStart ||
+    !comparisonEnd
+  ) {
+    return null
+  }
+
+  let countedWeekdays = 0
+
+  for (
+    const cursor =
+      new Date(comparisonStart);
+    cursor <= comparisonEnd;
+    cursor.setUTCDate(
+      cursor.getUTCDate() + 1,
+    )
+  ) {
+    const day =
+      cursor.getUTCDay()
+
+    if (
+      day === 0 ||
+      day === 6
+    ) {
+      continue
+    }
+
+    countedWeekdays += 1
+
+    if (
+      countedWeekdays ===
+      elapsedWeekdays
+    ) {
+      return toIsoDate(cursor)
+    }
+  }
+
+  return comparisonPeriod.periodEnd
+}
+
+function toIsoDate(
+  date: Date,
+): string {
+  return date
+    .toISOString()
+    .slice(0, 10)
 }
 
 function mapTargetMetric(
@@ -1467,11 +1566,36 @@ export function buildSalesWorkspace(
       filters,
     )
 
+  const selectedCutoff =
+    resolvePeriodCutoff(
+      repository,
+      selectedBasePeriod,
+    )
+
+  const compareEquivalentProgress =
+    isOpenSelectedPeriod(
+      repository,
+      selectedBasePeriod,
+    )
+
+  const comparisonCutoff =
+    compareEquivalentProgress &&
+    previousBasePeriod
+      ? resolveEquivalentWorkingDayCutoff(
+          selectedBasePeriod,
+          selectedCutoff,
+          previousBasePeriod,
+        )
+      : null
+
   const selectedPeriod =
     buildFilteredPeriod(
       repository,
       selectedBasePeriod,
       filters,
+      compareEquivalentProgress
+        ? selectedCutoff
+        : undefined,
     )
 
   const previousPeriod =
@@ -1480,6 +1604,8 @@ export function buildSalesWorkspace(
           repository,
           previousBasePeriod,
           filters,
+          comparisonCutoff ??
+            undefined,
         )
       : null
 
@@ -1603,6 +1729,13 @@ export function buildSalesWorkspace(
         'previous-year'
           ? 'Mismo mes del año anterior'
           : 'Periodo anterior',
+      currentDateTo:
+        compareEquivalentProgress
+          ? selectedCutoff
+          : undefined,
+      comparisonDateTo:
+        comparisonCutoff ??
+        undefined,
     })
 
   const commercialOpportunities =

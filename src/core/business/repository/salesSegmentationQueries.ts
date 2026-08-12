@@ -16,6 +16,8 @@ export type SalesSegmentationDimension =
 
 export interface SalesSegmentationFilter {
   periodIds?: readonly string[]
+  dateFrom?: string
+  dateTo?: string
   brandIds?: readonly string[]
   customerIds?: readonly string[]
   productIds?: readonly string[]
@@ -255,6 +257,8 @@ export class SalesSegmentationQueries {
 
     return JSON.stringify({
       periods: normalizeValues(filter.periodIds),
+      dateFrom: filter.dateFrom ?? '',
+      dateTo: filter.dateTo ?? '',
       brands: normalizeValues(filter.brandIds),
       customers: normalizeValues(filter.customerIds),
       products: normalizeValues(filter.productIds),
@@ -310,6 +314,20 @@ export class SalesSegmentationQueries {
         !periods.has(
           normalizeValue(segment.periodId),
         )
+      ) {
+        return false
+      }
+
+      if (
+        filter.dateFrom &&
+        segment.dateId < filter.dateFrom
+      ) {
+        return false
+      }
+
+      if (
+        filter.dateTo &&
+        segment.dateId > filter.dateTo
       ) {
         return false
       }

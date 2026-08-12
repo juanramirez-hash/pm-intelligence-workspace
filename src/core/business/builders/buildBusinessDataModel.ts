@@ -231,6 +231,7 @@ function getCustomerBrandPeriodId(
 }
 
 function getSalesSegmentId(
+  dateId: string,
   periodId: string,
   brandId: string,
   customerId: string | null,
@@ -239,6 +240,7 @@ function getSalesSegmentId(
   salesRepresentativeId: string | null,
 ): string {
   return [
+    dateId,
     periodId,
     brandId,
     customerId ?? 'NO_CUSTOMER',
@@ -249,6 +251,7 @@ function getSalesSegmentId(
 }
 
 function createBusinessSalesSegment(
+  dateId: string,
   periodId: string,
   brandId: string,
   customerId: string | null,
@@ -258,6 +261,7 @@ function createBusinessSalesSegment(
 ): BusinessSalesSegment {
   return {
     id: getSalesSegmentId(
+      dateId,
       periodId,
       brandId,
       customerId,
@@ -265,6 +269,7 @@ function createBusinessSalesSegment(
       locationId,
       salesRepresentativeId,
     ),
+    dateId,
     periodId,
     brandId,
     customerId,
@@ -1240,6 +1245,7 @@ export function buildBusinessDataModel(
 
     const salesSegmentId =
       getSalesSegmentId(
+        rowDate,
         periodId,
         brandId,
         customerId,
@@ -1256,6 +1262,7 @@ export function buildBusinessDataModel(
     if (!salesSegment) {
       salesSegment =
         createBusinessSalesSegment(
+          rowDate,
           periodId,
           brandId,
           customerId,
