@@ -12,6 +12,11 @@ import {
 } from './buildSalesVarianceContribution'
 
 import {
+  countWeekdaysInclusive,
+  resolveEquivalentWorkingDayCutoff,
+} from '../../../core/analytics/shared/dateAnalytics'
+
+import {
   calculateMetricAttainment,
   calculateRevenuePace,
 } from '../../../core/business/attainment'
@@ -692,75 +697,6 @@ function resolveWorkingDays(
   )
 }
 
-function parseIsoDate(
-  value: string,
-): Date | null {
-  const match =
-    /^(\d{4})-(\d{2})-(\d{2})$/.exec(
-      value,
-    )
-
-  if (!match) {
-    return null
-  }
-
-  const date =
-    new Date(
-      Date.UTC(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3]),
-      ),
-    )
-
-  return Number.isNaN(
-    date.getTime(),
-  )
-    ? null
-    : date
-}
-
-function countWeekdaysInclusive(
-  startValue: string,
-  endValue: string,
-): number | null {
-  const start =
-    parseIsoDate(startValue)
-
-  const end =
-    parseIsoDate(endValue)
-
-  if (
-    !start ||
-    !end ||
-    start > end
-  ) {
-    return null
-  }
-
-  let weekdays = 0
-
-  for (
-    const cursor = new Date(start);
-    cursor <= end;
-    cursor.setUTCDate(
-      cursor.getUTCDate() + 1,
-    )
-  ) {
-    const day =
-      cursor.getUTCDay()
-
-    if (
-      day !== 0 &&
-      day !== 6
-    ) {
-      weekdays += 1
-    }
-  }
-
-  return weekdays
-}
-
 function resolvePeriodCutoff(
   repository: BusinessRepository,
   period: RevenuePeriodSummary,
@@ -817,82 +753,6 @@ function isOpenSelectedPeriod(
     ) &&
     dataPeriodEnd < period.periodEnd,
   )
-}
-
-function resolveEquivalentWorkingDayCutoff(
-  sourcePeriod: RevenuePeriodSummary,
-  sourceCutoff: string,
-  comparisonPeriod: RevenuePeriodSummary,
-): string | null {
-  const elapsedWeekdays =
-    countWeekdaysInclusive(
-      `${sourcePeriod.id}-01`,
-      sourceCutoff,
-    )
-
-  if (
-    elapsedWeekdays === null ||
-    elapsedWeekdays <= 0
-  ) {
-    return null
-  }
-
-  const comparisonStart =
-    parseIsoDate(
-      `${comparisonPeriod.id}-01`,
-    )
-
-  const comparisonEnd =
-    parseIsoDate(
-      comparisonPeriod.periodEnd,
-    )
-
-  if (
-    !comparisonStart ||
-    !comparisonEnd
-  ) {
-    return null
-  }
-
-  let countedWeekdays = 0
-
-  for (
-    const cursor =
-      new Date(comparisonStart);
-    cursor <= comparisonEnd;
-    cursor.setUTCDate(
-      cursor.getUTCDate() + 1,
-    )
-  ) {
-    const day =
-      cursor.getUTCDay()
-
-    if (
-      day === 0 ||
-      day === 6
-    ) {
-      continue
-    }
-
-    countedWeekdays += 1
-
-    if (
-      countedWeekdays ===
-      elapsedWeekdays
-    ) {
-      return toIsoDate(cursor)
-    }
-  }
-
-  return comparisonPeriod.periodEnd
-}
-
-function toIsoDate(
-  date: Date,
-): string {
-  return date
-    .toISOString()
-    .slice(0, 10)
 }
 
 function mapTargetMetric(
@@ -1582,9 +1442,10 @@ export function buildSalesWorkspace(
     compareEquivalentProgress &&
     previousBasePeriod
       ? resolveEquivalentWorkingDayCutoff(
-          selectedBasePeriod,
+          selectedBasePeriod.id,
           selectedCutoff,
-          previousBasePeriod,
+          previousBasePeriod.id,
+          previousBasePeriod.periodEnd,
         )
       : null
 

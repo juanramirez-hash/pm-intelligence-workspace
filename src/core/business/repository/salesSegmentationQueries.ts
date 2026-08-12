@@ -47,6 +47,8 @@ export interface SalesSegmentationGroup {
   grossMargin: number
   quantity: number
   documents: number
+  customerCount: number
+  productCount: number
   rowCount: number
 }
 
@@ -492,6 +494,8 @@ export class SalesSegmentationQueries {
           quantity: number
           rowCount: number
           documents: Set<string>
+          customers: Set<string>
+          products: Set<string>
         }
       >()
 
@@ -518,6 +522,8 @@ export class SalesSegmentationQueries {
           quantity: 0,
           rowCount: 0,
           documents: new Set<string>(),
+          customers: new Set<string>(),
+          products: new Set<string>(),
         }
         groups.set(id, group)
       }
@@ -526,6 +532,18 @@ export class SalesSegmentationQueries {
       group.grossProfit += segment.grossProfit
       group.quantity += segment.quantity
       group.rowCount += segment.rowCount
+
+      if (segment.customerId) {
+        group.customers.add(
+          segment.customerId,
+        )
+      }
+
+      if (segment.productId) {
+        group.products.add(
+          segment.productId,
+        )
+      }
 
       for (
         const documentNumber of
@@ -548,6 +566,8 @@ export class SalesSegmentationQueries {
           ),
         quantity: group.quantity,
         documents: group.documents.size,
+        customerCount: group.customers.size,
+        productCount: group.products.size,
         rowCount: group.rowCount,
       }))
 

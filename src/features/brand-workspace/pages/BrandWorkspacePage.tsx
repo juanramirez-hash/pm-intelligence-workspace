@@ -80,7 +80,10 @@ function formatPercentage(
     return 'Sin comparación'
   }
 
-  return `${value >= 0 ? '+' : ''}${value.toLocaleString(
+  const percentage =
+    value * 100
+
+  return `${percentage >= 0 ? '+' : ''}${percentage.toLocaleString(
     'es-MX',
     {
       minimumFractionDigits: 1,
@@ -164,6 +167,15 @@ export function BrandWorkspacePage() {
     ? `${summary.currentPeriodStart} — ${summary.currentPeriodEnd}`
     : 'Sin periodo disponible'
 
+  const activeBrandCoverage =
+    summary &&
+    summary.totalBrands > 0
+      ? (
+          summary.activeBrands /
+          summary.totalBrands
+        ) * 100
+      : null
+
   return (
     <ExecutiveShell
       beforeContent={
@@ -242,8 +254,15 @@ export function BrandWorkspacePage() {
             },
           ]}
           score={{
-            score: null,
-            label: 'Pendiente de modelo',
+            score: activeBrandCoverage,
+            label:
+              summary &&
+              summary.totalBrands > 0
+                ? `${summary.activeBrands} de ${summary.totalBrands} activas`
+                : 'Sin datos',
+            caption: 'Cobertura activa',
+            emptyStateMessage:
+              'Disponible cuando existan marcas analizadas en el periodo.',
             tone: 'neutral',
           }}
           status={
@@ -453,47 +472,47 @@ export function BrandWorkspacePage() {
           </ExecutivePanel>
         </KPIGrid>
       ) : (
-          <section className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
-            <CircleDashed
-              className="mx-auto text-slate-300"
-              size={42}
-            />
+        <section className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+          <CircleDashed
+            className="mx-auto text-slate-300"
+            size={42}
+          />
 
-            <h2 className="mt-4 text-xl font-semibold text-slate-900">
-              Sin información de marcas
-            </h2>
+          <h2 className="mt-4 text-xl font-semibold text-slate-900">
+            Sin información de marcas
+          </h2>
 
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
-              Importa un archivo de ventas desde Data
-              Center para generar los indicadores de
-              Brand Intelligence.
-            </p>
-          </section>
-        )}
-        {summary && (
-          <div className="mt-6">
-            <SmartBrandDirectory
-              brands={workspace.filteredBrands}
-              filters={workspace.filters}
-              onAttentionChange={workspace.actions.setRequiresAttention}
-              onLifecycleChange={workspace.actions.setLifecycleFilter}
-              onResetFilters={workspace.actions.resetFilters}
-              onSearchChange={workspace.actions.setSearch}
-              onSelectBrand={(brandId) => {
-                workspace.actions.setSelectedBrandId(brandId)
-                navigate(`/brands/${encodeURIComponent(brandId)}`)
-              }}
-              onSortDirectionChange={workspace.actions.setSortDirection}
-              onSortFieldChange={workspace.actions.setSortField}
-              onTrendChange={workspace.actions.setTrendFilter}
-              selectedBrandId={workspace.selectedBrandId}
-              sortDirection={workspace.sortDirection}
-              sortField={workspace.sortField}
-              totalBrands={summary.totalBrands}
-            />
-          </div>
-        )}
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
+            Importa un archivo de ventas desde Data
+            Center para generar los indicadores de
+            Brand Intelligence.
+          </p>
+        </section>
+      )}
 
+      {summary && (
+        <div className="mt-6">
+          <SmartBrandDirectory
+            brands={workspace.filteredBrands}
+            filters={workspace.filters}
+            onAttentionChange={workspace.actions.setRequiresAttention}
+            onLifecycleChange={workspace.actions.setLifecycleFilter}
+            onResetFilters={workspace.actions.resetFilters}
+            onSearchChange={workspace.actions.setSearch}
+            onSelectBrand={(brandId) => {
+              workspace.actions.setSelectedBrandId(brandId)
+              navigate(`/brands/${encodeURIComponent(brandId)}`)
+            }}
+            onSortDirectionChange={workspace.actions.setSortDirection}
+            onSortFieldChange={workspace.actions.setSortField}
+            onTrendChange={workspace.actions.setTrendFilter}
+            selectedBrandId={workspace.selectedBrandId}
+            sortDirection={workspace.sortDirection}
+            sortField={workspace.sortField}
+            totalBrands={summary.totalBrands}
+          />
+        </div>
+      )}
     </ExecutiveShell>
   )
 }

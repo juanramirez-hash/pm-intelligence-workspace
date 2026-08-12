@@ -101,3 +101,120 @@ export function isDateWithinRange(
     date <= rangeEnd
   )
 }
+
+export function countWeekdaysInclusive(
+  startValue: string,
+  endValue: string,
+): number | null {
+  const start =
+    parseIsoDate(
+      startValue,
+    )
+
+  const end =
+    parseIsoDate(
+      endValue,
+    )
+
+  if (
+    !start ||
+    !end ||
+    start > end
+  ) {
+    return null
+  }
+
+  let weekdays = 0
+
+  for (
+    const cursor =
+      new Date(start);
+    cursor <= end;
+    cursor.setUTCDate(
+      cursor.getUTCDate() + 1,
+    )
+  ) {
+    const day =
+      cursor.getUTCDay()
+
+    if (
+      day !== 0 &&
+      day !== 6
+    ) {
+      weekdays += 1
+    }
+  }
+
+  return weekdays
+}
+
+export function resolveEquivalentWorkingDayCutoff(
+  sourcePeriodId: string,
+  sourceCutoff: string,
+  comparisonPeriodId: string,
+  comparisonPeriodEnd: string,
+): string | null {
+  const elapsedWeekdays =
+    countWeekdaysInclusive(
+      `${sourcePeriodId}-01`,
+      sourceCutoff,
+    )
+
+  if (
+    elapsedWeekdays === null ||
+    elapsedWeekdays <= 0
+  ) {
+    return null
+  }
+
+  const comparisonStart =
+    parseIsoDate(
+      `${comparisonPeriodId}-01`,
+    )
+
+  const comparisonEnd =
+    parseIsoDate(
+      comparisonPeriodEnd,
+    )
+
+  if (
+    !comparisonStart ||
+    !comparisonEnd
+  ) {
+    return null
+  }
+
+  let countedWeekdays = 0
+
+  for (
+    const cursor =
+      new Date(comparisonStart);
+    cursor <= comparisonEnd;
+    cursor.setUTCDate(
+      cursor.getUTCDate() + 1,
+    )
+  ) {
+    const day =
+      cursor.getUTCDay()
+
+    if (
+      day === 0 ||
+      day === 6
+    ) {
+      continue
+    }
+
+    countedWeekdays += 1
+
+    if (
+      countedWeekdays ===
+      elapsedWeekdays
+    ) {
+      return toIsoDate(
+        cursor,
+      )
+    }
+  }
+
+  return comparisonPeriodEnd
+}

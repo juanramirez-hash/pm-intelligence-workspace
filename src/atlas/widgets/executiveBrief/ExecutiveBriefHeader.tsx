@@ -14,16 +14,47 @@ interface ExecutiveBriefHeaderProps {
 function formatGeneratedAt(
   value: string,
 ): string {
-  const date = new Date(value)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const date =
+      new Date(
+        `${value}T00:00:00.000Z`,
+      )
 
-  if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime(),
+      )
+    ) {
+      return value
+    }
+
+    return date.toLocaleDateString(
+      'es-MX',
+      {
+        dateStyle: 'medium',
+        timeZone: 'UTC',
+      },
+    )
+  }
+
+  const date =
+    new Date(value)
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return value
   }
 
-  return date.toLocaleString('es-MX', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
+  return date.toLocaleString(
+    'es-MX',
+    {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    },
+  )
 }
 
 export function ExecutiveBriefHeader({

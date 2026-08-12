@@ -1,3 +1,7 @@
+import {
+  resolveEquivalentWorkingDayCutoff,
+} from '../shared/dateAnalytics'
+
 import type {
   BusinessBrand,
 } from '../../business/entities/brand'
@@ -80,6 +84,94 @@ function buildPeriodMetrics(
         brandPeriod.grossProfit,
       ),
   }
+}
+
+function buildSegmentationPeriodMetricsByBrand(
+  repository: BusinessRepository,
+  periodId: string,
+  dateTo: string,
+): Map<string, BrandPeriodMetrics> {
+  return new Map<
+    string,
+    BrandPeriodMetrics
+  >(
+    repository.salesSegmentation
+      .groupBy(
+        'brand',
+        {
+          periodIds: [periodId],
+          dateTo,
+        },
+      )
+      .map(
+        (
+          group,
+        ): [
+          string,
+          BrandPeriodMetrics,
+        ] => [
+          group.id,
+          {
+            revenue:
+              group.revenue,
+
+            grossProfit:
+              group.grossProfit,
+
+            quantity:
+              group.quantity,
+
+            documents:
+              group.documents,
+
+            customers:
+              group.customerCount,
+
+            products:
+              group.productCount,
+
+            margin:
+              getMargin(
+                group.revenue,
+                group.grossProfit,
+              ),
+          },
+        ],
+      ),
+  )
+}
+
+function resolvePeriodCutoff(
+  repository: BusinessRepository,
+  period: BusinessPeriod,
+): string {
+  const dataPeriodEnd =
+    repository.getDataPeriodEnd()
+
+  if (
+    dataPeriodEnd?.startsWith(
+      `${period.id}-`,
+    )
+  ) {
+    return dataPeriodEnd
+  }
+
+  return period.periodEnd
+}
+
+function isOpenPeriod(
+  repository: BusinessRepository,
+  period: BusinessPeriod,
+): boolean {
+  const dataPeriodEnd =
+    repository.getDataPeriodEnd()
+
+  return Boolean(
+    dataPeriodEnd?.startsWith(
+      `${period.id}-`,
+    ) &&
+    dataPeriodEnd < period.periodEnd,
+  )
 }
 
 function getMargin(
@@ -341,28 +433,42 @@ function buildBrandItem(
   currentPeriodRevenue: number,
   stableThreshold: number,
   attentionDeclineThreshold: number,
+  currentMetricsByBrand:
+    ReadonlyMap<
+      string,
+      BrandPeriodMetrics
+    > | null,
+  previousMetricsByBrand:
+    ReadonlyMap<
+      string,
+      BrandPeriodMetrics
+    > | null,
 ): BrandIntelligenceItem {
-  const currentBrandPeriod =
-    repository.brand.findPeriod(
-      brand.id,
-      currentPeriodId,
-    )
-
-  const previousBrandPeriod =
-    repository.brand.findPeriod(
-      brand.id,
-      previousPeriodId,
-    )
-
   const currentPeriod =
-    buildPeriodMetrics(
-      currentBrandPeriod,
-    )
+    currentMetricsByBrand
+      ? currentMetricsByBrand.get(
+          brand.id,
+        ) ??
+        createEmptyPeriodMetrics()
+      : buildPeriodMetrics(
+          repository.brand.findPeriod(
+            brand.id,
+            currentPeriodId,
+          ),
+        )
 
   const previousPeriod =
-    buildPeriodMetrics(
-      previousBrandPeriod,
-    )
+    previousMetricsByBrand
+      ? previousMetricsByBrand.get(
+          brand.id,
+        ) ??
+        createEmptyPeriodMetrics()
+      : buildPeriodMetrics(
+          repository.brand.findPeriod(
+            brand.id,
+            previousPeriodId,
+          ),
+        )
 
   const hadActivityBeforePreviousPeriod =
     hasActivityBeforePeriod(
@@ -581,6 +687,75 @@ export function buildBrandIntelligence(
           previousPeriodId,
       )
 
+  const currentCutoff =
+    resolvePeriodCutoff(
+      repository,
+      currentPeriod,
+    )
+
+  const compareEquivalentProgress =
+    isOpenPeriod(
+      repository,
+      currentPeriod,
+    )
+
+  const comparisonCutoff =
+    compareEquivalentProgress &&
+    previousPeriod
+      ? resolveEquivalentWorkingDayCutoff(
+          currentPeriod.id,
+          currentCutoff,
+          previousPeriod.id,
+          previousPeriod.periodEnd,
+        )
+      : null
+
+  const currentMetricsByBrand =
+    compareEquivalentProgress
+      ? buildSegmentationPeriodMetricsByBrand(
+          repository,
+          currentPeriod.id,
+          currentCutoff,
+        )
+      : null
+
+  const previousMetricsByBrand =
+    compareEquivalentProgress &&
+    comparisonCutoff
+      ? buildSegmentationPeriodMetricsByBrand(
+          repository,
+          previousPeriodId,
+          comparisonCutoff,
+        )
+      : null
+
+  const currentPeriodRevenue =
+    compareEquivalentProgress
+      ? repository.salesSegmentation
+          .summarize({
+            periodIds: [
+              currentPeriod.id,
+            ],
+            dateTo:
+              currentCutoff,
+          })
+          .revenue
+      : currentPeriod.revenue
+
+  const previousPeriodRevenue =
+    compareEquivalentProgress &&
+    comparisonCutoff
+      ? repository.salesSegmentation
+          .summarize({
+            periodIds: [
+              previousPeriodId,
+            ],
+            dateTo:
+              comparisonCutoff,
+          })
+          .revenue
+      : previousPeriod?.revenue ?? 0
+
   const stableThreshold =
     options
       .stableVariationThreshold ??
@@ -605,9 +780,11 @@ export function buildBrandIntelligence(
         brand,
         currentPeriod.id,
         previousPeriodId,
-        currentPeriod.revenue,
+        currentPeriodRevenue,
         stableThreshold,
         attentionDeclineThreshold,
+        currentMetricsByBrand,
+        previousMetricsByBrand,
       ),
     )
   }
@@ -662,22 +839,21 @@ export function buildBrandIntelligence(
         10,
       )
 
-  const previousPeriodRevenue =
-    previousPeriod?.revenue ?? 0
-
   const revenueVariation =
-    currentPeriod.revenue -
+    currentPeriodRevenue -
     previousPeriodRevenue
 
   const revenueVariationPercentage =
     getVariationPercentage(
-      currentPeriod.revenue,
+      currentPeriodRevenue,
       previousPeriodRevenue,
     )
 
   return {
     analysisDate:
-      currentPeriod.periodEnd,
+      compareEquivalentProgress
+        ? currentCutoff
+        : currentPeriod.periodEnd,
 
     currentPeriodId:
       currentPeriod.id,
@@ -686,7 +862,9 @@ export function buildBrandIntelligence(
       currentPeriod.periodStart,
 
     currentPeriodEnd:
-      currentPeriod.periodEnd,
+      compareEquivalentProgress
+        ? currentCutoff
+        : currentPeriod.periodEnd,
 
     previousPeriodId,
 
@@ -696,9 +874,12 @@ export function buildBrandIntelligence(
       `${previousPeriodId}-01`,
 
     previousPeriodEnd:
-      previousPeriod
-        ?.periodEnd ??
-      `${previousPeriodId}-01`,
+      compareEquivalentProgress &&
+      comparisonCutoff
+        ? comparisonCutoff
+        : previousPeriod
+            ?.periodEnd ??
+          `${previousPeriodId}-01`,
 
     totalBrands:
       brands.length,
@@ -769,8 +950,7 @@ export function buildBrandIntelligence(
     brandsRequiringAttention:
       attentionBrands.length,
 
-    currentPeriodRevenue:
-      currentPeriod.revenue,
+    currentPeriodRevenue,
 
     previousPeriodRevenue,
 
