@@ -6,6 +6,11 @@ import {
 } from 'lucide-react'
 
 import {
+  useMemo,
+  useState,
+} from 'react'
+
+import {
   KpiCard,
 } from '../../../components/business/kpi'
 
@@ -19,12 +24,38 @@ import {
 
 import type {
   PurchasingInventoryAnalyticsReport,
+  PurchasingInventoryItem,
 } from '../../../core/business/analytics/purchasingInventory'
+
+import {
+  PurchasingInventoryTable,
+} from './PurchasingInventoryTable'
 
 interface PurchasingInventorySummaryProps {
   report:
     PurchasingInventoryAnalyticsReport | null
 }
+
+type PurchasingInventoryView =
+  | 'without_open_po'
+  | 'overdue_po'
+  | 'with_open_po'
+  | 'no_available_stock'
+
+const viewLabels:
+  Record<
+    PurchasingInventoryView,
+    string
+  > = {
+    without_open_po:
+      'Sin PO abierta',
+    overdue_po:
+      'PO vencida',
+    with_open_po:
+      'Con PO abierta',
+    no_available_stock:
+      'Sin disponibilidad',
+  }
 
 function formatNumber(
   value: number,
@@ -37,9 +68,83 @@ function formatNumber(
   )
 }
 
+function matchesView(
+  item: PurchasingInventoryItem,
+  view: PurchasingInventoryView,
+): boolean {
+  const hasNoAvailableStock =
+    item.hasInventory &&
+    item.inventory.available <= 0
+
+  if (!hasNoAvailableStock) {
+    return false
+  }
+
+  if (
+    view ===
+    'without_open_po'
+  ) {
+    return (
+      item.purchasing
+        .openPurchaseOrders ===
+      0
+    )
+  }
+
+  if (
+    view ===
+    'overdue_po'
+  ) {
+    return (
+      item.purchasing
+        .overduePurchaseOrders >
+      0
+    )
+  }
+
+  if (
+    view ===
+    'with_open_po'
+  ) {
+    return (
+      item.purchasing
+        .openPurchaseOrders >
+      0
+    )
+  }
+
+  return true
+}
+
 export function PurchasingInventorySummary({
   report,
 }: PurchasingInventorySummaryProps) {
+  const [
+    activeView,
+    setActiveView,
+  ] =
+    useState<PurchasingInventoryView>(
+      'without_open_po',
+    )
+
+  const filteredItems =
+    useMemo(() => {
+      if (!report) {
+        return []
+      }
+
+      return report.items.filter(
+        (item) =>
+          matchesView(
+            item,
+            activeView,
+          ),
+      )
+    }, [
+      report,
+      activeView,
+    ])
+
   if (!report) {
     return null
   }
@@ -142,6 +247,78 @@ export function PurchasingInventorySummary({
             nonLinkableRecords,
           )} registros sin código enlazable
         </span>
+      </div>
+
+      <div className="mt-5 border-t border-slate-100 pt-5">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              Detalle operativo por artículo
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {
+                formatNumber(
+                  filteredItems.length,
+                )
+              } artículos en {
+                viewLabels[
+                  activeView
+                ].toLowerCase()
+              }
+            </p>
+          </div>
+
+          <div className="flex flex-wrap rounded-xl bg-slate-100 p-1">
+            {(
+              Object.keys(
+                viewLabels,
+              ) as PurchasingInventoryView[]
+            ).map(
+              (view) => (
+                <button
+                  className={[
+                    'rounded-lg px-3 py-2 text-xs font-semibold transition',
+                    activeView === view
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800',
+                  ].join(' ')}
+                  key={view}
+                  onClick={() =>
+                    setActiveView(
+                      view,
+                    )
+                  }
+                  type="button"
+                >
+                  {
+                    viewLabels[
+                      view
+                    ]
+                  }
+                </button>
+              ),
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <PurchasingInventoryTable
+            emptyMessage="No hay artículos para este criterio en el corte actual."
+            items={
+              filteredItems.slice(
+                0,
+                100,
+              )
+            }
+          />
+
+          {filteredItems.length >
+            100 && (
+            <p className="mt-4 text-center text-xs text-slate-400">
+              Se muestran los primeros 100 artículos de este criterio.
+            </p>
+          )}
+        </div>
       </div>
     </WorkspaceSection>
   )
