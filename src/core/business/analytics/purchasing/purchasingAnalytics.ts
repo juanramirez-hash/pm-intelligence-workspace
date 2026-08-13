@@ -7,6 +7,10 @@ import type {
   BusinessPurchaseRequest,
 } from '../../entities/purchaseRequest'
 
+import {
+  isClosedPurchaseOrderStatus,
+} from './purchaseOrderStatus'
+
 export type PurchasingAgingBucket =
   | 'current'
   | '1_7_days'
@@ -138,22 +142,6 @@ interface MutableAgingSummary {
   orderedAmountForeignCurrency: number
 }
 
-const CLOSED_STATUS_TOKENS = [
-  'CLOSED',
-  'CERRADA',
-  'CERRADO',
-  'CANCELLED',
-  'CANCELED',
-  'CANCELADA',
-  'CANCELADO',
-  'RECEIVED',
-  'RECIBIDA',
-  'RECIBIDO',
-  'COMPLETED',
-  'COMPLETADA',
-  'COMPLETADO',
-] as const
-
 const AGING_BUCKET_ORDER: readonly PurchasingAgingBucket[] = [
   'current',
   '1_7_days',
@@ -231,19 +219,8 @@ function diffDays(
 function isClosedOrder(
   order: BusinessPurchaseOrder,
 ): boolean {
-  const normalizedStatus =
-    normalizeKey(
-      order.status,
-      '',
-    )
-
-  if (!normalizedStatus) {
-    return false
-  }
-
-  return CLOSED_STATUS_TOKENS.some(
-    (token) =>
-      normalizedStatus.includes(token),
+  return isClosedPurchaseOrderStatus(
+    order.status,
   )
 }
 

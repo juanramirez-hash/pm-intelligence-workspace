@@ -83,6 +83,10 @@ import {
 } from './purchasingAnalyticsQueries'
 
 import {
+  PurchasingInventoryQueries,
+} from './purchasingInventoryQueries'
+
+import {
   ExchangeRateQueries,
 } from './exchangeRateQueries'
 
@@ -152,6 +156,9 @@ export class BusinessRepository {
 
   readonly purchasingAnalytics:
     PurchasingAnalyticsQueries
+
+  readonly purchasingInventory:
+    PurchasingInventoryQueries
 
   readonly exchangeRates:
     ExchangeRateQueries
@@ -237,6 +244,9 @@ export class BusinessRepository {
     this.purchasingAnalytics =
       new PurchasingAnalyticsQueries(model)
 
+    this.purchasingInventory =
+      new PurchasingInventoryQueries(model)
+
     this.exchangeRates =
       new ExchangeRateQueries(model)
 
@@ -319,6 +329,10 @@ export class BusinessRepository {
 
   getPurchasingAnalyticsReport() {
     return this.purchasingAnalytics.getReport()
+  }
+
+  getPurchasingInventoryReport() {
+    return this.purchasingInventory.getReport()
   }
 
   getExchangeRates() {

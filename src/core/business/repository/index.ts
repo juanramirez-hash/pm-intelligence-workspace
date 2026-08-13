@@ -165,6 +165,10 @@ export {
 } from './purchasingAnalyticsQueries'
 
 export {
+  PurchasingInventoryQueries,
+} from './purchasingInventoryQueries'
+
+export {
   ExchangeRateQueries,
 } from './exchangeRateQueries'
 
