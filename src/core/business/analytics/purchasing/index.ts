@@ -2,6 +2,10 @@ export {
   buildPurchasingAnalytics,
 } from './purchasingAnalytics'
 
+export {
+  isClosedPurchaseOrderStatus,
+} from './purchaseOrderStatus'
+
 export type {
   PurchasingAgingBucket,
   PurchasingAgingSummary,

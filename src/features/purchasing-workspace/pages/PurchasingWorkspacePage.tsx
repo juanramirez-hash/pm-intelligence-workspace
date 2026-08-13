@@ -54,6 +54,10 @@ import {
   PurchasingRankingTable,
 } from '../components/PurchasingTables'
 
+import {
+  PurchasingInventorySummary,
+} from '../components/PurchasingInventorySummary'
+
 function formatCurrency(
   value: number,
 ): string {
@@ -291,6 +295,12 @@ export function PurchasingWorkspacePage() {
             }
           />
         </WorkspaceGrid>
+
+        <PurchasingInventorySummary
+          report={
+            workspace.purchasingInventory
+          }
+        />
 
         <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_170px_170px_160px_160px_160px_150px_auto]">

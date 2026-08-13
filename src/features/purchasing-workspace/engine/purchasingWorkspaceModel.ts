@@ -9,6 +9,7 @@ import type {
 
 import {
   buildPurchasingAnalytics,
+  isClosedPurchaseOrderStatus,
 } from '../../../core/business/analytics/purchasing'
 
 import type {
@@ -16,6 +17,10 @@ import type {
   PurchasingAnalyticsGroup,
   PurchasingAnalyticsReport,
 } from '../../../core/business/analytics/purchasing'
+
+import type {
+  PurchasingInventoryAnalyticsReport,
+} from '../../../core/business/analytics/purchasingInventory'
 
 export type PurchasingWorkspaceDimension =
   | 'supplier'
@@ -36,6 +41,8 @@ export interface PurchasingWorkspaceFilters {
 export interface PurchasingWorkspaceModel {
   available: boolean
   analytics: PurchasingAnalyticsReport | null
+  purchasingInventory:
+    PurchasingInventoryAnalyticsReport | null
 
   orders: BusinessPurchaseOrder[]
   lines: BusinessPurchaseOrderLine[]
@@ -104,36 +111,6 @@ function uniqueSorted(
   )
 }
 
-function isClosedOrder(
-  order: BusinessPurchaseOrder,
-): boolean {
-  const status =
-    normalizeSearchValue(
-      order.status,
-    )
-
-  const closedTokens = [
-    'CLOSED',
-    'CERRADA',
-    'CERRADO',
-    'CANCELLED',
-    'CANCELED',
-    'CANCELADA',
-    'CANCELADO',
-    'RECEIVED',
-    'RECIBIDA',
-    'RECIBIDO',
-    'COMPLETED',
-    'COMPLETADA',
-    'COMPLETADO',
-  ]
-
-  return closedTokens.some(
-    (token) =>
-      status.includes(token),
-  )
-}
-
 function getOrderAgingBucket(
   order: BusinessPurchaseOrder,
   referenceDateValue: string,
@@ -142,7 +119,11 @@ function getOrderAgingBucket(
     return 'undated'
   }
 
-  if (isClosedOrder(order)) {
+  if (
+    isClosedPurchaseOrderStatus(
+      order.status,
+    )
+  ) {
     return 'current'
   }
 
@@ -291,6 +272,8 @@ export function buildPurchasingWorkspaceModel(
       requests.length > 0,
 
     analytics,
+    purchasingInventory: null,
+
     orders: [...orders],
     lines: [...lines],
     requests: [...requests],

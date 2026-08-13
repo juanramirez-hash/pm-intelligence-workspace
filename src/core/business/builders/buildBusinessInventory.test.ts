@@ -82,6 +82,34 @@ describe('IW-002 buildBusinessInventory', () => {
     expect(result.snapshots.get('2026-07-30')?.inventoryValue).toBe(70)
   })
 
+  it('usa la identidad canonica resuelta como productCode cuando el export no trae codigo separado', () => {
+    const result = buildBusinessInventory([
+      {
+        snapshotDate: null,
+        productName: 'P-1',
+        productCode: null,
+        brand: 'UNV',
+        model: 'IPC-A',
+        location: 'CDMX',
+        onHand: 5,
+        available: 4,
+        committed: 1,
+        inTransit: 2,
+        onOrder: 3,
+        unitCost: 10,
+        inventoryValue: 50,
+        currency: 'MXN',
+      },
+    ], products)
+
+    const position =
+      result.positions.values().next().value
+
+    expect(position?.productId).toBe('P-1')
+    expect(position?.productCode).toBe('P-1')
+    expect(position?.identityStatus).toBe('current_master')
+  })
+
   it('mantiene visible una identidad de inventario no resuelta', () => {
     const result = buildBusinessInventory([
       {

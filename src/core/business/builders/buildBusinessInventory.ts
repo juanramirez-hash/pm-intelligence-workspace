@@ -88,6 +88,10 @@ export function buildBusinessInventory(
 
     const product = products.get(productName)
     const productId = product?.id ?? null
+    const productCode =
+      normalizeIdentifier(row.productCode) ??
+      productId
+
     const positionId = buildPositionId(
       row.snapshotDate,
       productName,
@@ -102,7 +106,7 @@ export function buildBusinessInventory(
         snapshotDate: row.snapshotDate,
         productId,
         productName,
-        productCode: normalizeIdentifier(row.productCode),
+        productCode,
         brandId:
           product?.brandId ?? normalizeIdentifier(row.brand),
         model:

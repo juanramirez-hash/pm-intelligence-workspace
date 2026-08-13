@@ -27,6 +27,7 @@ export function usePurchasingWorkspace():
       return {
         available: false,
         analytics: null,
+        purchasingInventory: null,
         orders: [],
         lines: [],
         requests: [],
@@ -47,10 +48,17 @@ export function usePurchasingWorkspace():
     const requests =
       repository.purchaseRequests.getAll()
 
-    return buildPurchasingWorkspaceModel(
-      orders,
-      lines,
-      requests,
-    )
+    const model =
+      buildPurchasingWorkspaceModel(
+        orders,
+        lines,
+        requests,
+      )
+
+    return {
+      ...model,
+      purchasingInventory:
+        repository.purchasingInventory.getReport(),
+    }
   }, [workspace.repository])
 }
