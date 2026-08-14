@@ -15,7 +15,7 @@ import type {
 } from '../engine/purchasingWorkspaceModel'
 
 export function usePurchasingWorkspace():
-  PurchasingWorkspaceModel {
+PurchasingWorkspaceModel {
   const workspace =
     useWorkspaceContext()
 
@@ -28,6 +28,7 @@ export function usePurchasingWorkspace():
         available: false,
         analytics: null,
         purchasingInventory: null,
+        purchasingForecast: null,
         orders: [],
         lines: [],
         requests: [],
@@ -57,8 +58,14 @@ export function usePurchasingWorkspace():
 
     return {
       ...model,
+
       purchasingInventory:
-        repository.purchasingInventory.getReport(),
+        repository.purchasingInventory
+          .getReport(),
+
+      purchasingForecast:
+        repository.purchasingForecast
+          .getReport(),
     }
   }, [workspace.repository])
 }

@@ -22,6 +22,10 @@ import type {
   PurchasingInventoryAnalyticsReport,
 } from '../../../core/business/analytics/purchasingInventory'
 
+import type {
+  PurchasingForecastAnalyticsReport,
+} from '../../../core/business/analytics/purchasingForecast'
+
 export type PurchasingWorkspaceDimension =
   | 'supplier'
   | 'buyer'
@@ -41,8 +45,12 @@ export interface PurchasingWorkspaceFilters {
 export interface PurchasingWorkspaceModel {
   available: boolean
   analytics: PurchasingAnalyticsReport | null
+
   purchasingInventory:
     PurchasingInventoryAnalyticsReport | null
+
+  purchasingForecast:
+    PurchasingForecastAnalyticsReport | null
 
   orders: BusinessPurchaseOrder[]
   lines: BusinessPurchaseOrderLine[]
@@ -273,6 +281,7 @@ export function buildPurchasingWorkspaceModel(
 
     analytics,
     purchasingInventory: null,
+    purchasingForecast: null,
 
     orders: [...orders],
     lines: [...lines],

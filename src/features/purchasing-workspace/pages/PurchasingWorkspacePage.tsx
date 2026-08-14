@@ -58,6 +58,10 @@ import {
   PurchasingInventorySummary,
 } from '../components/PurchasingInventorySummary'
 
+import {
+  PurchasingForecastSummary,
+} from '../components/PurchasingForecastSummary'
+
 function formatCurrency(
   value: number,
 ): string {
@@ -299,6 +303,12 @@ export function PurchasingWorkspacePage() {
         <PurchasingInventorySummary
           report={
             workspace.purchasingInventory
+          }
+        />
+
+        <PurchasingForecastSummary
+          report={
+            workspace.purchasingForecast
           }
         />
 
