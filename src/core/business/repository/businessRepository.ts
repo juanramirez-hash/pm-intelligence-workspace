@@ -87,6 +87,10 @@ import {
 } from './purchasingInventoryQueries'
 
 import {
+  PurchasingForecastQueries,
+} from './purchasingForecastQueries'
+
+import {
   ExchangeRateQueries,
 } from './exchangeRateQueries'
 
@@ -159,6 +163,9 @@ export class BusinessRepository {
 
   readonly purchasingInventory:
     PurchasingInventoryQueries
+
+  readonly purchasingForecast:
+    PurchasingForecastQueries
 
   readonly exchangeRates:
     ExchangeRateQueries
@@ -247,6 +254,15 @@ export class BusinessRepository {
     this.purchasingInventory =
       new PurchasingInventoryQueries(model)
 
+    this.purchasingForecast =
+      new PurchasingForecastQueries(
+        this.forecast
+          .getInventoryIntelligenceReport(),
+
+        this.purchasingInventory
+          .getReport(),
+      )
+
     this.exchangeRates =
       new ExchangeRateQueries(model)
 
@@ -261,17 +277,17 @@ export class BusinessRepository {
   }
 
   getCustomers():
-    BusinessCustomer[] {
+  BusinessCustomer[] {
     return this.customer.getAll()
   }
 
   getBrands():
-    BusinessBrand[] {
+  BusinessBrand[] {
     return this.brand.getAll()
   }
 
   getProducts():
-    BusinessProduct[] {
+  BusinessProduct[] {
     return this.product.getAll()
   }
 
@@ -333,6 +349,10 @@ export class BusinessRepository {
 
   getPurchasingInventoryReport() {
     return this.purchasingInventory.getReport()
+  }
+
+  getPurchasingForecastReport() {
+    return this.purchasingForecast.getReport()
   }
 
   getExchangeRates() {
