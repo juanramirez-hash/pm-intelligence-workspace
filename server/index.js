@@ -209,20 +209,10 @@ app.get(
   '/api/health',
   async (_req, res) => {
     try {
-      const result =
-        await pool.query(
-          `
-            SELECT
-              current_user,
-              current_database(),
-              NOW() AS server_time
-          `,
-        )
+      await pool.query('SELECT 1')
 
       res.json({
         ok: true,
-        database:
-          result.rows[0],
       })
     } catch (error) {
       console.error(
@@ -232,8 +222,6 @@ app.get(
 
       res.status(500).json({
         ok: false,
-        error:
-          'Database connection failed',
       })
     }
   },
