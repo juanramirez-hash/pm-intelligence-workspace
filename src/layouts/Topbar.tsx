@@ -1,11 +1,16 @@
 import {
   Bell,
+  LogOut,
   Menu,
   Search,
   Sparkles,
 } from 'lucide-react'
-import { Button } from '@heroui/react'
-import { useLocation } from 'react-router-dom'
+import {
+  Button,
+} from '@heroui/react'
+import {
+  useLocation,
+} from 'react-router-dom'
 
 interface TopbarUser {
   email: string
@@ -73,6 +78,20 @@ export function Topbar({
       user.email,
     )
 
+  const handleLogout = async () => {
+    try {
+      await fetch(
+        '/api/auth/logout',
+        {
+          method: 'POST',
+          credentials: 'include',
+        },
+      )
+    } finally {
+      window.location.href = '/'
+    }
+  }
+
   return (
     <header
       data-print-hidden="true"
@@ -131,6 +150,17 @@ export function Topbar({
         >
           {initials}
         </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+        >
+          <LogOut size={17} />
+          <span className="hidden sm:inline">
+            Cerrar sesión
+          </span>
+        </button>
       </div>
     </header>
   )
