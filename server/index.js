@@ -9,6 +9,8 @@ const { Pool } = pg
 
 const app = express()
 
+app.disable('x-powered-by')
+
 const port = Number(process.env.PORT ?? 3001)
 
 const pool = new Pool({
