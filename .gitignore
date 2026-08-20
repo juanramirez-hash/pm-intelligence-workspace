@@ -26,3 +26,5 @@ dist-ssr
 # Local backup and reference artifacts
 proyecto v1.zip
 docs/reference/
+
+server/.env
