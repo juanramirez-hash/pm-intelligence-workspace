@@ -7,6 +7,15 @@ import {
 import { Button } from '@heroui/react'
 import { useLocation } from 'react-router-dom'
 
+interface TopbarUser {
+  email: string
+  name: string | null
+}
+
+interface TopbarProps {
+  user: TopbarUser
+}
+
 const workspaceTitles: Record<string, string> = {
   '/': 'Executive Workspace',
   '/sales': 'Sales Workspace',
@@ -21,14 +30,54 @@ const workspaceTitles: Record<string, string> = {
   '/settings': 'Settings',
 }
 
-export function Topbar() {
+function getUserInitials(
+  name: string | null,
+  email: string,
+) {
+  const source =
+    name?.trim() ||
+    email.split('@')[0] ||
+    ''
+
+  const parts = source
+    .replace(/[._-]+/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (parts.length === 0) {
+    return '?'
+  }
+
+  if (parts.length === 1) {
+    return parts[0]
+      .slice(0, 2)
+      .toUpperCase()
+  }
+
+  return `${parts[0][0]}${parts[1][0]}`
+    .toUpperCase()
+}
+
+export function Topbar({
+  user,
+}: TopbarProps) {
   const location = useLocation()
 
   const workspaceTitle =
-    workspaceTitles[location.pathname] ?? 'PM Intelligence'
+    workspaceTitles[location.pathname] ??
+    'PM Intelligence'
+
+  const initials =
+    getUserInitials(
+      user.name,
+      user.email,
+    )
 
   return (
-    <header data-print-hidden="true" className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur sm:px-8 lg:px-10">
+    <header
+      data-print-hidden="true"
+      className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur sm:px-8 lg:px-10"
+    >
       <div className="flex items-center gap-4">
         <button
           type="button"
@@ -73,8 +122,14 @@ export function Topbar() {
           <span className="absolute right-2 top-2 size-2 rounded-full bg-red-500" />
         </button>
 
-        <div className="flex size-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white">
-          JR
+        <div
+          className="flex size-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white"
+          title={
+            user.name ??
+            user.email
+          }
+        >
+          {initials}
         </div>
       </div>
     </header>

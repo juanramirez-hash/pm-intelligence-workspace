@@ -128,7 +128,7 @@ export function AppShell() {
         data-app-shell-content="true"
         className="min-h-screen lg:pl-72"
       >
-        <Topbar />
+        <Topbar user={auth.user} />
 
         <main
           data-app-main="true"
