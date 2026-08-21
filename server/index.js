@@ -2,26 +2,17 @@ import 'dotenv/config'
 import express from 'express'
 import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
-import pg from 'pg'
 import { OAuth2Client } from 'google-auth-library'
+import { pool } from './db/pool.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
 
-const { Pool } = pg
 
 const app = express()
 
 app.disable('x-powered-by')
 
 const port = Number(process.env.PORT ?? 3001)
-
-const pool = new Pool({
-  host: process.env.DB_HOST ?? '127.0.0.1',
-  port: Number(process.env.DB_PORT ?? 5432),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-})
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID
 const sessionSecret = process.env.SESSION_SECRET
