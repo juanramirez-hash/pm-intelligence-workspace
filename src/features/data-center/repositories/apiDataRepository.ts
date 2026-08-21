@@ -1,0 +1,220 @@
+import type {
+  DataRepository,
+  PersistedExchangeRateDataset,
+  PersistedInventoryDataset,
+  PersistedPricingDataset,
+  PersistedProductMasterDataset,
+  PersistedProjectBillingDataset,
+  PersistedProjectDataset,
+  PersistedPurchaseOrderDataset,
+  PersistedPurchaseRequestDataset,
+  PersistedSalesDataset,
+  PersistedTargetDataset,
+} from './dataRepository'
+
+async function requestJson<T>(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(
+    input,
+    {
+      credentials: 'include',
+      ...init,
+    },
+  )
+
+  const payload =
+    await response.json()
+      .catch(() => null)
+
+  if (!response.ok) {
+    const message =
+      payload &&
+      typeof payload === 'object' &&
+      'error' in payload &&
+      typeof payload.error === 'string'
+        ? payload.error
+        : `Request failed with status ${response.status}`
+
+    throw new Error(message)
+  }
+
+  return payload as T
+}
+
+export const apiDataRepository:
+  DataRepository = {
+    async saveSalesDataset(
+      dataset: PersistedSalesDataset,
+    ): Promise<void> {
+      await requestJson(
+        '/api/data/sales/import',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            rows:
+              dataset.normalizedRows,
+            fileName:
+              dataset.lastImportedFile,
+            ignoredRows:
+              dataset.summary
+                .ignoredRows,
+          }),
+        },
+      )
+    },
+
+    async loadSalesDataset():
+      Promise<PersistedSalesDataset | null> {
+      throw new Error(
+        'Remote Sales loading is not implemented yet',
+      )
+    },
+
+    async saveTargetDataset(
+      _dataset: PersistedTargetDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Target persistence is not implemented yet',
+      )
+    },
+
+    async loadTargetDataset():
+      Promise<PersistedTargetDataset | null> {
+      throw new Error(
+        'Remote Target loading is not implemented yet',
+      )
+    },
+
+    async saveProductMasterDataset(
+      _dataset: PersistedProductMasterDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Product Master persistence is not implemented yet',
+      )
+    },
+
+    async loadProductMasterDataset():
+      Promise<PersistedProductMasterDataset | null> {
+      throw new Error(
+        'Remote Product Master loading is not implemented yet',
+      )
+    },
+
+    async saveInventoryDataset(
+      _dataset: PersistedInventoryDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Inventory persistence is not implemented yet',
+      )
+    },
+
+    async loadInventoryDataset():
+      Promise<PersistedInventoryDataset | null> {
+      throw new Error(
+        'Remote Inventory loading is not implemented yet',
+      )
+    },
+
+    async savePurchaseOrderDataset(
+      _dataset: PersistedPurchaseOrderDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Purchase Order persistence is not implemented yet',
+      )
+    },
+
+    async loadPurchaseOrderDataset():
+      Promise<PersistedPurchaseOrderDataset | null> {
+      throw new Error(
+        'Remote Purchase Order loading is not implemented yet',
+      )
+    },
+
+    async savePurchaseRequestDataset(
+      _dataset: PersistedPurchaseRequestDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Purchase Request persistence is not implemented yet',
+      )
+    },
+
+    async loadPurchaseRequestDataset():
+      Promise<PersistedPurchaseRequestDataset | null> {
+      throw new Error(
+        'Remote Purchase Request loading is not implemented yet',
+      )
+    },
+
+    async saveProjectDataset(
+      _dataset: PersistedProjectDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Project persistence is not implemented yet',
+      )
+    },
+
+    async loadProjectDataset():
+      Promise<PersistedProjectDataset | null> {
+      throw new Error(
+        'Remote Project loading is not implemented yet',
+      )
+    },
+
+    async saveProjectBillingDataset(
+      _dataset: PersistedProjectBillingDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Project Billing persistence is not implemented yet',
+      )
+    },
+
+    async loadProjectBillingDataset():
+      Promise<PersistedProjectBillingDataset | null> {
+      throw new Error(
+        'Remote Project Billing loading is not implemented yet',
+      )
+    },
+
+    async saveExchangeRateDataset(
+      _dataset: PersistedExchangeRateDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Exchange Rate persistence is not implemented yet',
+      )
+    },
+
+    async loadExchangeRateDataset():
+      Promise<PersistedExchangeRateDataset | null> {
+      throw new Error(
+        'Remote Exchange Rate loading is not implemented yet',
+      )
+    },
+
+    async savePricingDataset(
+      _dataset: PersistedPricingDataset,
+    ): Promise<void> {
+      throw new Error(
+        'Remote Pricing persistence is not implemented yet',
+      )
+    },
+
+    async loadPricingDataset():
+      Promise<PersistedPricingDataset | null> {
+      throw new Error(
+        'Remote Pricing loading is not implemented yet',
+      )
+    },
+
+    async clearAllData():
+      Promise<void> {
+      throw new Error(
+        'Remote data clearing is not implemented yet',
+      )
+    },
+  }

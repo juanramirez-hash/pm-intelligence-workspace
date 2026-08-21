@@ -82,6 +82,10 @@ import {
 } from '../repositories/indexedDbDataRepository'
 
 import {
+  apiDataRepository,
+} from '../repositories/apiDataRepository'
+
+import {
   buildPurchaseOrderBusinessModel,
   mergePurchaseOrderRows,
 } from '../importers/purchases/purchaseOrderBusinessModel'
@@ -704,7 +708,7 @@ export const useDataCenterStore =
                 isPersisting: true,
               })
 
-              void indexedDbDataRepository
+              void apiDataRepository
                 .saveSalesDataset({
                   summary:
                     result.summary,
