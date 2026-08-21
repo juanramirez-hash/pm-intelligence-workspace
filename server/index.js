@@ -6,6 +6,7 @@ import { OAuth2Client } from 'google-auth-library'
 import { pool } from './db/pool.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
+import { createSalesRouter } from './routes/sales.js'
 
 
 const app = express()
@@ -382,6 +383,11 @@ app.use(
   createDataStatusRouter(pool),
 )
 
+app.use(
+  '/api/data/sales',
+  requireAuth,
+  createSalesRouter(pool),
+)
 
 app.listen(
   port,
