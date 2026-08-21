@@ -45,29 +45,88 @@ async function requestJson<T>(
 
 export const apiDataRepository:
   DataRepository = {
-    async saveSalesDataset(
-      dataset: PersistedSalesDataset,
-    ): Promise<void> {
-      await requestJson(
-        '/api/data/sales/import',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
-          body: JSON.stringify({
-            rows:
-              dataset.normalizedRows,
-            fileName:
-              dataset.lastImportedFile,
-            ignoredRows:
-              dataset.summary
-                .ignoredRows,
-          }),
+async saveSalesDataset(
+  dataset: PersistedSalesDataset,
+): Promise<void> {
+  const chunkSize = 500
+
+  const startResponse =
+    await requestJson<{
+      ok: true
+      import: {
+        id: number
+      }
+    }>(
+      '/api/data/sales/imports/start',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
         },
+        body: JSON.stringify({
+          fileName:
+            dataset.lastImportedFile,
+          sourceRowCount:
+            dataset.normalizedRows.length,
+        }),
+      },
+    )
+
+  const importId =
+    startResponse.import.id
+
+  for (
+    let offset = 0;
+    offset <
+      dataset.normalizedRows.length;
+    offset += chunkSize
+  ) {
+    const chunkIndex =
+      Math.floor(
+        offset / chunkSize,
       )
+
+    const rows =
+      dataset.normalizedRows.slice(
+        offset,
+        offset + chunkSize,
+      )
+
+    await requestJson(
+      `/api/data/sales/imports/${importId}/chunks`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          chunkIndex,
+          sourceRowOffset:
+            offset,
+          rows,
+        }),
+      },
+    )
+  }
+
+  await requestJson(
+    `/api/data/sales/imports/${importId}/finalize`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type':
+          'application/json',
+      },
+      body: JSON.stringify({
+        ignoredRows:
+          dataset.summary
+            .ignoredRows,
+      }),
     },
+  )
+},
 
     async loadSalesDataset():
       Promise<PersistedSalesDataset | null> {
