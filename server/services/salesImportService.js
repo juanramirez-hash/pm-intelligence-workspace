@@ -243,26 +243,27 @@ export async function importSalesDataset(
       insertedRows += 1
     }
 
-    await client.query('COMMIT')
 
-    const completed =
-      await completeDataImport(
-        client,
-        importRecord.id,
-        {
-          processedRows:
-            rows.length,
-          insertedRows,
-          replacedRows:
-            replacedResult.rowCount ?? 0,
-          ignoredRows,
-        },
-      )
+const completed =
+  await completeDataImport(
+    client,
+    importRecord.id,
+    {
+      processedRows:
+        rows.length,
+      insertedRows,
+      replacedRows:
+        replacedResult.rowCount ?? 0,
+      ignoredRows,
+    },
+  )
 
-    return {
-      import: completed,
-      periodIds,
-    }
+await client.query('COMMIT')
+
+return {
+  import: completed,
+  periodIds,
+}
   } catch (error) {
     try {
       await client.query('ROLLBACK')
