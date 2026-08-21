@@ -4,6 +4,7 @@ import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import pg from 'pg'
 import { OAuth2Client } from 'google-auth-library'
+import { requireAuth } from './middleware/requireAuth.js'
 
 const { Pool } = pg
 
@@ -229,16 +230,8 @@ app.get(
 
 app.get(
   '/api/auth/me',
+  requireAuth,
   (req, res) => {
-    if (!req.session.user) {
-      return res
-        .status(401)
-        .json({
-          ok: false,
-          authenticated: false,
-        })
-    }
-
     return res.json({
       ok: true,
       authenticated: true,
