@@ -130,3 +130,29 @@ export async function failDataImport(
 
   return result.rows[0] ?? null
 }
+
+export async function cancelDataImport(
+  client,
+  importId,
+  reason = 'Import cancelled by user',
+) {
+  const result = await client.query(
+    `
+      UPDATE data_imports
+      SET
+        status = 'cancelled',
+        error_message = $2,
+        completed_at = NOW()
+      WHERE
+        id = $1
+        AND status = 'processing'
+      RETURNING *
+    `,
+    [
+      importId,
+      reason,
+    ],
+  )
+
+  return result.rows[0] ?? null
+}
