@@ -344,6 +344,8 @@ export async function finalizeSalesChunkImport(
             rowCount: 0,
           }
 
+    let insertedRows = 0
+
     if (stagedRows > 0) {
       const insertResult =
         await client.query(
@@ -530,8 +532,7 @@ export async function finalizeSalesChunkImport(
         {
           processedRows:
             stagedRows,
-          insertedRows:
-            stagedRows,
+          insertedRows,
           replacedRows:
             replacedResult
               .rowCount ?? 0,
@@ -560,8 +561,7 @@ export async function finalizeSalesChunkImport(
     return {
       import: completed,
       periodIds,
-      insertedRows:
-        stagedRows,
+      insertedRows,
       replacedRows:
         replacedResult
           .rowCount ?? 0,
