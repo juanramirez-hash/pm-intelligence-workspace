@@ -345,54 +345,158 @@ export async function finalizeSalesChunkImport(
           }
 
     if (stagedRows > 0) {
-      await client.query(
-        `
-          INSERT INTO sales_facts (
-            import_id,
-            sale_date,
-            period_id,
-            brand,
-            revenue,
-            gross_profit,
-            customer_id,
-            customer_name,
-            product_name,
-            product_code,
-            model,
-            product_status,
-            quantity,
-            document_number,
-            location,
-            sales_rep,
-            currency,
-            source_row_number
-          )
-          SELECT
-            import_id,
-            sale_date,
-            period_id,
-            brand,
-            revenue,
-            gross_profit,
-            customer_id,
-            customer_name,
-            product_name,
-            product_code,
-            model,
-            product_status,
-            quantity,
-            document_number,
-            location,
-            sales_rep,
-            currency,
-            source_row_number
-          FROM sales_import_staging
-          WHERE import_id = $1
-          ORDER BY
-            source_row_number
-        `,
-        [importId],
-      )
+      const insertResult =
+        await client.query(
+          `
+            INSERT INTO sales_facts (
+              import_id,
+              sale_date,
+              period_id,
+              brand,
+              revenue,
+              gross_profit,
+              customer_id,
+              customer_name,
+              product_name,
+              product_code,
+              model,
+              product_status,
+              quantity,
+              document_number,
+              location,
+              sales_rep,
+              currency,
+              source_row_number
+            )
+            SELECT
+              staging.import_id,
+              staging.sale_date,
+              staging.period_id,
+              staging.brand,
+              staging.revenue,
+              staging.gross_profit,
+              staging.customer_id,
+              staging.customer_name,
+              staging.product_name,
+              staging.product_code,
+              staging.model,
+              staging.product_status,
+              staging.quantity,
+              staging.document_number,
+              staging.location,
+              staging.sales_rep,
+              staging.currency,
+              staging.source_row_number
+            FROM sales_import_staging staging
+            WHERE
+              staging.import_id = $1
+              AND (
+                $2::text <> 'append'
+                OR NOT EXISTS (
+                  SELECT 1
+                  FROM sales_facts existing
+                  WHERE
+                    existing.sale_date =
+                      staging.sale_date
+                    AND COALESCE(
+                      existing.document_number,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.document_number,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.customer_id,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.customer_id,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.customer_name,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.customer_name,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.product_name,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.product_name,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.product_code,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.product_code,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.model,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.model,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.product_status,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.product_status,
+                        ''
+                      )
+                    AND existing.quantity =
+                      staging.quantity
+                    AND existing.revenue =
+                      staging.revenue
+                    AND existing.gross_profit =
+                      staging.gross_profit
+                    AND COALESCE(
+                      existing.location,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.location,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.sales_rep,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.sales_rep,
+                        ''
+                      )
+                    AND COALESCE(
+                      existing.currency,
+                      ''
+                    ) =
+                      COALESCE(
+                        staging.currency,
+                        ''
+                      )
+                )
+              )
+            ORDER BY
+              staging.source_row_number
+          `,
+          [
+            importId,
+            importRecord.import_mode,
+          ],
+        )
+
+      insertedRows =
+        insertResult.rowCount ?? 0
     }
 
     await client.query(
