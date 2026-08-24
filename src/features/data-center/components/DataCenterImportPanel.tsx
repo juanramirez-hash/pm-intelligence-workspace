@@ -41,6 +41,10 @@ type ImportDestination =
   | ReportType
   | 'auto'
 
+type SalesImportScope =
+  | 'full-periods'
+  | 'partial'
+
 const destinationLabels:
   Record<ImportDestination, string> = {
     auto:
@@ -141,6 +145,14 @@ export function DataCenterImportPanel({
       'auto',
     )
 
+  const [
+    selectedImportScope,
+    setSelectedImportScope,
+  ] =
+    useState<SalesImportScope>(
+      'full-periods',
+    )
+
   const executeImport =
     useDataCenterStore(
       (state) =>
@@ -196,6 +208,7 @@ export function DataCenterImportPanel({
         'auto'
         ? undefined
         : selectedDestination,
+      selectedImportScope,
     )
   }
 
@@ -210,7 +223,7 @@ export function DataCenterImportPanel({
         }
       />
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px_auto] lg:items-end">
+      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_280px_280px_auto] lg:items-end">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <div className="flex items-start gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
@@ -247,6 +260,42 @@ export function DataCenterImportPanel({
             </div>
           </div>
         </div>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Alcance de carga
+          </span>
+
+          <select
+            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-50 disabled:cursor-not-allowed disabled:bg-slate-100"
+            disabled={
+              isImporting
+            }
+            onChange={(
+              event,
+            ) =>
+              setSelectedImportScope(
+                event.target
+                  .value as SalesImportScope,
+              )
+            }
+            value={
+              selectedImportScope
+            }
+          >
+            <option value="full-periods">
+              Carga completa por periodo
+            </option>
+
+            <option value="partial">
+              Carga parcial / incremental
+            </option>
+          </select>
+
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            Completa reemplaza los periodos incluidos. Parcial conserva los datos existentes.
+          </p>
+        </label>
 
         <label className="block">
           <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">

@@ -16,6 +16,7 @@ export async function startSalesChunkImport(
     fileName,
     uploadedByUserId,
     sourceRowCount,
+    importScope = 'partial',
     checksumSha256 = null,
   },
 ) {
@@ -31,11 +32,14 @@ export async function startSalesChunkImport(
           fileName,
           uploadedByUserId,
           importMode:
-            'replace-periods',
+            importScope === 'full-periods'
+              ? 'replace-periods'
+              : 'partial',
           sourceRowCount,
           checksumSha256,
           metadata: {
             chunked: true,
+            importScope,
           },
         },
       )
@@ -242,7 +246,8 @@ export async function finalizeSalesChunkImport(
           SELECT
             id,
             status,
-            source_row_count
+            source_row_count,
+            import_mode
           FROM data_imports
           WHERE id = $1
           FOR UPDATE
@@ -320,7 +325,12 @@ export async function finalizeSalesChunkImport(
         ? staging.period_ids
         : []
 
+    const shouldReplacePeriods =
+      importRecord.import_mode ===
+      'replace-periods'
+
     const replacedResult =
+      shouldReplacePeriods &&
       periodIds.length > 0
         ? await client.query(
             `

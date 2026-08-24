@@ -106,8 +106,23 @@ export function createSalesRouter(
         const {
           fileName,
           sourceRowCount,
+          importScope = 'partial',
           checksumSha256 = null,
         } = req.body ?? {}
+
+        if (
+          importScope !== 'full-periods' &&
+          importScope !== 'partial'
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'Sales importScope must be full-periods or partial',
+            })
+        }
+
 
         if (
           typeof fileName !== 'string' ||
@@ -160,6 +175,7 @@ export function createSalesRouter(
               uploadedByUserId:
                 userId,
               sourceRowCount,
+              importScope,
               checksumSha256,
             },
           )

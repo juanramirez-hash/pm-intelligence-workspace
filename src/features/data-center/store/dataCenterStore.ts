@@ -332,6 +332,7 @@ export interface DataCenterState {
     rows: SpreadsheetRow[],
     metadata: FileMetadata,
     selectedReportType?: ReportType,
+    importScope?: 'full-periods' | 'partial',
   ) => DataCenterImportResult | null
 
   hydratePersistedData:
@@ -636,6 +637,7 @@ export const useDataCenterStore =
         rows,
         metadata,
         selectedReportType,
+        importScope,
       ) => {
         set({
           activeReportType: null,
@@ -721,6 +723,9 @@ export const useDataCenterStore =
 
                   lastImportedAt:
                     importedAt,
+
+                  importScope:
+                    importScope ?? 'partial',
                 })
                 .then(() => {
                   set({

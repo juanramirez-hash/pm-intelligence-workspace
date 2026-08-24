@@ -69,6 +69,9 @@ async saveSalesDataset(
             dataset.lastImportedFile,
           sourceRowCount:
             dataset.normalizedRows.length,
+          importScope:
+            dataset.importScope ?? 'partial',
+
         }),
       },
     )

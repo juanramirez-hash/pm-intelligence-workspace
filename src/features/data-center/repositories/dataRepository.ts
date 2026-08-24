@@ -46,6 +46,7 @@ export interface PersistedSalesDataset {
   normalizedRows: NormalizedSalesRow[]
   lastImportedFile: string
   lastImportedAt: string
+  importScope?: 'full-periods' | 'partial'
 }
 
 export interface PersistedTargetDataset {
