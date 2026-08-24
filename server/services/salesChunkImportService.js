@@ -34,7 +34,7 @@ export async function startSalesChunkImport(
           importMode:
             importScope === 'full-periods'
               ? 'replace-periods'
-              : 'partial',
+              : 'append',
           sourceRowCount,
           checksumSha256,
           metadata: {
