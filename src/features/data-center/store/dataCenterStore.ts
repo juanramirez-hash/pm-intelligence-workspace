@@ -695,7 +695,7 @@ export const useDataCenterStore =
                   result.normalizedRows,
 
                 importStatus:
-                  'completed',
+                   'processing',
 
                 importErrors: [],
 
@@ -724,6 +724,10 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+
+                      importStatus:
+                      'completed', 
+
                     isPersisting:
                       false,
 
@@ -736,6 +740,10 @@ export const useDataCenterStore =
                     persistenceError,
                   ) => {
                     set({
+
+                      importStatus:
+                       'error',
+
                       isPersisting:
                         false,
 
