@@ -99,6 +99,9 @@ function getStorageLabel(
     case 'indexeddb':
       return 'IndexedDB local'
 
+    case 'postgresql':
+      return 'PostgreSQL'
+
     case 'supabase':
       return 'Supabase'
 

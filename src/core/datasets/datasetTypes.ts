@@ -19,6 +19,7 @@ export type DatasetStatus =
 
 export type DatasetStorage =
   | 'indexeddb'
+  | 'postgresql'
   | 'supabase'
   | 'google_sheets'
   | 'not_configured'

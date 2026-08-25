@@ -41,6 +41,7 @@ import {
 
 import type {
   DatasetRegistryItem,
+  DatasetStorage,
   DatasetType,
 } from '../datasets/datasetTypes'
 
@@ -118,6 +119,7 @@ function activateDataset(
     lastImportedFile: string | null
     lastImportedAt: string | null
   },
+  storage: DatasetStorage = 'indexeddb',
 ): void {
   const index = registry.findIndex(
     (dataset) => dataset.type === type,
@@ -130,7 +132,7 @@ function activateDataset(
   registry[index] = {
     ...registry[index],
     status: 'active',
-    storage: 'indexeddb',
+    storage,
     totalRows: input.totalRows,
     ignoredRows: input.ignoredRows,
     periodStart: input.periodStart,
@@ -149,14 +151,19 @@ export function buildDatasetRegistry(
   )
 
   if (input.salesSummary) {
-    activateDataset(registry, 'sales', {
+  activateDataset(
+    registry,
+    'sales',
+    {
       totalRows: input.salesSummary.processedRows,
       ignoredRows: input.salesSummary.ignoredRows,
       periodStart: input.salesSummary.periodStart,
       periodEnd: input.salesSummary.periodEnd,
       lastImportedFile: input.salesLastImportedFile,
       lastImportedAt: input.salesLastImportedAt,
-    })
+    },
+    'postgresql',
+  )
   }
 
   if (input.targetSummary) {
