@@ -167,15 +167,20 @@ export function buildDatasetRegistry(
   }
 
   if (input.targetSummary) {
-    activateDataset(registry, 'salesTargets', {
+  activateDataset(
+    registry,
+    'salesTargets',
+    {
       totalRows: input.targetSummary.processedRows,
       ignoredRows: input.targetSummary.ignoredRows,
       periodStart: input.targetSummary.periodStart,
       periodEnd: input.targetSummary.periodEnd,
       lastImportedFile: input.targetsLastImportedFile,
       lastImportedAt: input.targetsLastImportedAt,
-    })
-  }
+    },
+    'postgresql',
+  )
+}
 
   if (input.inventorySummary) {
   activateDataset(

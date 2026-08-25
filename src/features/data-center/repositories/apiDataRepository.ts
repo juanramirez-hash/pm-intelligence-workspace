@@ -257,19 +257,80 @@ export const apiDataRepository:
       }
     },
     async saveTargetDataset(
-      _dataset: PersistedTargetDataset,
-    ): Promise<void> {
-      throw new Error(
-        'Remote Target persistence is not implemented yet',
-      )
-    },
+  dataset: PersistedTargetDataset,
+): Promise<void> {
+  await requestJson(
+    '/api/data/targets/import',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type':
+          'application/json',
+      },
+      body: JSON.stringify({
+        rows:
+          dataset.normalizedRows,
 
-    async loadTargetDataset():
-      Promise<PersistedTargetDataset | null> {
-      throw new Error(
-        'Remote Target loading is not implemented yet',
-      )
+        fileName:
+          dataset.lastImportedFile,
+
+        ignoredRows:
+          dataset.summary.ignoredRows,
+      }),
     },
+  )
+},
+
+async loadTargetDataset():
+  Promise<PersistedTargetDataset | null> {
+  const response =
+    await requestJson<{
+      ok: true
+      dataset: 'salesTargets'
+      data: {
+        normalizedRows:
+          PersistedTargetDataset['normalizedRows']
+        ignoredRows: number
+        lastImportedFile: string
+        lastImportedAt: string
+      } | null
+    }>(
+      '/api/data/targets',
+      {
+        method: 'GET',
+      },
+    )
+
+  if (!response.data) {
+    return null
+  }
+
+  const {
+    buildTargetBusinessModel,
+  } = await import(
+    '../importers/targets/targetBusinessModel'
+  )
+
+  const model =
+    buildTargetBusinessModel(
+      response.data.normalizedRows,
+      response.data.ignoredRows,
+    )
+
+  return {
+    normalizedRows:
+      response.data.normalizedRows,
+
+    summary:
+      model.summary,
+
+    lastImportedFile:
+      response.data.lastImportedFile,
+
+    lastImportedAt:
+      response.data.lastImportedAt,
+  }
+},
 
     async saveProductMasterDataset(
       _dataset: PersistedProductMasterDataset,

@@ -777,7 +777,7 @@ export const useDataCenterStore =
                 isPersisting: true,
               })
 
-              void indexedDbDataRepository
+              void apiDataRepository
                 .saveTargetDataset({
                   summary: result.summary,
                   normalizedRows: result.normalizedRows,
@@ -1277,7 +1277,7 @@ export const useDataCenterStore =
               persistedPricing,
             ] = await Promise.all([
               apiDataRepository.loadSalesDataset(),
-              indexedDbDataRepository.loadTargetDataset(),
+              apiDataRepository.loadTargetDataset(),
               indexedDbDataRepository.loadProductMasterDataset(),
               apiDataRepository.loadInventoryDataset(),
               indexedDbDataRepository.loadPurchaseOrderDataset(),

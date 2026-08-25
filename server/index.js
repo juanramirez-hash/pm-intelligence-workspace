@@ -8,7 +8,7 @@ import { requireAuth } from './middleware/requireAuth.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
 import { createSalesRouter } from './routes/sales.js'
 import { createInventoryRouter } from './routes/inventory.js'
-
+import { createTargetsRouter } from './routes/targets.js'
 
 const app = express()
 
@@ -398,6 +398,12 @@ app.use(
   '/api/data/inventory',
   requireAuth,
   createInventoryRouter(pool),
+)
+
+app.use(
+  '/api/data/targets',
+  requireAuth,
+  createTargetsRouter(pool),
 )
 
 app.listen(
