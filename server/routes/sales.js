@@ -4,6 +4,7 @@ import {
 } from '../services/salesImportService.js'
 import {
   appendSalesChunk,
+  cancelSalesChunkImport,
   finalizeSalesChunkImport,
   startSalesChunkImport,
 } from '../services/salesChunkImportService.js'
@@ -122,7 +123,6 @@ export function createSalesRouter(
                 'Sales importScope must be full-periods or partial',
             })
         }
-
 
         if (
           typeof fileName !== 'string' ||
@@ -300,6 +300,78 @@ export function createSalesRouter(
   )
 
   router.post(
+    '/imports/:importId/cancel',
+    async (req, res) => {
+      try {
+        const importId =
+          Number(
+            req.params.importId,
+          )
+
+        const {
+          reason =
+            'Import cancelled by user',
+        } = req.body ?? {}
+
+        if (
+          !Number.isInteger(importId) ||
+          importId <= 0
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'Sales importId is invalid',
+            })
+        }
+
+        if (
+          typeof reason !== 'string' ||
+          reason.trim() === ''
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'Sales cancel reason is invalid',
+            })
+        }
+
+        const result =
+          await cancelSalesChunkImport(
+            pool,
+            {
+              importId,
+              reason:
+                reason.trim(),
+            },
+          )
+
+        return res.json({
+          ok: true,
+          dataset: 'sales',
+          ...result,
+        })
+      } catch (error) {
+        console.error(
+          'Sales chunk cancel failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'Sales chunk cancel failed',
+          })
+      }
+    },
+  )
+
+  router.post(
     '/imports/:importId/finalize',
     async (req, res) => {
       try {
@@ -355,7 +427,6 @@ export function createSalesRouter(
       }
     },
   )
-
 
   return router
 }
