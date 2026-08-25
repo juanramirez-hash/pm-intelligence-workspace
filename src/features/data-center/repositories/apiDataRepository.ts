@@ -286,28 +286,135 @@ export const apiDataRepository:
       )
     },
 
-     async saveInventoryDataset(
-      dataset: PersistedInventoryDataset,
+async saveInventoryDataset(
+  dataset: PersistedInventoryDataset,
 ): Promise<void> {
+  const chunkSize = 500
+
+  const startResponse =
+    await requestJson<{
+      ok: true
+      import: {
+        id: number
+      }
+    }>(
+      '/api/data/inventory/imports/start',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          fileName:
+            dataset.lastImportedFile,
+          sourceRowCount:
+            dataset.normalizedRows.length,
+        }),
+      },
+    )
+
+  const importId =
+    startResponse.import.id
+
+  let importCompleted = false
+
+  const handlePageHide =
+    () => {
+      if (importCompleted) {
+        return
+      }
+
+      navigator.sendBeacon(
+        `/api/data/inventory/imports/${importId}/cancel`,
+      )
+    }
+
+  window.addEventListener(
+    'pagehide',
+    handlePageHide,
+  )
+
+  try {
+    for (
+      let offset = 0;
+      offset <
+        dataset.normalizedRows.length;
+      offset += chunkSize
+    ) {
+      const chunkIndex =
+        Math.floor(
+          offset / chunkSize,
+        )
+
+      const rows =
+        dataset.normalizedRows.slice(
+          offset,
+          offset + chunkSize,
+        )
+
       await requestJson(
-        '/api/data/inventory/import',
+        `/api/data/inventory/imports/${importId}/chunks`,
         {
           method: 'POST',
           headers: {
             'Content-Type':
               'application/json',
+          },
+          body: JSON.stringify({
+            chunkIndex,
+            sourceRowOffset:
+              offset,
+            rows,
+          }),
+        },
+      )
+    }
+
+    await requestJson(
+      `/api/data/inventory/imports/${importId}/finalize`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
         },
         body: JSON.stringify({
-          rows:
-            dataset.normalizedRows,
-          fileName:
-            dataset.lastImportedFile,
           ignoredRows:
             dataset.summary
-            .ignoredRows,
-      }),
-    },
-  )
+              .ignoredRows,
+        }),
+      },
+    )
+
+    importCompleted = true
+  } catch (error) {
+    try {
+      await requestJson(
+        `/api/data/inventory/imports/${importId}/cancel`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            reason:
+              'Import cancelled after upload failure',
+          }),
+        },
+      )
+    } catch {
+      // Preserve the original import error.
+    }
+
+    throw error
+  } finally {
+    window.removeEventListener(
+      'pagehide',
+      handlePageHide,
+    )
+  }
 },
 
     async loadInventoryDataset():
