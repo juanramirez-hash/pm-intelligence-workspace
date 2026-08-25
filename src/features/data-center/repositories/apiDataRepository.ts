@@ -46,7 +46,6 @@ async function requestJson<T>(
 async function cancelSalesImport(
   importId: number,
   reason: string,
-  keepalive = false,
 ): Promise<void> {
   await requestJson(
     `/api/data/sales/imports/${importId}/cancel`,
@@ -59,8 +58,15 @@ async function cancelSalesImport(
       body: JSON.stringify({
         reason,
       }),
-      keepalive,
     },
+  )
+}
+
+function cancelSalesImportOnPageExit(
+  importId: number,
+): void {
+  navigator.sendBeacon(
+    `/api/data/sales/imports/${importId}/cancel`,
   )
 }
 
@@ -108,11 +114,9 @@ export const apiDataRepository:
             return
           }
 
-          void cancelSalesImport(
+          cancelSalesImportOnPageExit(
             importId,
-            'Import cancelled because the page was closed, reloaded, or left',
-            true,
-          ).catch(() => undefined)
+          )
         }
 
       window.addEventListener(
