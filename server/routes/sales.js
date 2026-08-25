@@ -3,6 +3,9 @@ import {
   importSalesDataset,
 } from '../services/salesImportService.js'
 import {
+  loadSalesDataset,
+} from '../services/salesReadService.js'
+import {
   appendSalesChunk,
   cancelSalesChunkImport,
   finalizeSalesChunkImport,
@@ -13,6 +16,37 @@ export function createSalesRouter(
   pool,
 ) {
   const router = Router()
+
+  router.get(
+    '/',
+    async (_req, res) => {
+      try {
+        const dataset =
+          await loadSalesDataset(
+            pool,
+          )
+
+        return res.json({
+          ok: true,
+          dataset: 'sales',
+          data: dataset,
+        })
+      } catch (error) {
+        console.error(
+          'Sales load failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'Sales load failed',
+          })
+      }
+    },
+  )
 
   router.post(
     '/import',
