@@ -7,6 +7,7 @@ import { pool } from './db/pool.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
 import { createSalesRouter } from './routes/sales.js'
+import { createInventoryRouter } from './routes/inventory.js'
 
 
 const app = express()
@@ -391,6 +392,12 @@ app.use(
   '/api/data/sales',
   requireAuth,
   createSalesRouter(pool),
+)
+
+app.use(
+  '/api/data/inventory',
+  requireAuth,
+  createInventoryRouter(pool),
 )
 
 app.listen(
