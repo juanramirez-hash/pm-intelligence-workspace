@@ -596,7 +596,7 @@ export const useDataCenterStore =
           isPersisting: true,
         })
 
-        void indexedDbDataRepository
+        void apiDataRepository
           .saveExchangeRateDataset({
             summary: businessModel.summary,
             normalizedRows: businessModel.rates,
@@ -816,7 +816,7 @@ export const useDataCenterStore =
                 isPersisting: true,
               })
 
-              void indexedDbDataRepository
+              void apiDataRepository
                 .saveInventoryDataset({
                   summary: result.summary,
                   normalizedRows: result.normalizedRows,
@@ -1279,7 +1279,7 @@ export const useDataCenterStore =
               apiDataRepository.loadSalesDataset(),
               indexedDbDataRepository.loadTargetDataset(),
               indexedDbDataRepository.loadProductMasterDataset(),
-              indexedDbDataRepository.loadInventoryDataset(),
+              apiDataRepository.loadInventoryDataset(),
               indexedDbDataRepository.loadPurchaseOrderDataset(),
               indexedDbDataRepository.loadPurchaseRequestDataset(),
               indexedDbDataRepository.loadProjectDataset(),

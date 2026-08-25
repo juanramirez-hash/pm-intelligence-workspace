@@ -286,20 +286,79 @@ export const apiDataRepository:
       )
     },
 
-    async saveInventoryDataset(
-      _dataset: PersistedInventoryDataset,
-    ): Promise<void> {
-      throw new Error(
-        'Remote Inventory persistence is not implemented yet',
-      )
+     async saveInventoryDataset(
+      dataset: PersistedInventoryDataset,
+): Promise<void> {
+      await requestJson(
+        '/api/data/inventory/import',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+        },
+        body: JSON.stringify({
+          rows:
+            dataset.normalizedRows,
+          fileName:
+            dataset.lastImportedFile,
+          ignoredRows:
+            dataset.summary
+            .ignoredRows,
+      }),
     },
+  )
+},
 
     async loadInventoryDataset():
-      Promise<PersistedInventoryDataset | null> {
-      throw new Error(
-        'Remote Inventory loading is not implemented yet',
-      )
-    },
+  Promise<PersistedInventoryDataset | null> {
+  const response =
+    await requestJson<{
+      ok: true
+      dataset: 'inventory'
+      data: {
+        normalizedRows:
+          PersistedInventoryDataset['normalizedRows']
+        lastImportedFile: string
+        lastImportedAt: string
+      } | null
+    }>(
+      '/api/data/inventory',
+      {
+        method: 'GET',
+      },
+    )
+
+  if (!response.data) {
+    return null
+  }
+
+  const {
+    buildInventoryBusinessModel,
+  } = await import(
+    '../importers/inventory/inventoryBusinessModel'
+  )
+
+  const model =
+    buildInventoryBusinessModel(
+      response.data.normalizedRows,
+      0,
+    )
+
+  return {
+    normalizedRows:
+      response.data.normalizedRows,
+
+    summary:
+      model.summary,
+
+    lastImportedFile:
+      response.data.lastImportedFile,
+
+    lastImportedAt:
+      response.data.lastImportedAt,
+  }
+},
 
     async savePurchaseOrderDataset(
       _dataset: PersistedPurchaseOrderDataset,
