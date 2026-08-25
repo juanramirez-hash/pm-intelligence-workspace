@@ -198,11 +198,64 @@ export const apiDataRepository:
 
     async loadSalesDataset():
       Promise<PersistedSalesDataset | null> {
-      throw new Error(
-        'Remote Sales loading is not implemented yet',
-      )
-    },
+      const response =
+        await requestJson<{
+          ok: true
+          dataset: 'sales'
+          data: {
+            normalizedRows:
+              PersistedSalesDataset['normalizedRows']
+            lastImportedFile: string
+            lastImportedAt: string
+          } | null
+        }>(
+          '/api/data/sales',
+          {
+            method: 'GET',
+          },
+        )
 
+      if (!response.data) {
+        return null
+      }
+
+      const {
+        buildSalesBusinessModel,
+      } = await import(
+        '../importers/sales/salesBusinessModel'
+      )
+
+      const {
+        processSalesBusinessModel,
+      } = await import(
+        '../importers/sales/salesProcessor'
+      )
+
+      const model =
+        buildSalesBusinessModel(
+          response.data.normalizedRows,
+          0,
+        )
+
+      return {
+        normalizedRows:
+          response.data.normalizedRows,
+
+        summary:
+          processSalesBusinessModel(
+            model,
+          ),
+
+        lastImportedFile:
+          response.data.lastImportedFile,
+
+        lastImportedAt:
+          response.data.lastImportedAt,
+
+        importScope:
+          'partial',
+      }
+    },
     async saveTargetDataset(
       _dataset: PersistedTargetDataset,
     ): Promise<void> {
