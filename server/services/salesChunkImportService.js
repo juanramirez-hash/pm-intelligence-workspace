@@ -1,4 +1,5 @@
 import {
+  cancelDataImport,
   completeDataImport,
   createDataImport,
   failDataImport,
@@ -217,6 +218,117 @@ export async function appendSalesChunk(
     } catch (rollbackError) {
       console.error(
         'Sales chunk rollback failed:',
+        rollbackError,
+      )
+    }
+
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+export async function cancelSalesChunkImport(
+  pool,
+  {
+    importId,
+    reason =
+      'Import cancelled by user',
+  },
+) {
+  const client =
+    await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    const importResult =
+      await client.query(
+        `
+          SELECT
+            id,
+            dataset_type,
+            status
+          FROM data_imports
+          WHERE id = $1
+          FOR UPDATE
+        `,
+        [importId],
+      )
+
+    const importRecord =
+      importResult.rows[0]
+
+    if (!importRecord) {
+      throw new Error(
+        'Sales import not found',
+      )
+    }
+
+    if (
+      importRecord.dataset_type !==
+      'sales'
+    ) {
+      throw new Error(
+        'Import does not belong to sales',
+      )
+    }
+
+    if (
+      importRecord.status !==
+      'processing'
+    ) {
+      throw new Error(
+        'Sales import is not processing',
+      )
+    }
+
+    const stagingResult =
+      await client.query(
+        `
+          DELETE FROM sales_import_staging
+          WHERE import_id = $1
+        `,
+        [importId],
+      )
+
+    const chunksResult =
+      await client.query(
+        `
+          DELETE FROM sales_import_chunks
+          WHERE import_id = $1
+        `,
+        [importId],
+      )
+
+    const cancelled =
+      await cancelDataImport(
+        client,
+        importId,
+        reason,
+      )
+
+    if (!cancelled) {
+      throw new Error(
+        'Sales import could not be cancelled',
+      )
+    }
+
+    await client.query('COMMIT')
+
+    return {
+      import: cancelled,
+      deletedStagingRows:
+        stagingResult.rowCount ?? 0,
+      deletedChunks:
+        chunksResult.rowCount ?? 0,
+    }
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK')
+    } catch (rollbackError) {
+      console.error(
+        'Sales cancel rollback failed:',
         rollbackError,
       )
     }
