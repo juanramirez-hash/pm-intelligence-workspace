@@ -43,79 +43,13 @@ async function requestJson<T>(
   return payload as T
 }
 
-export const apiDataRepository:
-  DataRepository = {
-async saveSalesDataset(
-  dataset: PersistedSalesDataset,
+async function cancelSalesImport(
+  importId: number,
+  reason: string,
+  keepalive = false,
 ): Promise<void> {
-  const chunkSize = 500
-
-  const startResponse =
-    await requestJson<{
-      ok: true
-      import: {
-        id: number
-      }
-    }>(
-      '/api/data/sales/imports/start',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type':
-            'application/json',
-        },
-        body: JSON.stringify({
-          fileName:
-            dataset.lastImportedFile,
-          sourceRowCount:
-            dataset.normalizedRows.length,
-          importScope:
-            dataset.importScope ?? 'partial',
-
-        }),
-      },
-    )
-
-  const importId =
-    startResponse.import.id
-
-  for (
-    let offset = 0;
-    offset <
-      dataset.normalizedRows.length;
-    offset += chunkSize
-  ) {
-    const chunkIndex =
-      Math.floor(
-        offset / chunkSize,
-      )
-
-    const rows =
-      dataset.normalizedRows.slice(
-        offset,
-        offset + chunkSize,
-      )
-
-    await requestJson(
-      `/api/data/sales/imports/${importId}/chunks`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type':
-            'application/json',
-        },
-        body: JSON.stringify({
-          chunkIndex,
-          sourceRowOffset:
-            offset,
-          rows,
-        }),
-      },
-    )
-  }
-
   await requestJson(
-    `/api/data/sales/imports/${importId}/finalize`,
+    `/api/data/sales/imports/${importId}/cancel`,
     {
       method: 'POST',
       headers: {
@@ -123,13 +57,140 @@ async saveSalesDataset(
           'application/json',
       },
       body: JSON.stringify({
-        ignoredRows:
-          dataset.summary
-            .ignoredRows,
+        reason,
       }),
+      keepalive,
     },
   )
-},
+}
+
+export const apiDataRepository:
+  DataRepository = {
+    async saveSalesDataset(
+      dataset: PersistedSalesDataset,
+    ): Promise<void> {
+      const chunkSize = 500
+
+      const startResponse =
+        await requestJson<{
+          ok: true
+          import: {
+            id: number
+          }
+        }>(
+          '/api/data/sales/imports/start',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              fileName:
+                dataset.lastImportedFile,
+              sourceRowCount:
+                dataset.normalizedRows.length,
+              importScope:
+                dataset.importScope ??
+                'partial',
+            }),
+          },
+        )
+
+      const importId =
+        startResponse.import.id
+
+      let importCompleted = false
+
+      const handlePageHide =
+        () => {
+          if (importCompleted) {
+            return
+          }
+
+          void cancelSalesImport(
+            importId,
+            'Import cancelled because the page was closed, reloaded, or left',
+            true,
+          ).catch(() => undefined)
+        }
+
+      window.addEventListener(
+        'pagehide',
+        handlePageHide,
+      )
+
+      try {
+        for (
+          let offset = 0;
+          offset <
+            dataset.normalizedRows.length;
+          offset += chunkSize
+        ) {
+          const chunkIndex =
+            Math.floor(
+              offset / chunkSize,
+            )
+
+          const rows =
+            dataset.normalizedRows.slice(
+              offset,
+              offset + chunkSize,
+            )
+
+          await requestJson(
+            `/api/data/sales/imports/${importId}/chunks`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json',
+              },
+              body: JSON.stringify({
+                chunkIndex,
+                sourceRowOffset:
+                  offset,
+                rows,
+              }),
+            },
+          )
+        }
+
+        await requestJson(
+          `/api/data/sales/imports/${importId}/finalize`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              ignoredRows:
+                dataset.summary
+                  .ignoredRows,
+            }),
+          },
+        )
+
+        importCompleted = true
+      } catch (error) {
+        try {
+          await cancelSalesImport(
+            importId,
+            'Import cancelled after upload failure',
+          )
+        } catch {
+          // Preserve the original import error.
+        }
+
+        throw error
+      } finally {
+        window.removeEventListener(
+          'pagehide',
+          handlePageHide,
+        )
+      }
+    },
 
     async loadSalesDataset():
       Promise<PersistedSalesDataset | null> {
