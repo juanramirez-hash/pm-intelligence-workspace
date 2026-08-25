@@ -1276,7 +1276,7 @@ export const useDataCenterStore =
               persistedExchangeRates,
               persistedPricing,
             ] = await Promise.all([
-              indexedDbDataRepository.loadSalesDataset(),
+              apiDataRepository.loadSalesDataset(),
               indexedDbDataRepository.loadTargetDataset(),
               indexedDbDataRepository.loadProductMasterDataset(),
               indexedDbDataRepository.loadInventoryDataset(),
