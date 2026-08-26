@@ -772,7 +772,7 @@ export const useDataCenterStore =
                 normalizedTargets: result.normalizedRows,
                 targetsLastImportedFile: metadata.fileName,
                 targetsLastImportedAt: importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -786,12 +786,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
@@ -811,7 +813,7 @@ export const useDataCenterStore =
                 normalizedInventory: result.normalizedRows,
                 inventoryLastImportedFile: metadata.fileName,
                 inventoryLastImportedAt: importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -825,12 +827,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
@@ -867,7 +871,7 @@ export const useDataCenterStore =
                   metadata.fileName,
                 purchaseOrderLastImportedAt:
                   importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -885,12 +889,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError:
                       getErrorMessage(
@@ -928,7 +934,7 @@ export const useDataCenterStore =
                   metadata.fileName,
                 purchaseRequestLastImportedAt:
                   importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -946,12 +952,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError:
                       getErrorMessage(
@@ -985,7 +993,7 @@ export const useDataCenterStore =
                 productMasterLastImportedAt: importedAt,
                 pricingSummary:
                   pricingBusinessModel?.summary ?? currentPricingSummary,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -1017,12 +1025,14 @@ export const useDataCenterStore =
               void Promise.all(persistenceOperations)
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
@@ -1050,7 +1060,7 @@ export const useDataCenterStore =
                 normalizedProjects: businessModel.projects,
                 projectsLastImportedFile: metadata.fileName,
                 projectsLastImportedAt: importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -1064,12 +1074,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
@@ -1097,7 +1109,7 @@ export const useDataCenterStore =
                 normalizedProjectBillings: businessModel.lines,
                 projectBillingLastImportedFile: metadata.fileName,
                 projectBillingLastImportedAt: importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -1111,12 +1123,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
@@ -1144,7 +1158,7 @@ export const useDataCenterStore =
                 normalizedExchangeRates: businessModel.rates,
                 exchangeRateLastImportedFile: metadata.fileName,
                 exchangeRateLastImportedAt: importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -1158,12 +1172,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
@@ -1188,7 +1204,7 @@ export const useDataCenterStore =
                 normalizedPricing: businessModel.inputs,
                 pricingLastImportedFile: metadata.fileName,
                 pricingLastImportedAt: importedAt,
-                importStatus: 'completed',
+                importStatus: 'processing',
                 importErrors: [],
                 isPersisting: true,
               })
@@ -1202,12 +1218,14 @@ export const useDataCenterStore =
                 })
                 .then(() => {
                   set({
+                    importStatus: 'completed',
                     isPersisting: false,
                     persistenceError: null,
                   })
                 })
                 .catch((persistenceError) => {
                   set({
+                    importStatus: 'error',
                     isPersisting: false,
                     persistenceError: getErrorMessage(
                       persistenceError,
