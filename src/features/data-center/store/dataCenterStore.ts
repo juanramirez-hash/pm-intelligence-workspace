@@ -88,7 +88,6 @@ import {
 
 import {
   buildPurchaseRequestBusinessModel,
-  mergePurchaseRequestRows,
 } from '../importers/purchase-requests/purchaseRequestBusinessModel'
 
 export interface DataCenterState {
@@ -910,67 +909,80 @@ case 'purchases': {
 }
 
             case 'purchase-requests': {
-              const importedAt =
-                new Date().toISOString()
+  const importedAt =
+    new Date().toISOString()
 
-              const mergedRows =
-                mergePurchaseRequestRows(
-                  get().normalizedPurchaseRequests,
-                  result.normalizedRows,
-                )
+  const incomingBusinessModel =
+    buildPurchaseRequestBusinessModel(
+      result.normalizedRows,
+      result.ignoredRows,
+    )
 
-              const businessModel =
-                buildPurchaseRequestBusinessModel(
-                  mergedRows,
-                  result.ignoredRows,
-                )
+  set({
+    importStatus: 'processing',
+    importErrors: [],
+    isPersisting: true,
+    persistenceError: null,
+  })
 
-              set({
-                purchaseRequestSummary:
-                  businessModel.summary,
-                normalizedPurchaseRequests:
-                  businessModel.requests,
-                purchaseRequestLastImportedFile:
-                  metadata.fileName,
-                purchaseRequestLastImportedAt:
-                  importedAt,
-                importStatus: 'processing',
-                importErrors: [],
-                isPersisting: true,
-              })
+  void apiDataRepository
+    .savePurchaseRequestDataset({
+      summary:
+        incomingBusinessModel.summary,
 
-              void indexedDbDataRepository
-                .savePurchaseRequestDataset({
-                  summary:
-                    businessModel.summary,
-                  normalizedRows:
-                    businessModel.requests,
-                  lastImportedFile:
-                    metadata.fileName,
-                  lastImportedAt:
-                    importedAt,
-                })
-                .then(() => {
-                  set({
-                    importStatus: 'completed',
-                    isPersisting: false,
-                    persistenceError: null,
-                  })
-                })
-                .catch((persistenceError) => {
-                  set({
-                    importStatus: 'error',
-                    isPersisting: false,
-                    persistenceError:
-                      getErrorMessage(
-                        persistenceError,
-                        'No fue posible guardar las solicitudes de compra.',
-                      ),
-                  })
-                })
+      normalizedRows:
+        incomingBusinessModel.requests,
 
-              break
-            }
+      lastImportedFile:
+        metadata.fileName,
+
+      lastImportedAt:
+        importedAt,
+    })
+    .then(async () => {
+      const persistedPurchaseRequests =
+        await apiDataRepository
+          .loadPurchaseRequestDataset()
+
+      if (!persistedPurchaseRequests) {
+        throw new Error(
+          'Las solicitudes de compra se guardaron, pero no fue posible recuperar el dataset desde PostgreSQL.',
+        )
+      }
+
+      set({
+        purchaseRequestSummary:
+          persistedPurchaseRequests.summary,
+
+        normalizedPurchaseRequests:
+          persistedPurchaseRequests.normalizedRows,
+
+        purchaseRequestLastImportedFile:
+          persistedPurchaseRequests.lastImportedFile,
+
+        purchaseRequestLastImportedAt:
+          persistedPurchaseRequests.lastImportedAt,
+
+        importStatus: 'completed',
+        isPersisting: false,
+        persistenceError: null,
+      })
+    })
+    .catch((persistenceError) => {
+      set({
+        importStatus: 'error',
+        isPersisting: false,
+
+        persistenceError:
+          getErrorMessage(
+            persistenceError,
+            'No fue posible guardar las solicitudes de compra.',
+          ),
+      })
+    })
+
+  break
+}
 
             case 'products': {
               const importedAt = new Date().toISOString()
@@ -1299,7 +1311,7 @@ case 'purchases': {
               apiDataRepository.loadProductMasterDataset(),
               apiDataRepository.loadInventoryDataset(),
               apiDataRepository.loadPurchaseOrderDataset(),
-              indexedDbDataRepository.loadPurchaseRequestDataset(),
+              apiDataRepository.loadPurchaseRequestDataset(),
               indexedDbDataRepository.loadProjectDataset(),
               indexedDbDataRepository.loadProjectBillingDataset(),
               indexedDbDataRepository.loadExchangeRateDataset(),

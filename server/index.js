@@ -11,6 +11,7 @@ import { createInventoryRouter } from './routes/inventory.js'
 import { createTargetsRouter } from './routes/targets.js'
 import { createProductsRouter } from './routes/products.js'
 import { createPurchasesRouter } from './routes/purchases.js'
+import { createPurchaseRequestsRouter } from './routes/purchaseRequests.js'
 
 const app = express()
 
@@ -418,6 +419,12 @@ app.use(
   '/api/data/purchases',
   requireAuth,
   createPurchasesRouter(pool),
+)
+
+app.use(
+  '/api/data/purchase-requests',
+  requireAuth,
+  createPurchaseRequestsRouter(pool),
 )
 
 app.listen(
