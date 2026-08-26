@@ -85,10 +85,7 @@ import {
   apiDataRepository,
 } from '../repositories/apiDataRepository'
 
-import {
-  buildPurchaseOrderBusinessModel,
-  mergePurchaseOrderRows,
-} from '../importers/purchases/purchaseOrderBusinessModel'
+
 import {
   buildPurchaseRequestBusinessModel,
   mergePurchaseRequestRows,
@@ -846,68 +843,71 @@ export const useDataCenterStore =
               break
             }
 
-            case 'purchases': {
-              const importedAt =
-                new Date().toISOString()
+case 'purchases': {
+  const importedAt =
+    new Date().toISOString()
 
-              const mergedRows =
-                mergePurchaseOrderRows(
-                  get().normalizedPurchaseOrders,
-                  result.normalizedRows,
-                )
+  set({
+    importStatus: 'processing',
+    importErrors: [],
+    isPersisting: true,
+    persistenceError: null,
+  })
 
-              const businessModel =
-                buildPurchaseOrderBusinessModel(
-                  mergedRows,
-                  result.ignoredRows,
-                )
+  void apiDataRepository
+    .savePurchaseOrderDataset({
+      summary:
+        result.summary,
+      normalizedRows:
+        result.normalizedRows,
+      lastImportedFile:
+        metadata.fileName,
+      lastImportedAt:
+        importedAt,
+    })
+    .then(async () => {
+      const persistedPurchaseOrders =
+        await apiDataRepository
+          .loadPurchaseOrderDataset()
 
-              set({
-                purchaseOrderSummary:
-                  businessModel.summary,
-                normalizedPurchaseOrders:
-                  businessModel.lines,
-                purchaseOrderLastImportedFile:
-                  metadata.fileName,
-                purchaseOrderLastImportedAt:
-                  importedAt,
-                importStatus: 'processing',
-                importErrors: [],
-                isPersisting: true,
-              })
+      if (!persistedPurchaseOrders) {
+        throw new Error(
+          'Las órdenes de compra se guardaron, pero no fue posible recuperar el dataset desde PostgreSQL.',
+        )
+      }
 
-              void indexedDbDataRepository
-                .savePurchaseOrderDataset({
-                  summary:
-                    businessModel.summary,
-                  normalizedRows:
-                    businessModel.lines,
-                  lastImportedFile:
-                    metadata.fileName,
-                  lastImportedAt:
-                    importedAt,
-                })
-                .then(() => {
-                  set({
-                    importStatus: 'completed',
-                    isPersisting: false,
-                    persistenceError: null,
-                  })
-                })
-                .catch((persistenceError) => {
-                  set({
-                    importStatus: 'error',
-                    isPersisting: false,
-                    persistenceError:
-                      getErrorMessage(
-                        persistenceError,
-                        'No fue posible guardar las órdenes de compra.',
-                      ),
-                  })
-                })
+      set({
+        purchaseOrderSummary:
+          persistedPurchaseOrders.summary,
 
-              break
-            }
+        normalizedPurchaseOrders:
+          persistedPurchaseOrders.normalizedRows,
+
+        purchaseOrderLastImportedFile:
+          persistedPurchaseOrders.lastImportedFile,
+
+        purchaseOrderLastImportedAt:
+          persistedPurchaseOrders.lastImportedAt,
+
+        importStatus: 'completed',
+        isPersisting: false,
+        persistenceError: null,
+      })
+    })
+    .catch((persistenceError) => {
+      set({
+        importStatus: 'error',
+        isPersisting: false,
+        persistenceError:
+          getErrorMessage(
+            persistenceError,
+            'No fue posible guardar las órdenes de compra.',
+          ),
+      })
+    })
+
+  break
+}
 
             case 'purchase-requests': {
               const importedAt =
@@ -1298,7 +1298,7 @@ export const useDataCenterStore =
               apiDataRepository.loadTargetDataset(),
               apiDataRepository.loadProductMasterDataset(),
               apiDataRepository.loadInventoryDataset(),
-              indexedDbDataRepository.loadPurchaseOrderDataset(),
+              apiDataRepository.loadPurchaseOrderDataset(),
               indexedDbDataRepository.loadPurchaseRequestDataset(),
               indexedDbDataRepository.loadProjectDataset(),
               indexedDbDataRepository.loadProjectBillingDataset(),
