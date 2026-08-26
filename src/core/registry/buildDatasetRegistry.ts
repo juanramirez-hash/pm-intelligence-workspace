@@ -222,7 +222,7 @@ export function buildDatasetRegistry(
     periodEnd: input.purchaseOrderSummary.periodEnd,
     lastImportedFile: input.purchaseOrderLastImportedFile ?? null,
     lastImportedAt: input.purchaseOrderLastImportedAt ?? null,
-  },'postgresql')
+  }, 'postgresql')
 }
 
   if (input.purchaseRequestSummary) {
@@ -233,7 +233,7 @@ export function buildDatasetRegistry(
       periodEnd: input.purchaseRequestSummary.periodEnd,
       lastImportedFile: input.purchaseRequestLastImportedFile ?? null,
       lastImportedAt: input.purchaseRequestLastImportedAt ?? null,
-    })
+    }, 'postgresql')
   }
 
   if (input.projectsSummary) {
