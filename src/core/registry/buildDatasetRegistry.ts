@@ -214,16 +214,16 @@ export function buildDatasetRegistry(
   )
 }
 
-  if (input.purchaseOrderSummary) {
-    activateDataset(registry, 'purchases', {
-      totalRows: input.purchaseOrderSummary.processedRows,
-      ignoredRows: input.purchaseOrderSummary.ignoredRows,
-      periodStart: input.purchaseOrderSummary.periodStart,
-      periodEnd: input.purchaseOrderSummary.periodEnd,
-      lastImportedFile: input.purchaseOrderLastImportedFile ?? null,
-      lastImportedAt: input.purchaseOrderLastImportedAt ?? null,
-    })
-  }
+ if (input.purchaseOrderSummary) {
+  activateDataset(registry, 'purchases', {
+    totalRows: input.purchaseOrderSummary.processedRows,
+    ignoredRows: input.purchaseOrderSummary.ignoredRows,
+    periodStart: input.purchaseOrderSummary.periodStart,
+    periodEnd: input.purchaseOrderSummary.periodEnd,
+    lastImportedFile: input.purchaseOrderLastImportedFile ?? null,
+    lastImportedAt: input.purchaseOrderLastImportedAt ?? null,
+  },'postgresql')
+}
 
   if (input.purchaseRequestSummary) {
     activateDataset(registry, 'purchaseRequests', {
