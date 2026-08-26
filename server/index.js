@@ -9,6 +9,7 @@ import { createDataStatusRouter } from './routes/dataStatus.js'
 import { createSalesRouter } from './routes/sales.js'
 import { createInventoryRouter } from './routes/inventory.js'
 import { createTargetsRouter } from './routes/targets.js'
+import { createProductsRouter } from './routes/products.js'
 
 const app = express()
 
@@ -404,6 +405,12 @@ app.use(
   '/api/data/targets',
   requireAuth,
   createTargetsRouter(pool),
+)
+
+app.use(
+  '/api/data/products',
+  requireAuth,
+  createProductsRouter(pool),
 )
 
 app.listen(

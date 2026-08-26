@@ -991,7 +991,7 @@ export const useDataCenterStore =
               })
 
               const persistenceOperations: Promise<void>[] = [
-                indexedDbDataRepository.saveProductMasterDataset({
+                apiDataRepository.saveProductMasterDataset({
                   summary: result.summary,
                   normalizedRows: result.normalizedRows,
                   lastImportedFile: metadata.fileName,
@@ -1278,7 +1278,7 @@ export const useDataCenterStore =
             ] = await Promise.all([
               apiDataRepository.loadSalesDataset(),
               apiDataRepository.loadTargetDataset(),
-              indexedDbDataRepository.loadProductMasterDataset(),
+              apiDataRepository.loadProductMasterDataset(),
               apiDataRepository.loadInventoryDataset(),
               indexedDbDataRepository.loadPurchaseOrderDataset(),
               indexedDbDataRepository.loadPurchaseRequestDataset(),
