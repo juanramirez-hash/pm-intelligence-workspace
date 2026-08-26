@@ -40,6 +40,66 @@ function formatDate(
     return 'Sin información'
   }
 
+  const monthMatch =
+    value.match(
+      /^(\d{4})-(\d{2})$/,
+    )
+
+  if (monthMatch) {
+    const year =
+      Number(monthMatch[1])
+
+    const month =
+      Number(monthMatch[2]) - 1
+
+    const parsedDate =
+      new Date(
+        year,
+        month,
+        1,
+      )
+
+    return new Intl.DateTimeFormat(
+      'es-MX',
+      {
+        month: 'short',
+        year: 'numeric',
+      },
+    ).format(parsedDate)
+  }
+
+  const dateMatch =
+    value.match(
+      /^(\d{4})-(\d{2})-(\d{2})$/,
+    )
+
+  if (dateMatch) {
+    const year =
+      Number(dateMatch[1])
+
+    const month =
+      Number(dateMatch[2]) - 1
+
+    const day =
+      Number(dateMatch[3])
+
+    const parsedDate =
+      new Date(
+        year,
+        month,
+        day,
+      )
+
+    return new Intl.DateTimeFormat(
+      'es-MX',
+      {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      },
+    ).format(parsedDate)
+  }
+
   const parsedDate =
     new Date(value)
 
