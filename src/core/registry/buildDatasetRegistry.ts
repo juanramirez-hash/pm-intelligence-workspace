@@ -266,7 +266,7 @@ export function buildDatasetRegistry(
       periodEnd: input.exchangeRateSummary.periodEnd,
       lastImportedFile: input.exchangeRateLastImportedFile ?? null,
       lastImportedAt: input.exchangeRateLastImportedAt ?? null,
-    })
+    }, 'postgresql')
   }
 
   if (input.pricingSummary) {
