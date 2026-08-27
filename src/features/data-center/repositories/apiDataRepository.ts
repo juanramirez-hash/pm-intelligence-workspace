@@ -1415,19 +1415,81 @@ async loadProjectBillingDataset():
   }
 },
 
-    async saveExchangeRateDataset(
-      _dataset: PersistedExchangeRateDataset,
+        async saveExchangeRateDataset(
+      dataset: PersistedExchangeRateDataset,
     ): Promise<void> {
-      throw new Error(
-        'Remote Exchange Rate persistence is not implemented yet',
+      await requestJson(
+        '/api/data/exchange-rates',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            fileName:
+              dataset.lastImportedFile,
+            rows:
+              dataset.normalizedRows,
+            ignoredRows:
+              dataset.summary
+                .ignoredRows,
+          }),
+        },
       )
     },
 
     async loadExchangeRateDataset():
       Promise<PersistedExchangeRateDataset | null> {
-      throw new Error(
-        'Remote Exchange Rate loading is not implemented yet',
+      const response =
+        await requestJson<{
+          ok: true
+          dataset: 'exchangeRates'
+          data: {
+            normalizedRows:
+              PersistedExchangeRateDataset['normalizedRows']
+            ignoredRows: number
+            lastImportedFile: string | null
+            lastImportedAt: string | null
+          } | null
+        }>(
+          '/api/data/exchange-rates',
+          {
+            method: 'GET',
+          },
+        )
+
+      if (!response.data) {
+        return null
+      }
+
+      const {
+        buildExchangeRateBusinessModel,
+      } = await import(
+        '../importers/exchange-rates/exchangeRateBusinessModel'
       )
+
+      const model =
+        buildExchangeRateBusinessModel(
+          response.data.normalizedRows,
+          response.data.ignoredRows,
+        )
+
+      return {
+        normalizedRows:
+          model.rates,
+
+        summary:
+          model.summary,
+
+        lastImportedFile:
+          response.data
+            .lastImportedFile ?? '',
+
+        lastImportedAt:
+          response.data
+            .lastImportedAt ?? '',
+      }
     },
 
     async savePricingDataset(

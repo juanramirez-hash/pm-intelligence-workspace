@@ -66,7 +66,6 @@ import {
 } from '../importers/project-billings/projectBillingBusinessModel'
 import {
   buildExchangeRateBusinessModel,
-  upsertExchangeRateRows,
 } from '../importers/exchange-rates/exchangeRateBusinessModel'
 import {
   buildPricingBusinessModel,
@@ -568,48 +567,95 @@ export const useDataCenterStore =
       setNormalizedExchangeRates: (rows) =>
         set({ normalizedExchangeRates: rows }),
 
-      upsertExchangeRate: (input) => {
-        const recordedAt = new Date().toISOString()
-        const currentRows = get().normalizedExchangeRates
-        const normalizedRows = upsertExchangeRateRows(
-          currentRows,
-          [{ ...input, recordedAt }],
-        )
-        const businessModel = buildExchangeRateBusinessModel(
-          normalizedRows,
-        )
+            upsertExchangeRate: (input) => {
+        const recordedAt =
+          new Date().toISOString()
+
+        const incomingModel =
+          buildExchangeRateBusinessModel([
+            {
+              ...input,
+              recordedAt,
+            },
+          ])
 
         set({
-          activeReportType: 'exchange-rates',
-          exchangeRateSummary: businessModel.summary,
-          normalizedExchangeRates: businessModel.rates,
-          exchangeRateLastImportedFile: 'Registro manual',
-          exchangeRateLastImportedAt: recordedAt,
-          importStatus: 'completed',
+          activeReportType:
+            'exchange-rates',
+
+          importStatus:
+            'processing',
+
           importErrors: [],
-          isPersisting: true,
+
+          isPersisting:
+            true,
+
+          persistenceError:
+            null,
         })
 
         void apiDataRepository
           .saveExchangeRateDataset({
-            summary: businessModel.summary,
-            normalizedRows: businessModel.rates,
-            lastImportedFile: 'Registro manual',
-            lastImportedAt: recordedAt,
+            summary:
+              incomingModel.summary,
+
+            normalizedRows:
+              incomingModel.rates,
+
+            lastImportedFile:
+              'Registro manual',
+
+            lastImportedAt:
+              recordedAt,
           })
-          .then(() => {
+          .then(() =>
+            apiDataRepository
+              .loadExchangeRateDataset(),
+          )
+          .then((persistedDataset) => {
+            if (!persistedDataset) {
+              throw new Error(
+                'PostgreSQL no devolvió el dataset de tipos de cambio.',
+              )
+            }
+
             set({
-              isPersisting: false,
-              persistenceError: null,
+              exchangeRateSummary:
+                persistedDataset.summary,
+
+              normalizedExchangeRates:
+                persistedDataset.normalizedRows,
+
+              exchangeRateLastImportedFile:
+                persistedDataset.lastImportedFile,
+
+              exchangeRateLastImportedAt:
+                persistedDataset.lastImportedAt,
+
+              importStatus:
+                'completed',
+
+              isPersisting:
+                false,
+
+              persistenceError:
+                null,
             })
           })
           .catch((persistenceError) => {
             set({
-              isPersisting: false,
-              persistenceError: getErrorMessage(
-                persistenceError,
-                'No fue posible guardar el tipo de cambio.',
-              ),
+              importStatus:
+                'error',
+
+              isPersisting:
+                false,
+
+              persistenceError:
+                getErrorMessage(
+                  persistenceError,
+                  'No fue posible guardar el tipo de cambio.',
+                ),
             })
           })
       },
@@ -1206,51 +1252,102 @@ case 'purchases': {
 }
 
 
-            case 'exchange-rates': {
-              const importedAt = new Date().toISOString()
-              const mergedRows = upsertExchangeRateRows(
-                get().normalizedExchangeRates,
-                result.normalizedRows,
-              )
-              const businessModel = buildExchangeRateBusinessModel(
-                mergedRows,
-                result.ignoredRows,
-              )
+                        case 'exchange-rates': {
+              const importedAt =
+                new Date().toISOString()
+
+              const incomingBusinessModel =
+                buildExchangeRateBusinessModel(
+                  result.normalizedRows,
+                  result.ignoredRows,
+                )
 
               set({
-                exchangeRateSummary: businessModel.summary,
-                normalizedExchangeRates: businessModel.rates,
-                exchangeRateLastImportedFile: metadata.fileName,
-                exchangeRateLastImportedAt: importedAt,
-                importStatus: 'processing',
+                exchangeRateLastImportedFile:
+                  metadata.fileName,
+
+                exchangeRateLastImportedAt:
+                  importedAt,
+
+                importStatus:
+                  'processing',
+
                 importErrors: [],
-                isPersisting: true,
+
+                isPersisting:
+                  true,
+
+                persistenceError:
+                  null,
               })
 
-              void indexedDbDataRepository
+              void apiDataRepository
                 .saveExchangeRateDataset({
-                  summary: businessModel.summary,
-                  normalizedRows: businessModel.rates,
-                  lastImportedFile: metadata.fileName,
-                  lastImportedAt: importedAt,
+                  summary:
+                    incomingBusinessModel.summary,
+
+                  normalizedRows:
+                    incomingBusinessModel.rates,
+
+                  lastImportedFile:
+                    metadata.fileName,
+
+                  lastImportedAt:
+                    importedAt,
                 })
-                .then(() => {
-                  set({
-                    importStatus: 'completed',
-                    isPersisting: false,
-                    persistenceError: null,
-                  })
-                })
-                .catch((persistenceError) => {
-                  set({
-                    importStatus: 'error',
-                    isPersisting: false,
-                    persistenceError: getErrorMessage(
-                      persistenceError,
-                      'No fue posible guardar los tipos de cambio.',
-                    ),
-                  })
-                })
+                .then(() =>
+                  apiDataRepository
+                    .loadExchangeRateDataset(),
+                )
+                .then(
+                  (persistedDataset) => {
+                    if (!persistedDataset) {
+                      throw new Error(
+                        'Los tipos de cambio se guardaron, pero no fue posible recuperar el dataset desde PostgreSQL.',
+                      )
+                    }
+
+                    set({
+                      exchangeRateSummary:
+                        persistedDataset.summary,
+
+                      normalizedExchangeRates:
+                        persistedDataset.normalizedRows,
+
+                      exchangeRateLastImportedFile:
+                        persistedDataset.lastImportedFile,
+
+                      exchangeRateLastImportedAt:
+                        persistedDataset.lastImportedAt,
+
+                      importStatus:
+                        'completed',
+
+                      isPersisting:
+                        false,
+
+                      persistenceError:
+                        null,
+                    })
+                  },
+                )
+                .catch(
+                  (persistenceError) => {
+                    set({
+                      importStatus:
+                        'error',
+
+                      isPersisting:
+                        false,
+
+                      persistenceError:
+                        getErrorMessage(
+                          persistenceError,
+                          'No fue posible guardar los tipos de cambio.',
+                        ),
+                    })
+                  },
+                )
 
               break
             }
@@ -1366,7 +1463,7 @@ case 'purchases': {
               apiDataRepository.loadPurchaseRequestDataset(),
               apiDataRepository.loadProjectDataset(),
               apiDataRepository.loadProjectBillingDataset(),
-              indexedDbDataRepository.loadExchangeRateDataset(),
+              apiDataRepository.loadExchangeRateDataset(),
               indexedDbDataRepository.loadPricingDataset(),
             ])
 
