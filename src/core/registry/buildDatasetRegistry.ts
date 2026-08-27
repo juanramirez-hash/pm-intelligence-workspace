@@ -255,7 +255,7 @@ export function buildDatasetRegistry(
       periodEnd: input.projectBillingSummary.periodEnd,
       lastImportedFile: input.projectBillingLastImportedFile ?? null,
       lastImportedAt: input.projectBillingLastImportedAt ?? null,
-    })
+    }, 'postgresql')
   }
 
   if (input.exchangeRateSummary) {
