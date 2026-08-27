@@ -1236,19 +1236,184 @@ async loadPurchaseOrderDataset():
 },
 
     async saveProjectBillingDataset(
-      _dataset: PersistedProjectBillingDataset,
-    ): Promise<void> {
-      throw new Error(
-        'Remote Project Billing persistence is not implemented yet',
-      )
-    },
+  dataset: PersistedProjectBillingDataset,
+): Promise<void> {
+  const chunkSize = 500
 
-    async loadProjectBillingDataset():
-      Promise<PersistedProjectBillingDataset | null> {
-      throw new Error(
-        'Remote Project Billing loading is not implemented yet',
+  const startResponse =
+    await requestJson<{
+      ok: true
+      import: {
+        id: number
+      }
+    }>(
+      '/api/data/project-billings/imports/start',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          fileName:
+            dataset.lastImportedFile,
+          sourceRowCount:
+            dataset.normalizedRows.length,
+        }),
+      },
+    )
+
+  const importId =
+    startResponse.import.id
+
+  let importCompleted = false
+
+  const handlePageHide =
+    () => {
+      if (importCompleted) {
+        return
+      }
+
+      navigator.sendBeacon(
+        `/api/data/project-billings/imports/${importId}/cancel`,
       )
-    },
+    }
+
+  window.addEventListener(
+    'pagehide',
+    handlePageHide,
+  )
+
+  try {
+    for (
+      let offset = 0;
+      offset <
+        dataset.normalizedRows.length;
+      offset += chunkSize
+    ) {
+      const chunkIndex =
+        Math.floor(
+          offset / chunkSize,
+        )
+
+      const rows =
+        dataset.normalizedRows.slice(
+          offset,
+          offset + chunkSize,
+        )
+
+      await requestJson(
+        `/api/data/project-billings/imports/${importId}/chunks`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            chunkIndex,
+            rows,
+          }),
+        },
+      )
+    }
+
+    await requestJson(
+      `/api/data/project-billings/imports/${importId}/finalize`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          ignoredRows:
+            dataset.summary
+              .ignoredRows,
+        }),
+      },
+    )
+
+    importCompleted = true
+  } catch (error) {
+    try {
+      await requestJson(
+        `/api/data/project-billings/imports/${importId}/cancel`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            reason:
+              'Import cancelled after upload failure',
+          }),
+        },
+      )
+    } catch {
+      // Preserve the original import error.
+    }
+
+    throw error
+  } finally {
+    window.removeEventListener(
+      'pagehide',
+      handlePageHide,
+    )
+  }
+},
+
+async loadProjectBillingDataset():
+  Promise<PersistedProjectBillingDataset | null> {
+  const response =
+    await requestJson<{
+      ok: true
+      dataset: 'projectBillings'
+      data: {
+        normalizedRows:
+          PersistedProjectBillingDataset['normalizedRows']
+        ignoredRows: number
+        lastImportedFile: string | null
+        lastImportedAt: string | null
+      } | null
+    }>(
+      '/api/data/project-billings',
+      {
+        method: 'GET',
+      },
+    )
+
+  if (!response.data) {
+    return null
+  }
+
+  const {
+    buildProjectBillingBusinessModel,
+  } = await import(
+    '../importers/project-billings/projectBillingBusinessModel'
+  )
+
+  const model =
+    buildProjectBillingBusinessModel(
+      response.data.normalizedRows,
+      response.data.ignoredRows,
+    )
+
+  return {
+    normalizedRows:
+      model.lines,
+
+    summary:
+      model.summary,
+
+    lastImportedFile:
+      response.data.lastImportedFile ?? '',
+
+    lastImportedAt:
+      response.data.lastImportedAt ?? '',
+  }
+},
 
     async saveExchangeRateDataset(
       _dataset: PersistedExchangeRateDataset,

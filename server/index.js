@@ -13,6 +13,7 @@ import { createProductsRouter } from './routes/products.js'
 import { createPurchasesRouter } from './routes/purchases.js'
 import { createPurchaseRequestsRouter } from './routes/purchaseRequests.js'
 import { createProjectsRouter } from './routes/projects.js'
+import { createProjectBillingsRouter } from './routes/projectBillings.js'
 
 const app = express()
 
@@ -432,6 +433,12 @@ app.use(
   '/api/data/projects',
   requireAuth,
   createProjectsRouter(pool),
+)
+
+app.use(
+  '/api/data/project-billings',
+  requireAuth,
+  createProjectBillingsRouter(pool),
 )
 
 app.listen(
