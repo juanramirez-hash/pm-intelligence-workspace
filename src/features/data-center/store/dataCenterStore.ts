@@ -60,7 +60,6 @@ import type {
 } from '../importers/pricing/pricingTypes'
 import {
   buildProjectBusinessModel,
-  upsertProjectRows,
 } from '../importers/projects/projectBusinessModel'
 import {
   buildProjectBillingBusinessModel,
@@ -1057,54 +1056,80 @@ case 'purchases': {
             }
 
             case 'projects': {
-              const importedAt = new Date().toISOString()
-              const mergedRows = upsertProjectRows(
-                get().normalizedProjects,
-                result.normalizedRows,
-              )
-              const businessModel = buildProjectBusinessModel(
-                mergedRows,
-                result.ignoredRows,
-              )
+  const importedAt =
+    new Date().toISOString()
 
-              set({
-                projectsSummary: businessModel.summary,
-                normalizedProjects: businessModel.projects,
-                projectsLastImportedFile: metadata.fileName,
-                projectsLastImportedAt: importedAt,
-                importStatus: 'processing',
-                importErrors: [],
-                isPersisting: true,
-              })
+  const incomingBusinessModel =
+    buildProjectBusinessModel(
+      result.normalizedRows,
+      result.ignoredRows,
+    )
 
-              void indexedDbDataRepository
-                .saveProjectDataset({
-                  summary: businessModel.summary,
-                  normalizedRows: businessModel.projects,
-                  lastImportedFile: metadata.fileName,
-                  lastImportedAt: importedAt,
-                })
-                .then(() => {
-                  set({
-                    importStatus: 'completed',
-                    isPersisting: false,
-                    persistenceError: null,
-                  })
-                })
-                .catch((persistenceError) => {
-                  set({
-                    importStatus: 'error',
-                    isPersisting: false,
-                    persistenceError: getErrorMessage(
-                      persistenceError,
-                      'No fue posible guardar el repositorio de proyectos.',
-                    ),
-                  })
-                })
+  set({
+    importStatus: 'processing',
+    importErrors: [],
+    isPersisting: true,
+    persistenceError: null,
+  })
 
-              break
-            }
+  void apiDataRepository
+    .saveProjectDataset({
+      summary:
+        incomingBusinessModel.summary,
 
+      normalizedRows:
+        incomingBusinessModel.projects,
+
+      lastImportedFile:
+        metadata.fileName,
+
+      lastImportedAt:
+        importedAt,
+    })
+    .then(async () => {
+      const persistedProjects =
+        await apiDataRepository
+          .loadProjectDataset()
+
+      if (!persistedProjects) {
+        throw new Error(
+          'Los proyectos se guardaron, pero no fue posible recuperar el dataset desde PostgreSQL.',
+        )
+      }
+
+      set({
+        projectsSummary:
+          persistedProjects.summary,
+
+        normalizedProjects:
+          persistedProjects.normalizedRows,
+
+        projectsLastImportedFile:
+          persistedProjects.lastImportedFile,
+
+        projectsLastImportedAt:
+          persistedProjects.lastImportedAt,
+
+        importStatus: 'completed',
+        isPersisting: false,
+        persistenceError: null,
+      })
+    })
+    .catch((persistenceError) => {
+      set({
+        importStatus: 'error',
+        isPersisting: false,
+
+        persistenceError:
+          getErrorMessage(
+            persistenceError,
+            'No fue posible guardar el repositorio de proyectos.',
+          ),
+      })
+    })
+
+  break
+}
             case 'project-billing': {
               const importedAt = new Date().toISOString()
               const mergedRows = mergeProjectBillingRows(
@@ -1312,7 +1337,7 @@ case 'purchases': {
               apiDataRepository.loadInventoryDataset(),
               apiDataRepository.loadPurchaseOrderDataset(),
               apiDataRepository.loadPurchaseRequestDataset(),
-              indexedDbDataRepository.loadProjectDataset(),
+              apiDataRepository.loadProjectDataset(),
               indexedDbDataRepository.loadProjectBillingDataset(),
               indexedDbDataRepository.loadExchangeRateDataset(),
               indexedDbDataRepository.loadPricingDataset(),
