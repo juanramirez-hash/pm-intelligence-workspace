@@ -277,7 +277,7 @@ export function buildDatasetRegistry(
       periodEnd: input.pricingSummary.periodEnd,
       lastImportedFile: input.pricingLastImportedFile ?? null,
       lastImportedAt: input.pricingLastImportedAt ?? null,
-    })
+    }, 'postgresql')
   }
 
   return registry.sort(
