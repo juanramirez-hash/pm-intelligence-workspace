@@ -1032,8 +1032,6 @@ case 'purchases': {
               const importedAt = new Date().toISOString()
               const currentPricingRows = get().normalizedPricing
               const currentPricingSummary = get().pricingSummary
-              const pricingLastImportedFile = get().pricingLastImportedFile
-              const pricingLastImportedAt = get().pricingLastImportedAt
               const pricingBusinessModel = currentPricingRows.length > 0
                 ? buildPricingBusinessModel(
                     currentPricingRows,
@@ -1062,21 +1060,6 @@ case 'purchases': {
                   lastImportedAt: importedAt,
                 }),
               ]
-
-              if (
-                pricingBusinessModel &&
-                pricingLastImportedFile &&
-                pricingLastImportedAt
-              ) {
-                persistenceOperations.push(
-                  indexedDbDataRepository.savePricingDataset({
-                    summary: pricingBusinessModel.summary,
-                    normalizedRows: pricingBusinessModel.inputs,
-                    lastImportedFile: pricingLastImportedFile,
-                    lastImportedAt: pricingLastImportedAt,
-                  }),
-                )
-              }
 
               void Promise.all(persistenceOperations)
                 .then(() => {
@@ -1352,48 +1335,116 @@ case 'purchases': {
               break
             }
 
-            case 'pricing': {
-              const importedAt = new Date().toISOString()
-              const businessModel = buildPricingBusinessModel(
-                result.normalizedRows,
-                result.ignoredRows,
-                get().normalizedProductMaster,
-              )
+                        case 'pricing': {
+              const importedAt =
+                new Date().toISOString()
+
+              const businessModel =
+                buildPricingBusinessModel(
+                  result.normalizedRows,
+                  result.ignoredRows,
+                  get().normalizedProductMaster,
+                )
 
               set({
-                pricingSummary: businessModel.summary,
-                normalizedPricing: businessModel.inputs,
-                pricingLastImportedFile: metadata.fileName,
-                pricingLastImportedAt: importedAt,
-                importStatus: 'processing',
+                pricingSummary:
+                  businessModel.summary,
+
+                normalizedPricing:
+                  businessModel.inputs,
+
+                pricingLastImportedFile:
+                  metadata.fileName,
+
+                pricingLastImportedAt:
+                  importedAt,
+
+                importStatus:
+                  'processing',
+
                 importErrors: [],
-                isPersisting: true,
+
+                isPersisting:
+                  true,
+
+                persistenceError:
+                  null,
               })
 
-              void indexedDbDataRepository
+              void apiDataRepository
                 .savePricingDataset({
-                  summary: businessModel.summary,
-                  normalizedRows: businessModel.inputs,
-                  lastImportedFile: metadata.fileName,
-                  lastImportedAt: importedAt,
+                  summary:
+                    businessModel.summary,
+
+                  normalizedRows:
+                    businessModel.inputs,
+
+                  lastImportedFile:
+                    metadata.fileName,
+
+                  lastImportedAt:
+                    importedAt,
                 })
-                .then(() => {
-                  set({
-                    importStatus: 'completed',
-                    isPersisting: false,
-                    persistenceError: null,
-                  })
-                })
-                .catch((persistenceError) => {
-                  set({
-                    importStatus: 'error',
-                    isPersisting: false,
-                    persistenceError: getErrorMessage(
-                      persistenceError,
-                      'No fue posible guardar la fuente de Pricing.',
-                    ),
-                  })
-                })
+                .then(() =>
+                  apiDataRepository
+                    .loadPricingDataset(),
+                )
+                .then(
+                  (persistedPricing) => {
+                    if (!persistedPricing) {
+                      throw new Error(
+                        'Pricing se guardo, pero no fue posible recuperar el dataset desde PostgreSQL.',
+                      )
+                    }
+
+                    const persistedBusinessModel =
+                      buildPricingBusinessModel(
+                        persistedPricing.normalizedRows,
+                        persistedPricing.summary.ignoredRows,
+                        get().normalizedProductMaster,
+                      )
+
+                    set({
+                      pricingSummary:
+                        persistedBusinessModel.summary,
+
+                      normalizedPricing:
+                        persistedBusinessModel.inputs,
+
+                      pricingLastImportedFile:
+                        persistedPricing.lastImportedFile,
+
+                      pricingLastImportedAt:
+                        persistedPricing.lastImportedAt,
+
+                      importStatus:
+                        'completed',
+
+                      isPersisting:
+                        false,
+
+                      persistenceError:
+                        null,
+                    })
+                  },
+                )
+                .catch(
+                  (persistenceError) => {
+                    set({
+                      importStatus:
+                        'error',
+
+                      isPersisting:
+                        false,
+
+                      persistenceError:
+                        getErrorMessage(
+                          persistenceError,
+                          'No fue posible guardar la fuente de Pricing.',
+                        ),
+                    })
+                  },
+                )
 
               break
             }
@@ -1464,7 +1515,7 @@ case 'purchases': {
               apiDataRepository.loadProjectDataset(),
               apiDataRepository.loadProjectBillingDataset(),
               apiDataRepository.loadExchangeRateDataset(),
-              indexedDbDataRepository.loadPricingDataset(),
+              apiDataRepository.loadPricingDataset(),
             ])
 
             const hydratedPricing = persistedPricing

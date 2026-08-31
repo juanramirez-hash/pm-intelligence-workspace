@@ -15,6 +15,7 @@ import { createPurchaseRequestsRouter } from './routes/purchaseRequests.js'
 import { createProjectsRouter } from './routes/projects.js'
 import { createProjectBillingsRouter } from './routes/projectBillings.js'
 import { createExchangeRatesRouter } from './routes/exchangeRates.js'
+import { createPricingRouter } from './routes/pricing.js'
 
 const app = express()
 
@@ -446,6 +447,12 @@ app.use(
   '/api/data/exchange-rates',
   requireAuth,
   createExchangeRatesRouter(pool),
+)
+
+app.use(
+  '/api/data/pricing',
+  requireAuth,
+  createPricingRouter(pool),
 )
 
 app.listen(
