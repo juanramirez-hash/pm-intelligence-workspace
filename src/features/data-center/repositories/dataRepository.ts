@@ -40,6 +40,10 @@ import type {
   NormalizedPricingRow,
   PricingDatasetSummary,
 } from '../importers/pricing/pricingTypes'
+import type {
+  CustomerMasterDatasetSummary,
+  NormalizedCustomerMasterRow,
+} from '../importers/customers/customerMasterTypes'
 
 export interface PersistedSalesDataset {
   summary: SalesDatasetSummary
@@ -108,6 +112,13 @@ export interface PersistedExchangeRateDataset {
 export interface PersistedPricingDataset {
   summary: PricingDatasetSummary
   normalizedRows: NormalizedPricingRow[]
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
+export interface PersistedCustomerMasterDataset {
+  summary: CustomerMasterDatasetSummary
+  normalizedRows: NormalizedCustomerMasterRow[]
   lastImportedFile: string
   lastImportedAt: string
 }
@@ -182,6 +193,13 @@ export interface DataRepository {
 
   loadPricingDataset: () =>
     Promise<PersistedPricingDataset | null>
+
+    saveCustomerMasterDataset: (
+    dataset: PersistedCustomerMasterDataset,
+  ) => Promise<void>
+
+  loadCustomerMasterDataset: () =>
+    Promise<PersistedCustomerMasterDataset | null>
 
   clearAllData: () => Promise<void>
 }

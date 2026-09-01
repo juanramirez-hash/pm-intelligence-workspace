@@ -19,6 +19,10 @@ import type {
 } from '../../features/data-center/importers/products/productMasterTypes'
 
 import type {
+  NormalizedCustomerMasterRow,
+} from '../../features/data-center/importers/customers/customerMasterTypes'
+
+import type {
   NormalizedInventoryRow,
 } from '../../features/data-center/importers/inventory/inventoryTypes'
 
@@ -69,6 +73,7 @@ import {
 export interface BuildBusinessIntelligenceOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
   productMaster?: readonly NormalizedProductMasterRow[]
+  customerMaster?: readonly NormalizedCustomerMasterRow[]
   inventory?: readonly NormalizedInventoryRow[]
   purchaseOrders?: readonly NormalizedPurchaseOrderRow[]
   purchaseRequests?: readonly NormalizedPurchaseRequestRow[]
@@ -88,8 +93,12 @@ export function buildBusinessIntelligence(
       {
         brandTargets:
           options.brandTargets,
-        productMaster:
+                productMaster:
           options.productMaster,
+
+        customerMaster:
+          options.customerMaster,
+
         inventory:
           options.inventory,
         purchaseOrders:

@@ -58,6 +58,12 @@ import type {
   NormalizedPricingRow,
   PricingDatasetSummary,
 } from '../importers/pricing/pricingTypes'
+
+import type {
+  CustomerMasterDatasetSummary,
+  NormalizedCustomerMasterRow,
+} from '../importers/customers/customerMasterTypes'
+
 import {
   buildProjectBusinessModel,
 } from '../importers/projects/projectBusinessModel'
@@ -70,6 +76,10 @@ import {
 import {
   buildPricingBusinessModel,
 } from '../importers/pricing/pricingBusinessModel'
+
+import {
+  buildCustomerMasterBusinessModel,
+} from '../importers/customers/customerMasterBusinessModel'
 
 import {
   runDataCenterImport,
@@ -196,7 +206,17 @@ export interface DataCenterState {
 
   quotaSummary: unknown | null
 
-  customersSummary: unknown | null
+    customerMasterSummary:
+    CustomerMasterDatasetSummary | null
+
+  normalizedCustomerMaster:
+    NormalizedCustomerMasterRow[]
+
+  customerMasterLastImportedFile:
+    string | null
+
+  customerMasterLastImportedAt:
+    string | null
 
   isHydrating: boolean
 
@@ -317,9 +337,14 @@ export interface DataCenterState {
     rows: NormalizedPricingRow[],
   ) => void
 
-  setCustomersSummary: (
-    summary: unknown | null,
-  ) => void
+  setCustomerMasterSummary: (
+  summary:
+    CustomerMasterDatasetSummary | null,
+) => void
+
+setNormalizedCustomerMaster: (
+  rows: NormalizedCustomerMasterRow[],
+) => void
 
   executeImport: (
     rows: SpreadsheetRow[],
@@ -443,11 +468,19 @@ export const useDataCenterStore =
 
       pricingLastImportedAt: null,
 
-      forecastSummary: null,
+            forecastSummary: null,
 
       quotaSummary: null,
 
-      customersSummary: null,
+      customerMasterSummary: null,
+
+      normalizedCustomerMaster: [],
+
+      customerMasterLastImportedFile:
+        null,
+
+      customerMasterLastImportedAt:
+        null,
 
       isHydrating: false,
 
@@ -666,11 +699,20 @@ export const useDataCenterStore =
       setNormalizedPricing: (rows) =>
         set({ normalizedPricing: rows }),
 
-      setCustomersSummary: (
+            setCustomerMasterSummary: (
         summary,
       ) =>
         set({
-          customersSummary: summary,
+          customerMasterSummary:
+            summary,
+        }),
+
+      setNormalizedCustomerMaster: (
+        rows,
+      ) =>
+        set({
+          normalizedCustomerMaster:
+            rows,
         }),
 
       executeImport: (
@@ -1449,6 +1491,119 @@ case 'purchases': {
               break
             }
 
+                        case 'customers': {
+              const importedAt =
+                new Date().toISOString()
+
+              const businessModel =
+                buildCustomerMasterBusinessModel(
+                  result.normalizedRows,
+                  result.ignoredRows,
+                )
+
+              set({
+                customerMasterSummary:
+                  businessModel.summary,
+
+                normalizedCustomerMaster:
+                  businessModel.customers,
+
+                customerMasterLastImportedFile:
+                  metadata.fileName,
+
+                customerMasterLastImportedAt:
+                  importedAt,
+
+                importStatus:
+                  'processing',
+
+                importErrors: [],
+
+                isPersisting:
+                  true,
+
+                persistenceError:
+                  null,
+              })
+
+              void apiDataRepository
+                .saveCustomerMasterDataset({
+                  summary:
+                    businessModel.summary,
+
+                  normalizedRows:
+                    businessModel.customers,
+
+                  lastImportedFile:
+                    metadata.fileName,
+
+                  lastImportedAt:
+                    importedAt,
+                })
+                .then(() =>
+                  apiDataRepository
+                    .loadCustomerMasterDataset(),
+                )
+                .then(
+                  (persistedCustomers) => {
+                    if (!persistedCustomers) {
+                      throw new Error(
+                        'Customer Master se guardo, pero no fue posible recuperar el dataset desde PostgreSQL.',
+                      )
+                    }
+
+                    const persistedBusinessModel =
+                      buildCustomerMasterBusinessModel(
+                        persistedCustomers.normalizedRows,
+                        persistedCustomers.summary.ignoredRows,
+                      )
+
+                    set({
+                      customerMasterSummary:
+                        persistedBusinessModel.summary,
+
+                      normalizedCustomerMaster:
+                        persistedBusinessModel.customers,
+
+                      customerMasterLastImportedFile:
+                        persistedCustomers.lastImportedFile,
+
+                      customerMasterLastImportedAt:
+                        persistedCustomers.lastImportedAt,
+
+                      importStatus:
+                        'completed',
+
+                      isPersisting:
+                        false,
+
+                      persistenceError:
+                        null,
+                    })
+                  },
+                )
+                .catch(
+                  (persistenceError) => {
+                    set({
+                      importStatus:
+                        'error',
+
+                      isPersisting:
+                        false,
+
+                      persistenceError:
+                        getErrorMessage(
+                          persistenceError,
+                          'No fue posible guardar el Customer Master.',
+                        ),
+                    })
+                  },
+                )
+
+              break
+            }
+
+
             default:
               throw new Error(
                 'No existe un destino de almacenamiento para el reporte detectado.',
@@ -1505,6 +1660,7 @@ case 'purchases': {
               persistedProjectBillings,
               persistedExchangeRates,
               persistedPricing,
+              persistedCustomers,
             ] = await Promise.all([
               apiDataRepository.loadSalesDataset(),
               apiDataRepository.loadTargetDataset(),
@@ -1516,6 +1672,7 @@ case 'purchases': {
               apiDataRepository.loadProjectBillingDataset(),
               apiDataRepository.loadExchangeRateDataset(),
               apiDataRepository.loadPricingDataset(),
+              apiDataRepository.loadCustomerMasterDataset(),
             ])
 
             const hydratedPricing = persistedPricing
@@ -1527,7 +1684,9 @@ case 'purchases': {
               : null
 
             set({
-              activeReportType: persistedPricing
+              activeReportType: persistedCustomers
+              ? 'customers'
+              : persistedPricing
                 ? 'pricing'
                 : persistedExchangeRates
                   ? 'exchange-rates'
@@ -1559,7 +1718,8 @@ case 'purchases': {
                 persistedProjects ||
                 persistedProjectBillings ||
                 persistedExchangeRates ||
-                persistedPricing
+                persistedPricing ||
+                persistedCustomers
                   ? 'completed'
                   : 'idle',
               fileMetadata: null,
@@ -1611,10 +1771,30 @@ case 'purchases': {
               normalizedExchangeRates: persistedExchangeRates?.normalizedRows ?? [],
               exchangeRateLastImportedFile: persistedExchangeRates?.lastImportedFile ?? null,
               exchangeRateLastImportedAt: persistedExchangeRates?.lastImportedAt ?? null,
-              pricingSummary: hydratedPricing?.summary ?? null,
-              normalizedPricing: hydratedPricing?.inputs ?? [],
-              pricingLastImportedFile: persistedPricing?.lastImportedFile ?? null,
-              pricingLastImportedAt: persistedPricing?.lastImportedAt ?? null,
+              pricingSummary:
+                hydratedPricing?.summary ?? null,
+
+              normalizedPricing:
+                hydratedPricing?.inputs ?? [],
+
+              pricingLastImportedFile:
+                persistedPricing?.lastImportedFile ?? null,
+
+              pricingLastImportedAt:
+                persistedPricing?.lastImportedAt ?? null,
+
+              customerMasterSummary:
+                persistedCustomers?.summary ?? null,
+
+              normalizedCustomerMaster:
+                persistedCustomers?.normalizedRows ?? [],
+
+              customerMasterLastImportedFile:
+                persistedCustomers?.lastImportedFile ?? null,
+
+              customerMasterLastImportedAt:
+                persistedCustomers?.lastImportedAt ?? null,
+
               isHydrating: false,
               isHydrated: true,
               persistenceError: null,
@@ -1803,7 +1983,16 @@ case 'purchases': {
 
               pricingLastImportedAt: null,
 
-              customersSummary:
+                            customerMasterSummary:
+                null,
+
+              normalizedCustomerMaster:
+                [],
+
+              customerMasterLastImportedFile:
+                null,
+
+              customerMasterLastImportedAt:
                 null,
 
               isPersisting: false,

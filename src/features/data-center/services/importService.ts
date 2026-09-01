@@ -17,6 +17,16 @@ import type {
   NormalizedProductMasterRow,
   ProductMasterDatasetSummary,
 } from '../importers/products/productMasterTypes'
+
+import type {
+  NormalizedCustomerMasterRow,
+  CustomerMasterDatasetSummary,
+} from '../importers/customers/customerMasterTypes'
+
+import type {
+  CustomerMasterBusinessModel,
+} from '../importers/customers/customerMasterBusinessModel'
+
 import type {
   NormalizedInventoryRow,
   InventoryDatasetSummary,
@@ -60,6 +70,7 @@ import type {
 import { salesImportPlugin } from '../importers/sales/salesPlugin'
 import { targetImportPlugin } from '../importers/targets/targetPlugin'
 import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
+import { customerMasterImportPlugin } from '../importers/customers/customerMasterPlugin'
 import { inventoryImportPlugin } from '../importers/inventory/inventoryPlugin'
 
 import {
@@ -95,6 +106,12 @@ export type ProductMasterImportResult = ImportEngineResult<
   NormalizedProductMasterRow,
   ProductMasterBusinessModel
 > & { reportType: 'products' }
+
+export type CustomerMasterImportResult = ImportEngineResult<
+  CustomerMasterDatasetSummary,
+  NormalizedCustomerMasterRow,
+  CustomerMasterBusinessModel
+> & { reportType: 'customers' }
 
 export type InventoryImportResult = ImportEngineResult<
   InventoryDatasetSummary,
@@ -144,6 +161,7 @@ export type DataCenterImportResult =
   | SalesImportResult
   | TargetImportResult
   | ProductMasterImportResult
+  | CustomerMasterImportResult
   | InventoryImportResult
   | PurchaseOrderImportResult
   | PurchaseRequestImportResult
@@ -263,6 +281,13 @@ export function runDataCenterImport(
         rows,
         headers,
       ) as ProductMasterImportResult
+
+    case 'customers':
+      return runImportEngine(
+        customerMasterImportPlugin,
+        rows,
+        headers,
+      ) as CustomerMasterImportResult
 
     case 'inventory':
       return runImportEngine(

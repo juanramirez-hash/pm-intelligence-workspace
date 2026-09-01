@@ -90,6 +90,7 @@ const destinationOptions:
     'project-billing',
     'exchange-rates',
     'pricing',
+    'customers',
   ]
 
 function getFileExtension(

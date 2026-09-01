@@ -74,7 +74,7 @@ describe('PL-002 Dataset Registry integration', () => {
       ),
     ).toMatchObject({
       status: 'active',
-      storage: 'indexeddb',
+      storage: 'postgresql',
       totalRows: 15,
       ignoredRows: 0,
       lastImportedFile:
@@ -117,7 +117,7 @@ describe('PL-002 Dataset Registry integration', () => {
       ),
     ).toMatchObject({
       status: 'active',
-      storage: 'indexeddb',
+      storage: 'postgresql',
       totalRows: 7064,
       ignoredRows: 7,
       periodStart: '2025-02-13',
@@ -162,7 +162,7 @@ describe('PL-002 Dataset Registry integration', () => {
       ),
     ).toMatchObject({
       status: 'active',
-      storage: 'indexeddb',
+      storage: 'postgresql',
       totalRows: 814,
       ignoredRows: 0,
       periodStart: '2026-01-01',
@@ -174,4 +174,77 @@ describe('PL-002 Dataset Registry integration', () => {
       version: 1,
     })
   })
+
+    it(
+    'publica Customer Master como dataset activo y persistido',
+    () => {
+      const registry =
+        buildDatasetRegistry({
+          ...emptyInput(),
+
+          customerMasterSummary: {
+            totalCustomers: 13979,
+
+            duplicateCustomers: 200,
+
+            customersWithSalesRep: 12000,
+
+            customersWithKam: 5000,
+
+            customersWithEmail: 9000,
+
+            customersWithPhone: 10000,
+
+            inactiveCustomers: 1500,
+
+            uniqueCategories: 12,
+
+            uniqueLocations: 8,
+
+            uniqueSalesReps: 45,
+
+            uniquePriceLevels: 10,
+
+            processedRows: 13979,
+
+            ignoredRows: 0,
+          },
+
+          customerMasterLastImportedFile:
+            'OFICarteradeClientes.xls',
+
+          customerMasterLastImportedAt:
+            '2026-09-01T20:00:00.000Z',
+        })
+
+      expect(
+        registry.find(
+          (dataset) =>
+            dataset.type ===
+            'customers',
+        ),
+      ).toMatchObject({
+        status: 'active',
+
+        storage: 'postgresql',
+
+        totalRows: 13979,
+
+        ignoredRows: 0,
+
+        periodStart: null,
+
+        periodEnd: null,
+
+        lastImportedFile:
+          'OFICarteradeClientes.xls',
+
+        lastImportedAt:
+          '2026-09-01T20:00:00.000Z',
+
+        version: 1,
+      })
+    },
+  )
+
 })

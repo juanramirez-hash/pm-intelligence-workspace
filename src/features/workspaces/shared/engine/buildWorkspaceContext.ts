@@ -70,6 +70,10 @@ type WorkspaceContextState =
       | 'normalizedPricing'
       | 'pricingLastImportedAt'
       | 'pricingLastImportedFile'
+      | 'customerMasterSummary'
+      | 'normalizedCustomerMaster'
+      | 'customerMasterLastImportedAt'
+      | 'customerMasterLastImportedFile'
     >
   >
 
@@ -159,10 +163,19 @@ export function buildWorkspaceContext(
         state.pricingLastImportedAt ?? null,
       pricingLastImportedFile:
         state.pricingLastImportedFile ?? null,
+      customerMasterSummary:
+        state.customerMasterSummary ?? null,
+
+      customerMasterLastImportedAt:
+        state.customerMasterLastImportedAt ?? null,
+
+      customerMasterLastImportedFile:
+        state.customerMasterLastImportedFile ?? null,
     })
 
   const hasBusinessData =
     state.normalizedSales.length > 0 ||
+    (state.normalizedCustomerMaster?.length ?? 0) > 0 ||
     (state.normalizedPurchaseOrders?.length ?? 0) > 0 ||
     (state.normalizedPurchaseRequests?.length ?? 0) > 0 ||
     (state.normalizedProjects?.length ?? 0) > 0 ||
@@ -179,6 +192,8 @@ export function buildWorkspaceContext(
               state.normalizedTargets,
             productMaster:
               state.normalizedProductMaster,
+            customerMaster:
+              state.normalizedCustomerMaster ?? [],
             inventory:
               state.normalizedInventory,
             purchaseOrders:

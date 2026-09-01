@@ -7,6 +7,10 @@ import type {
 } from '../../../features/data-center/importers/products/productMasterTypes'
 
 import type {
+  NormalizedCustomerMasterRow,
+} from '../../../features/data-center/importers/customers/customerMasterTypes'
+
+import type {
   NormalizedInventoryRow,
 } from '../../../features/data-center/importers/inventory/inventoryTypes'
 
@@ -351,6 +355,9 @@ function createBusinessCustomer(
       customerName ??
       `Cliente ${customerId}`,
 
+      identitySource:
+      'sales_fallback',
+
     firstPurchase:
       rowDate,
 
@@ -360,6 +367,137 @@ function createBusinessCustomer(
     revenue: 0,
     grossProfit: 0,
     quantity: 0,
+    documents: 0,
+
+    brands:
+      new Set<string>(),
+
+    products:
+      new Set<string>(),
+
+    locations:
+      new Set<string>(),
+
+    activePeriods:
+      new Set<string>(),
+  }
+}
+
+function createBusinessCustomerFromMaster(
+  source: NormalizedCustomerMasterRow,
+): BusinessCustomer {
+  return {
+    id:
+      source.customerId,
+
+    name:
+      source.name,
+
+    erpInternalId:
+      source.internalId,
+
+    isDuplicate:
+      source.isDuplicate,
+
+    primaryContact:
+      source.primaryContact,
+
+    category:
+      source.category,
+
+    salesRep:
+      source.salesRep,
+
+    salesRepLocation:
+      source.salesRepLocation,
+
+    assignedKam:
+      source.assignedKam,
+
+    lastSaleDate:
+      source.lastSaleDate,
+
+    inactiveDate:
+      source.inactiveDate,
+
+    phone:
+      source.phone,
+
+    email:
+      source.email,
+
+    location:
+      source.location,
+
+    hasPhysicalLocation:
+      source.hasPhysicalLocation,
+
+    department:
+      source.department,
+
+    specialtyBrands:
+      source.specialtyBrands,
+
+    previousSalesRep:
+      source.previousSalesRep,
+
+    customerRegistrationForm:
+      source.customerRegistrationForm,
+
+    priceLevel:
+      source.priceLevel,
+
+    whatsapp:
+      source.whatsapp,
+
+    serviceSegment:
+      source.serviceSegment,
+
+    taxId:
+      source.taxId,
+
+    catalogDelivered:
+      source.catalogDelivered,
+
+    registrationDate:
+      source.registrationDate,
+
+    portalAccessBlocked:
+      source.portalAccessBlocked,
+
+    contactLetter:
+      source.contactLetter,
+
+    billingVersion:
+      source.billingVersion,
+
+    salesClassification:
+      source.salesClassification,
+
+    frequencyClassification:
+      source.frequencyClassification,
+
+    purchaseAmountClassification:
+      source.purchaseAmountClassification,
+
+    permanentFreeLocalShipping:
+      source.permanentFreeLocalShipping,
+
+    identitySource:
+      'customer_master',
+
+    firstPurchase:
+      null,
+
+    lastPurchase:
+      null,
+
+    revenue: 0,
+
+    grossProfit: 0,
+
+    quantity: 0,
+
     documents: 0,
 
     brands:
@@ -725,6 +863,7 @@ function updateModelPeriodRange(
 export interface BuildBusinessDataModelOptions {
   brandTargets?: readonly BusinessBrandTargetInput[]
   productMaster?: readonly NormalizedProductMasterRow[]
+  customerMaster?: readonly NormalizedCustomerMasterRow[]
   inventory?: readonly NormalizedInventoryRow[]
 
   purchaseOrders?:
@@ -902,6 +1041,32 @@ export function buildBusinessDataModel(
     processedRows: 0,
     ignoredRows: 0,
   }
+
+  const customerMaster =
+    options.customerMaster ?? []
+
+  for (const source of customerMaster) {
+    if (
+      !source.customerId ||
+      !source.name
+    ) {
+      continue
+    }
+
+    if (
+      !model.customers.has(
+        source.customerId,
+      )
+    ) {
+      model.customers.set(
+        source.customerId,
+        createBusinessCustomerFromMaster(
+          source,
+        ),
+      )
+    }
+  }
+
 
   const productMaster =
     options.productMaster ?? []
@@ -1385,7 +1550,11 @@ export function buildBusinessDataModel(
         )
       }
 
-      if (customerName) {
+      if (
+        customerName &&
+        customer.identitySource !==
+          'customer_master'
+      ) {
         customer.name =
           customerName
       }

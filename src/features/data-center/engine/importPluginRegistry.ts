@@ -3,6 +3,7 @@ import type { DetectableImportPlugin } from './importPlugin'
 import { salesImportPlugin } from '../importers/sales/salesPlugin'
 import { targetImportPlugin } from '../importers/targets/targetPlugin'
 import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
+import { customerMasterImportPlugin } from '../importers/customers/customerMasterPlugin'
 import { pricingImportPlugin } from '../importers/pricing/pricingPlugin'
 import { inventoryImportPlugin } from '../importers/inventory/inventoryPlugin'
 import { purchaseOrderImportPlugin } from '../importers/purchases/purchaseOrderPlugin'
@@ -19,6 +20,7 @@ export const importPluginRegistry = [
   purchaseRequestImportPlugin,
   pricingImportPlugin,
   productMasterImportPlugin,
+  customerMasterImportPlugin,
   projectBillingImportPlugin,
   projectImportPlugin,
   exchangeRateImportPlugin,

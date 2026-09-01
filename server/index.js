@@ -16,6 +16,7 @@ import { createProjectsRouter } from './routes/projects.js'
 import { createProjectBillingsRouter } from './routes/projectBillings.js'
 import { createExchangeRatesRouter } from './routes/exchangeRates.js'
 import { createPricingRouter } from './routes/pricing.js'
+import { createCustomersRouter } from './routes/customers.js'
 
 const app = express()
 
@@ -453,6 +454,12 @@ app.use(
   '/api/data/pricing',
   requireAuth,
   createPricingRouter(pool),
+)
+
+app.use(
+  '/api/data/customers',
+  requireAuth,
+  createCustomersRouter(pool),
 )
 
 app.listen(

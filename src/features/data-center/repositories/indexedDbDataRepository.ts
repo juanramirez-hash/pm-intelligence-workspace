@@ -1,5 +1,6 @@
 import type {
   DataRepository,
+  PersistedCustomerMasterDataset,
   PersistedExchangeRateDataset,
   PersistedInventoryDataset,
   PersistedProductMasterDataset,
@@ -647,6 +648,20 @@ export const indexedDbDataRepository:
       lastImportedAt: metadata.lastImportedAt,
     }
   },
+
+    async saveCustomerMasterDataset(
+    _dataset: PersistedCustomerMasterDataset,
+  ): Promise<void> {
+    throw new Error(
+      'Customer Master is persisted exclusively in PostgreSQL.',
+    )
+  },
+
+  async loadCustomerMasterDataset():
+    Promise<PersistedCustomerMasterDataset | null> {
+    return null
+  },
+
 
    async clearAllData() {
     const database =

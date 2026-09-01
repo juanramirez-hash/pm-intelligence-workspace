@@ -35,6 +35,10 @@ import type {
   PricingDatasetSummary,
 } from '../../features/data-center/importers/pricing/pricingTypes'
 
+import type {
+  CustomerMasterDatasetSummary,
+} from '../../features/data-center/importers/customers/customerMasterTypes'
+
 import {
   DATASET_DEFINITIONS,
 } from '../datasets/datasetDefinitions'
@@ -85,6 +89,15 @@ export interface BuildDatasetRegistryInput {
   pricingSummary?: PricingDatasetSummary | null
   pricingLastImportedFile?: string | null
   pricingLastImportedAt?: string | null
+
+    customerMasterSummary?:
+    CustomerMasterDatasetSummary | null
+
+  customerMasterLastImportedFile?:
+    string | null
+
+  customerMasterLastImportedAt?:
+    string | null
 }
 
 function createEmptyRegistryItem(
@@ -278,6 +291,31 @@ export function buildDatasetRegistry(
       lastImportedFile: input.pricingLastImportedFile ?? null,
       lastImportedAt: input.pricingLastImportedAt ?? null,
     }, 'postgresql')
+  }
+
+    if (input.customerMasterSummary) {
+    activateDataset(
+      registry,
+      'customers',
+      {
+        totalRows:
+          input.customerMasterSummary.processedRows,
+
+        ignoredRows:
+          input.customerMasterSummary.ignoredRows,
+
+        periodStart: null,
+
+        periodEnd: null,
+
+        lastImportedFile:
+          input.customerMasterLastImportedFile ?? null,
+
+        lastImportedAt:
+          input.customerMasterLastImportedAt ?? null,
+      },
+      'postgresql',
+    )
   }
 
   return registry.sort(

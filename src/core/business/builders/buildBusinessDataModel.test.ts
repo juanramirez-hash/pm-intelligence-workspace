@@ -481,5 +481,339 @@ describe(
         ).toBe('2026-02-12')
       },
     )
+
+        it(
+      'preserva la identidad del Customer Master y deriva las metricas desde Sales',
+      () => {
+        const model =
+          buildBusinessDataModel(
+            createTestRows(),
+            {
+              customerMaster: [
+                {
+                  internalId:
+                    'ERP-100001',
+
+                  customerId:
+                    '100001',
+
+                  name:
+                    'Nombre Canonico ERP',
+
+                  isDuplicate:
+                    false,
+
+                  primaryContact:
+                    'Contacto Principal',
+
+                  category:
+                    'INTEGRADOR',
+
+                  salesRep:
+                    'Ejecutivo Master',
+
+                  salesRepLocation:
+                    'CDMX',
+
+                  assignedKam:
+                    'KAM Uno',
+
+                  lastSaleDate:
+                    '2026-02-12',
+
+                  inactiveDate:
+                    null,
+
+                  phone:
+                    '5555555555',
+
+                  email:
+                    'cliente@example.com',
+
+                  location:
+                    'CDMX',
+
+                  hasPhysicalLocation:
+                    true,
+
+                  department:
+                    'Ventas',
+
+                  specialtyBrands:
+                    'UNV',
+
+                  previousSalesRep:
+                    null,
+
+                  customerRegistrationForm:
+                    null,
+
+                  priceLevel:
+                    'L 24%',
+
+                  whatsapp:
+                    '5555555555',
+
+                  serviceSegment:
+                    'Corporativo',
+
+                  taxId:
+                    'ABC123456XYZ',
+
+                  catalogDelivered:
+                    true,
+
+                  registrationDate:
+                    '2020-01-15',
+
+                  portalAccessBlocked:
+                    false,
+
+                  contactLetter:
+                    null,
+
+                  billingVersion:
+                    '4.0',
+
+                  salesClassification:
+                    'A',
+
+                  frequencyClassification:
+                    'B',
+
+                  purchaseAmountClassification:
+                    'H',
+
+                  permanentFreeLocalShipping:
+                    false,
+                },
+
+                {
+                  internalId:
+                    'ERP-999999',
+
+                  customerId:
+                    '999999',
+
+                  name:
+                    'Cliente Sin Ventas',
+
+                  isDuplicate:
+                    false,
+
+                  primaryContact:
+                    null,
+
+                  category:
+                    'PROSPECTO',
+
+                  salesRep:
+                    'Ejecutivo Master',
+
+                  salesRepLocation:
+                    'QRO',
+
+                  assignedKam:
+                    null,
+
+                  lastSaleDate:
+                    null,
+
+                  inactiveDate:
+                    null,
+
+                  phone:
+                    null,
+
+                  email:
+                    null,
+
+                  location:
+                    'QRO',
+
+                  hasPhysicalLocation:
+                    false,
+
+                  department:
+                    null,
+
+                  specialtyBrands:
+                    null,
+
+                  previousSalesRep:
+                    null,
+
+                  customerRegistrationForm:
+                    null,
+
+                  priceLevel:
+                    'L 30%',
+
+                  whatsapp:
+                    null,
+
+                  serviceSegment:
+                    null,
+
+                  taxId:
+                    null,
+
+                  catalogDelivered:
+                    false,
+
+                  registrationDate:
+                    '2026-01-01',
+
+                  portalAccessBlocked:
+                    false,
+
+                  contactLetter:
+                    null,
+
+                  billingVersion:
+                    null,
+
+                  salesClassification:
+                    null,
+
+                  frequencyClassification:
+                    null,
+
+                  purchaseAmountClassification:
+                    null,
+
+                  permanentFreeLocalShipping:
+                    false,
+                },
+              ],
+            },
+          )
+
+        const customerWithSales =
+          model.customers.get(
+            '100001',
+          )
+
+        expect(
+          customerWithSales,
+        ).toBeDefined()
+
+        expect(
+          customerWithSales?.name,
+        ).toBe(
+          'Nombre Canonico ERP',
+        )
+
+        expect(
+          customerWithSales
+            ?.identitySource,
+        ).toBe(
+          'customer_master',
+        )
+
+        expect(
+          customerWithSales
+            ?.erpInternalId,
+        ).toBe(
+          'ERP-100001',
+        )
+
+        expect(
+          customerWithSales
+            ?.salesRep,
+        ).toBe(
+          'Ejecutivo Master',
+        )
+
+        expect(
+          customerWithSales
+            ?.revenue,
+        ).toBe(350)
+
+        expect(
+          customerWithSales
+            ?.grossProfit,
+        ).toBe(105)
+
+        expect(
+          customerWithSales
+            ?.quantity,
+        ).toBe(4)
+
+        expect(
+          customerWithSales
+            ?.documents,
+        ).toBe(2)
+
+        expect(
+          customerWithSales
+            ?.firstPurchase,
+        ).toBe(
+          '2026-01-05',
+        )
+
+        expect(
+          customerWithSales
+            ?.lastPurchase,
+        ).toBe(
+          '2026-02-12',
+        )
+
+        const customerWithoutSales =
+          model.customers.get(
+            '999999',
+          )
+
+        expect(
+          customerWithoutSales,
+        ).toBeDefined()
+
+        expect(
+          customerWithoutSales
+            ?.identitySource,
+        ).toBe(
+          'customer_master',
+        )
+
+        expect(
+          customerWithoutSales
+            ?.revenue,
+        ).toBe(0)
+
+        expect(
+          customerWithoutSales
+            ?.grossProfit,
+        ).toBe(0)
+
+        expect(
+          customerWithoutSales
+            ?.quantity,
+        ).toBe(0)
+
+        expect(
+          customerWithoutSales
+            ?.documents,
+        ).toBe(0)
+
+        expect(
+          customerWithoutSales
+            ?.firstPurchase,
+        ).toBeNull()
+
+        expect(
+          customerWithoutSales
+            ?.lastPurchase,
+        ).toBeNull()
+
+        expect(
+          model.customers.get(
+            '100002',
+          )?.identitySource,
+        ).toBe(
+          'sales_fallback',
+        )
+      },
+    )
+
   },
 )
