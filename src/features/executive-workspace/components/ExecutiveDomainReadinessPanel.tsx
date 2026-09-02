@@ -104,7 +104,6 @@ const DATASET_LABELS:
   projects: 'Proyectos',
   projectBillings: 'Facturación',
   exchangeRates: 'Tipo de cambio',
-  businessCalendar: 'Calendario',
   pricing: 'Pricing',
   purchases: 'Órdenes de compra',
   purchaseRequests: 'Solicitudes de compra',

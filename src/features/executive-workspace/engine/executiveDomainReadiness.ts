@@ -65,7 +65,6 @@ const DOMAIN_DEFINITIONS:
       'exchangeRates',
       'inventory',
       'products',
-      'businessCalendar',
     ],
   },
   {

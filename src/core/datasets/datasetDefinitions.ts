@@ -93,14 +93,7 @@ export const DATASET_DEFINITIONS:
     updateFrequency: 'Semanal',
     displayOrder: 11,
   },
-  {
-    type: 'businessCalendar',
-    label: 'Calendario laboral',
-    description:
-      'Días laborales utilizados para avance diario y proyecciones mensuales.',
-    updateFrequency: 'Anual',
-    displayOrder: 12,
-  },
+
 ]
 
 export function getDatasetDefinition(

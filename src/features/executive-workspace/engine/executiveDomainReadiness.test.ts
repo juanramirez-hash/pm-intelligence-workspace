@@ -39,11 +39,9 @@ function dataset(
       ? lastImportedAt
       : null,
     version: 1,
-    updateFrequency: type === 'businessCalendar'
-      ? 'Anual'
-      : type === 'exchangeRates'
-        ? 'Mensual'
-        : 'Semanal',
+    updateFrequency: type === 'exchangeRates'
+      ? 'Mensual'
+      : 'Semanal',
     displayOrder: 1,
   }
 }
@@ -60,7 +58,6 @@ const allRequiredTypes:
   'purchaseRequests',
   'pricing',
   'products',
-  'businessCalendar',
 ]
 
 describe('EW-001 Executive domain readiness', () => {
@@ -172,9 +169,9 @@ describe('EW-001 Executive domain readiness', () => {
     const health =
       buildExecutiveDomainHealth(
         {
-          readyDatasets: 11,
-          totalDatasets: 12,
-          coveragePercentage: 92,
+          readyDatasets: 10,
+          totalDatasets: 11,
+          coveragePercentage: 91,
           systemReady: true,
           importStatus: 'completed',
           lastImportedAt:

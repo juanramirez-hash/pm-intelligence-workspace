@@ -1,5 +1,4 @@
 import {
-  CalendarDays,
   Crosshair,
   Database,
   DollarSign,
@@ -82,8 +81,7 @@ const DATASET_ICONS: Record<
   products:
     Package,
 
-  businessCalendar:
-    CalendarDays,
+
 }
 
 function mapDatasetStatus(

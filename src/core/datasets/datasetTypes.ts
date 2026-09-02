@@ -10,7 +10,6 @@ export type DatasetType =
   | 'pricing'
   | 'customers'
   | 'products'
-  | 'businessCalendar'
 
 export type DatasetStatus =
   | 'active'
