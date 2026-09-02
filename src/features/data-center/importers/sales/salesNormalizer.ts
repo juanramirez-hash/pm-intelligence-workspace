@@ -117,44 +117,41 @@ function extractCustomerId(
   explicitCustomerId: unknown,
   customerNameValue: unknown,
 ): string | null {
-  const parsedExplicitId = parseIdentifier(
-    explicitCustomerId,
-  )
+  const customerName =
+    parseString(customerNameValue)
+
+  if (customerName) {
+    const customerIds = [
+      ...customerName.matchAll(
+        /(?:^|:)\s*(\d{6})(?:\s|$)/g,
+      ),
+    ]
+
+    const buyingCustomerId =
+      customerIds.at(-1)?.[1]
+
+    if (buyingCustomerId) {
+      return buyingCustomerId
+    }
+  }
+
+  const parsedExplicitId =
+    parseIdentifier(
+      explicitCustomerId,
+    )
 
   if (parsedExplicitId) {
     return parsedExplicitId
   }
 
-  const customerName =
-    parseString(customerNameValue)
-
   if (!customerName) {
     return null
   }
 
-  /*
-   * El reporte de Tecnosinergia contiene el ID y el nombre
-   * en una sola columna:
-   *
-   * 039010 BICOMER COMERCIO...
-   *
-   * Se toma el identificador inicial de seis dígitos.
-   */
-  const customerIdMatch =
-    customerName.match(/^\s*(\d{6})(?:\s|$)/)
-
-  if (customerIdMatch?.[1]) {
-    return customerIdMatch[1]
-  }
-
-  /*
-   * Respaldo para formatos que no contienen un ID separado.
-   * Permite contar al cliente por su nombre sin perder la fila.
-   */
-  return parseIdentifier(customerName)
+  return parseIdentifier(
+    customerName,
+  )
 }
-
-
 
 function getProductStatusSourceValue(
   row: RawSalesRow,
