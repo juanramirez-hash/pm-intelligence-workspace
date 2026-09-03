@@ -6,6 +6,10 @@ import type {
   BrandTrendStatus,
 } from '../../../core/analytics/brands'
 
+import {
+  resolveEquivalentWorkingDayCutoff,
+} from '../../../core/analytics/shared/dateAnalytics'
+
 import type {
   BusinessBrand,
 } from '../../../core/business/entities/brand'
@@ -85,8 +89,8 @@ interface AggregatedActivity {
 
 interface AggregatedBrandActivity
   extends AggregatedActivity {
-  customers: Set<string>
-  products: Set<string>
+  customerCount: number
+  productCount: number
 }
 
 interface EntityClassification {
@@ -244,6 +248,9 @@ function buildEmptySelection(
     currentPeriodIds: [],
     comparisonPeriodIds: [],
     priorYearPeriodIds: [],
+    currentCutoff: null,
+    comparisonCutoff: null,
+    priorYearCutoff: null,
     currentLabel: 'Sin periodo disponible',
     comparisonLabel: 'Sin comparación disponible',
     priorYearLabel: 'Sin comparación anual disponible',
@@ -409,7 +416,72 @@ export function buildExecutivePeriodSelection(
         ],
       ),
     )
+const currentEndPeriodId =
+  currentPeriodIds.at(-1) ?? null
 
+const currentPeriod =
+  currentEndPeriodId
+    ? repository.revenue.findById(
+        currentEndPeriodId,
+      )
+    : undefined
+
+const dataPeriodEnd =
+  repository.getDataPeriodEnd()
+
+const currentCutoff =
+  preset === 'month' &&
+  currentPeriod &&
+  dataPeriodEnd?.startsWith(
+    `${currentPeriod.id}-`,
+  ) &&
+  dataPeriodEnd < currentPeriod.periodEnd
+    ? dataPeriodEnd
+    : null
+
+const comparisonEndPeriodId =
+  comparisonPeriodIds.at(-1) ?? null
+
+const comparisonPeriod =
+  comparisonEndPeriodId
+    ? repository.revenue.findById(
+        comparisonEndPeriodId,
+      )
+    : undefined
+
+const comparisonCutoff =
+  currentCutoff &&
+  currentPeriod &&
+  comparisonPeriod
+    ? resolveEquivalentWorkingDayCutoff(
+        currentPeriod.id,
+        currentCutoff,
+        comparisonPeriod.id,
+        comparisonPeriod.periodEnd,
+      )
+    : null
+
+const priorYearEndPeriodId =
+  priorYearPeriodIds.at(-1) ?? null
+
+const priorYearPeriod =
+  priorYearEndPeriodId
+    ? repository.revenue.findById(
+        priorYearEndPeriodId,
+      )
+    : undefined
+
+const priorYearCutoff =
+  currentCutoff &&
+  currentPeriod &&
+  priorYearPeriod
+    ? resolveEquivalentWorkingDayCutoff(
+        currentPeriod.id,
+        currentCutoff,
+        priorYearPeriod.id,
+        priorYearPeriod.periodEnd,
+      )
+    : null
   return {
     preset,
     presetLabel: PRESET_LABELS[preset],
@@ -418,6 +490,9 @@ export function buildExecutivePeriodSelection(
     currentPeriodIds,
     comparisonPeriodIds,
     priorYearPeriodIds,
+    currentCutoff,
+    comparisonCutoff,
+    priorYearCutoff,
     currentLabel:
       formatPeriodRange(
         currentPeriodIds,
@@ -503,6 +578,10 @@ function classifyEntity(
   timeline: readonly PeriodActivity[],
   selection: ExecutivePeriodSelection,
   attentionDeclineThreshold: number,
+  activityOverride?: {
+    current: AggregatedActivity
+    comparison: AggregatedActivity
+  },
 ): EntityClassification | null {
   const currentIds =
     new Set(selection.currentPeriodIds)
@@ -511,22 +590,24 @@ function classifyEntity(
     new Set(selection.comparisonPeriodIds)
 
   const current =
+    activityOverride?.current ??
     aggregateActivity(
       timeline,
       currentIds,
     )
 
   const comparison =
+    activityOverride?.comparison ??
     aggregateActivity(
       timeline,
       comparisonIds,
     )
 
-  const currentActive =
-    current.revenue > 0
+    const currentActive =
+      current.revenue > 0
 
-  const comparisonActive =
-    comparison.revenue > 0
+    const comparisonActive =
+      comparison.revenue > 0
 
   if (!currentActive && !comparisonActive) {
     return null
@@ -778,7 +859,27 @@ function buildExecutiveAttention(
 function sumRevenuePeriods(
   repository: BusinessRepository,
   periodIds: readonly string[],
+  dateTo?: string | null,
 ): AggregatedActivity | null {
+  if (periodIds.length === 0) {
+    return null
+  }
+
+  if (dateTo) {
+    const summary =
+      repository.salesSegmentation.summarize({
+        periodIds,
+        dateTo,
+      })
+
+    return {
+      revenue: summary.revenue,
+      grossProfit: summary.grossProfit,
+      quantity: summary.quantity,
+      documents: summary.documents,
+    }
+  }
+
   const periods =
     periodIds
       .map(
@@ -872,18 +973,21 @@ function buildSalesPerformance(
     sumRevenuePeriods(
       repository,
       selection.currentPeriodIds,
+      selection.currentCutoff,
     )
 
   const comparison =
     sumRevenuePeriods(
       repository,
       selection.comparisonPeriodIds,
+      selection.comparisonCutoff,
     )
 
   const priorYear =
     sumRevenuePeriods(
       repository,
       selection.priorYearPeriodIds,
+      selection.priorYearCutoff,
     )
 
   const periodCount =
@@ -927,39 +1031,6 @@ function buildSalesPerformance(
   }
 }
 
-function aggregateBrandActivity(
-  timeline: readonly BusinessBrandPeriod[],
-  periodIds: ReadonlySet<string>,
-): AggregatedBrandActivity {
-  return timeline.reduce<AggregatedBrandActivity>(
-    (total, period) => {
-      if (!periodIds.has(period.periodId)) {
-        return total
-      }
-
-      total.revenue += period.revenue
-      total.grossProfit += period.grossProfit
-      total.quantity += period.quantity
-      total.documents += period.documents
-
-      for (const customerId of period.customers) {
-        total.customers.add(customerId)
-      }
-
-      for (const productId of period.products) {
-        total.products.add(productId)
-      }
-
-      return total
-    },
-    {
-      ...createEmptyActivity(),
-      customers: new Set<string>(),
-      products: new Set<string>(),
-    },
-  )
-}
-
 function mapBrandPeriodMetrics(
   activity: AggregatedBrandActivity,
 ): BrandPeriodMetrics {
@@ -968,8 +1039,8 @@ function mapBrandPeriodMetrics(
     grossProfit: activity.grossProfit,
     quantity: activity.quantity,
     documents: activity.documents,
-    customers: activity.customers.size,
-    products: activity.products.size,
+    customers: activity.customerCount,
+    products: activity.productCount,
     margin:
       activity.revenue !== 0
         ? activity.grossProfit /
@@ -1010,24 +1081,63 @@ function buildBrandSummary(
     return null
   }
 
-  const currentIds =
-    new Set(selection.currentPeriodIds)
+  const currentBrandGroups =
+    repository.salesSegmentation.groupBy(
+      'brand',
+      {
+        periodIds:
+          selection.currentPeriodIds,
+        ...(selection.currentCutoff
+          ? {
+              dateTo:
+                selection.currentCutoff,
+            }
+          : {}),
+      },
+    )
 
-  const comparisonIds =
-    new Set(selection.comparisonPeriodIds)
+  const comparisonBrandGroups =
+    repository.salesSegmentation.groupBy(
+      'brand',
+      {
+        periodIds:
+          selection.comparisonPeriodIds,
+        ...(selection.comparisonCutoff
+          ? {
+              dateTo:
+                selection.comparisonCutoff,
+            }
+          : {}),
+      },
+    )
+
+  const currentBrandGroupsById =
+    new Map(
+      currentBrandGroups.map(
+        (group) => [group.id, group],
+      ),
+    )
+
+  const comparisonBrandGroupsById =
+    new Map(
+      comparisonBrandGroups.map(
+        (group) => [group.id, group],
+      ),
+    )
 
   const currentPeriodRevenue =
     sumRevenuePeriods(
       repository,
       selection.currentPeriodIds,
+      selection.currentCutoff,
     )?.revenue ?? 0
 
   const previousPeriodRevenue =
     sumRevenuePeriods(
       repository,
       selection.comparisonPeriodIds,
+      selection.comparisonCutoff,
     )?.revenue ?? 0
-
   const brands:
     BrandIntelligenceItem[] = []
 
@@ -1037,28 +1147,65 @@ function buildBrandSummary(
         brand.id,
       )
 
+    const currentGroup =
+  currentBrandGroupsById.get(brand.id)
+
+    const comparisonGroup =
+      comparisonBrandGroupsById.get(brand.id)
+
+    const current: AggregatedBrandActivity =
+      currentGroup
+        ? {
+            revenue: currentGroup.revenue,
+            grossProfit:
+              currentGroup.grossProfit,
+            quantity: currentGroup.quantity,
+            documents: currentGroup.documents,
+            customerCount:
+              currentGroup.customerCount,
+            productCount:
+              currentGroup.productCount,
+          }
+        : {
+            ...createEmptyActivity(),
+            customerCount: 0,
+            productCount: 0,
+          }
+
+    const previous: AggregatedBrandActivity =
+      comparisonGroup
+        ? {
+            revenue: comparisonGroup.revenue,
+            grossProfit:
+              comparisonGroup.grossProfit,
+            quantity: comparisonGroup.quantity,
+            documents:
+              comparisonGroup.documents,
+            customerCount:
+              comparisonGroup.customerCount,
+            productCount:
+              comparisonGroup.productCount,
+          }
+        : {
+            ...createEmptyActivity(),
+            customerCount: 0,
+            productCount: 0,
+          }
+
     const classification =
       classifyEntity(
         timeline,
         selection,
         BRAND_ATTENTION_DECLINE_THRESHOLD,
+        {
+          current,
+          comparison: previous,
+        },
       )
 
-    if (!classification) {
-      continue
-    }
-
-    const current =
-      aggregateBrandActivity(
-        timeline,
-        currentIds,
-      )
-
-    const previous =
-      aggregateBrandActivity(
-        timeline,
-        comparisonIds,
-      )
+      if (!classification) {
+  continue
+}
 
     const currentPeriod =
       mapBrandPeriodMetrics(current)
@@ -1125,11 +1272,11 @@ function buildBrandSummary(
       grossProfitVariationPercentage,
       marginVariation,
       customerVariation:
-        current.customers.size -
-        previous.customers.size,
+        current.customerCount -
+        previous.customerCount,
       productVariation:
-        current.products.size -
-        previous.products.size,
+       current.productCount -
+        previous.productCount,
       historicalRevenue:
         brand.revenue,
       historicalGrossProfit:

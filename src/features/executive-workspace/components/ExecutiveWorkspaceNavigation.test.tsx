@@ -58,6 +58,9 @@ const selection:
   currentPeriodIds: [],
   comparisonPeriodIds: [],
   priorYearPeriodIds: [],
+  currentCutoff: null,
+  comparisonCutoff: null,
+  priorYearCutoff: null,
   currentLabel: 'Sin periodo disponible',
   comparisonLabel:
     'Sin comparación disponible',

@@ -52,6 +52,7 @@ BusinessRepository {
     row('2025-05-10', 'UNV', 'C1', 'P-A', 50),
     row('2025-06-10', 'UNV', 'C1', 'P-A', 60),
     row('2025-07-10', 'UNV', 'C1', 'P-A', 70),
+    row('2025-07-25', 'UNV', 'C1', 'P-A', 1000),
     row('2026-02-10', 'ZKTECO', 'C4', 'P-D', 40),
     row('2026-03-10', 'UNV', 'C1', 'P-A', 80),
     row('2026-04-10', 'UNV', 'C1', 'P-A', 100),
@@ -59,6 +60,7 @@ BusinessRepository {
     row('2026-06-10', 'UNV', 'C1', 'P-A', 100),
     row('2026-06-12', 'UNV', 'C2', 'P-B', 50),
     row('2026-06-14', 'UNV', 'C5', 'P-E', 100),
+    row('2026-06-26', 'UNV', 'C1', 'P-A', 1000),
     row('2026-07-10', 'UNV', 'C1', 'P-A', 80),
     row('2026-07-12', 'AJAX', 'C3', 'P-C', 200),
     row('2026-07-14', 'ZKTECO', 'C4', 'P-D', 60),
@@ -237,10 +239,20 @@ describe(
       ).toBe(250)
 
       expect(
+        view.salesPerformance
+          .priorYearComparison
+          .comparisonValue,
+      ).toBe(70)
+
+      expect(
         view.commercialTrends
           .monthlyRevenue.at(-1)
           ?.periodId,
       ).toBe('2026-07')
+
+      expect(
+        view.brands?.previousPeriodRevenue,
+      ).toBe(250)
 
       expect(
         view.commercialTrends

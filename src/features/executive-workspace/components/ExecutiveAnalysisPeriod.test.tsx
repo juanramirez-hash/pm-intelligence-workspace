@@ -45,6 +45,9 @@ const selection:
   currentPeriodIds: ['2026-07'],
   comparisonPeriodIds: ['2026-06'],
   priorYearPeriodIds: [],
+  currentCutoff: null,
+  comparisonCutoff: null,
+  priorYearCutoff: null,
   currentLabel: 'Julio de 2026',
   comparisonLabel: 'Junio de 2026',
   priorYearLabel:

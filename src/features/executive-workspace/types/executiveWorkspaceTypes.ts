@@ -147,6 +147,15 @@ export interface ExecutivePeriodSelection {
   priorYearPeriodIds:
     readonly string[]
 
+    currentCutoff:
+    string | null
+
+  comparisonCutoff:
+    string | null
+
+  priorYearCutoff:
+    string | null
+
   currentLabel: string
 
   comparisonLabel: string
