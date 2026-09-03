@@ -6,10 +6,6 @@ import {
   AppShell,
 } from '../layouts/AppShell'
 
-import {
-  PlaceholderPage,
-} from '../shared/ui/PlaceholderPage'
-
 const loadExecutiveWorkspace = async () => {
   const module =
     await import(
@@ -190,6 +186,18 @@ const loadDataCenter = async () => {
   }
 }
 
+const loadSettings = async () => {
+  const module =
+    await import(
+      '../features/settings/SettingsPage'
+    )
+
+  return {
+    Component:
+      module.SettingsPage,
+  }
+}
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -255,15 +263,10 @@ export const router = createBrowserRouter([
         path: 'data-quality/products',
         lazy: loadProductIdentityQuality,
       },
-      {
-        path: 'settings',
-        element: (
-          <PlaceholderPage
-            title="Settings"
-            description="Configuración de la plataforma y preferencias."
-          />
-        ),
-      },
+{
+  path: 'settings',
+  lazy: loadSettings,
+},
     ],
   },
 ])
