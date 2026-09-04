@@ -19,12 +19,13 @@ import {
   Topbar,
 } from './Topbar'
 
-interface AuthenticatedUser {
-  id: number
-  email: string
-  name: string | null
-  role: 'admin' | 'analyst' | 'viewer'
-}
+import {
+  AuthProvider,
+} from '../features/auth/AuthContext'
+
+import {
+  type AuthenticatedUser,
+} from '../features/auth/authTypes'
 
 interface AuthState {
   loading: boolean
@@ -118,6 +119,9 @@ export function AppShell() {
   }
 
   return (
+  <AuthProvider
+    user={auth.user}
+  >
     <div
       data-app-shell="true"
       className="min-h-screen bg-slate-50 text-slate-950"
@@ -140,5 +144,6 @@ export function AppShell() {
         </main>
       </div>
     </div>
-  )
+  </AuthProvider>
+)
 }
