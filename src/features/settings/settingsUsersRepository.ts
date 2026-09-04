@@ -5,7 +5,6 @@ export type SettingsUserRole =
   | 'manager'
   | 'pm'
   | 'engineering'
-  | 'pricing'
 
 export interface SettingsUser {
   id: number
@@ -119,4 +118,42 @@ export async function updateSettingsUser(
     )
 
   return result.user
+}
+export async function loadSettingsUserBrands(
+  userId: number,
+): Promise<string[]> {
+  const result =
+    await requestJson<{
+      ok: true
+      brandIds: string[]
+    }>(
+      `/api/settings/users/${userId}/brands`,
+    )
+
+  return result.brandIds
+}
+
+export async function updateSettingsUserBrands(
+  userId: number,
+  brandIds: string[],
+): Promise<string[]> {
+  const result =
+    await requestJson<{
+      ok: true
+      brandIds: string[]
+    }>(
+      `/api/settings/users/${userId}/brands`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          brandIds,
+        }),
+      },
+    )
+
+  return result.brandIds
 }

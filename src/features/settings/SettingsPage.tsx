@@ -21,11 +21,17 @@ import {
 
 import {
   createSettingsUser,
+  loadSettingsUserBrands,
   loadSettingsUsers,
   updateSettingsUser,
+  updateSettingsUserBrands,
   type SettingsUser,
   type SettingsUserRole,
 } from './settingsUsersRepository'
+
+import {
+  useWorkspaceContext,
+} from '../workspaces/shared/hooks/useWorkspaceContext'
 
 import {
   loadSettingsRoles,
@@ -161,6 +167,30 @@ function GeneralSettings() {
 }
 
 function UsersSettings() {
+    const workspace =
+    useWorkspaceContext()
+
+  const brandOptions =
+    (
+      workspace.brands?.brands ??
+      []
+    )
+      .map(
+        (brand) => ({
+          brandId:
+            brand.brandId,
+          brandName:
+            brand.brandName,
+        }),
+      )
+      .sort(
+        (left, right) =>
+          left.brandName.localeCompare(
+            right.brandName,
+            'es-MX',
+          ),
+      )
+
   const [
     users,
     setUsers,
@@ -217,6 +247,36 @@ function UsersSettings() {
   ] =
     useState(false)
 
+    const [
+    assignmentUserId,
+    setAssignmentUserId,
+  ] =
+    useState<number | null>(null)
+
+  const [
+    assignedBrandIds,
+    setAssignedBrandIds,
+  ] =
+    useState<string[]>([])
+
+  const [
+    loadingAssignments,
+    setLoadingAssignments,
+  ] =
+    useState(false)
+
+  const [
+    savingAssignments,
+    setSavingAssignments,
+  ] =
+    useState(false)
+
+  const [
+    brandSearch,
+    setBrandSearch,
+  ] =
+    useState('')
+
   const roleOptions: Array<{
     value: SettingsUserRole
     label: string
@@ -227,7 +287,7 @@ function UsersSettings() {
     },
     {
       value: 'manager',
-      label: 'Gerente de Marcas',
+      label: 'Gerente de Ingeniería',
     },
     {
       value: 'pm',
@@ -236,10 +296,6 @@ function UsersSettings() {
     {
       value: 'engineering',
       label: 'Ingeniero de Marca',
-    },
-    {
-      value: 'pricing',
-      label: 'Pricing',
     },
     {
       value: 'analyst',
@@ -278,6 +334,127 @@ function UsersSettings() {
       } finally {
         setLoading(false)
       }
+    }
+
+    const handleOpenAssignments =
+    async (
+      user: SettingsUser,
+    ) => {
+      try {
+        setAssignmentUserId(
+          user.id,
+        )
+        setAssignedBrandIds([])
+        setBrandSearch('')
+        setLoadingAssignments(true)
+        setError(null)
+        setSuccessMessage(null)
+
+        const loadedBrandIds =
+          await loadSettingsUserBrands(
+            user.id,
+          )
+
+        setAssignedBrandIds(
+          loadedBrandIds,
+        )
+      } catch (assignmentError) {
+        setAssignmentUserId(null)
+
+        setError(
+          assignmentError instanceof Error
+            ? assignmentError.message
+            : 'No fue posible cargar las marcas asignadas.',
+        )
+      } finally {
+        setLoadingAssignments(false)
+      }
+    }
+
+      const handleSaveAssignments =
+    async () => {
+      if (
+        assignmentUserId === null
+      ) {
+        return
+      }
+
+      try {
+        setSavingAssignments(true)
+        setError(null)
+        setSuccessMessage(null)
+
+        const savedBrandIds =
+          await updateSettingsUserBrands(
+            assignmentUserId,
+            assignedBrandIds,
+          )
+
+        setAssignedBrandIds(
+          savedBrandIds,
+        )
+
+        setSuccessMessage(
+          'Asignaciones de marcas actualizadas.',
+        )
+      } catch (assignmentError) {
+        setError(
+          assignmentError instanceof Error
+            ? assignmentError.message
+            : 'No fue posible guardar las marcas asignadas.',
+        )
+      } finally {
+        setSavingAssignments(false)
+      }
+    }
+
+    const filteredBrandOptions =
+    brandOptions.filter(
+      (brand) => {
+        const query =
+          brandSearch
+            .trim()
+            .toLocaleLowerCase(
+              'es-MX',
+            )
+
+        if (query === '') {
+          return true
+        }
+
+        return (
+          brand.brandName
+            .toLocaleLowerCase(
+              'es-MX',
+            )
+            .includes(query) ||
+          brand.brandId
+            .toLocaleLowerCase(
+              'es-MX',
+            )
+            .includes(query)
+        )
+      },
+    )
+
+  const handleToggleBrand =
+    (
+      brandId: string,
+    ) => {
+      setAssignedBrandIds(
+        (current) =>
+          current.includes(
+            brandId,
+          )
+            ? current.filter(
+                (item) =>
+                  item !== brandId,
+              )
+            : [
+                ...current,
+                brandId,
+              ],
+      )
     }
 
   useEffect(() => {
@@ -642,7 +819,7 @@ function UsersSettings() {
                     Rol
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Último acceso
+                    Marcas
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Estado
@@ -721,6 +898,22 @@ function UsersSettings() {
                             )}
                           </p>
                         </td>
+                        <td className="px-6 py-4">
+                          <button
+                            type="button"
+                            disabled={
+                              isSaving
+                            }
+                            onClick={() =>
+                              void handleOpenAssignments(
+                                user,
+                              )
+                            }
+                            className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            Administrar marcas
+                          </button>
+                        </td>
 
                         <td className="px-6 py-4 text-sm text-slate-600">
                           {formatLastLogin(
@@ -781,6 +974,149 @@ function UsersSettings() {
           </div>
         )}
       </AtlasCard>
+
+{assignmentUserId !== null && (
+  <AtlasCard className="p-6">
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="text-lg font-semibold text-slate-900">
+          Asignación de marcas
+        </p>
+
+        <p className="mt-2 text-sm text-slate-500">
+          Usuario:{' '}
+          <span className="font-semibold text-slate-700">
+            {
+              users.find(
+                (item) =>
+                  item.id ===
+                  assignmentUserId,
+              )?.name ??
+              users.find(
+                (item) =>
+                  item.id ===
+                  assignmentUserId,
+              )?.email ??
+              'Usuario'
+            }
+          </span>
+        </p>
+
+        <p className="mt-1 text-sm text-slate-500">
+          {assignedBrandIds.length}{' '}
+          marcas asignadas.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setAssignmentUserId(null)
+          setAssignedBrandIds([])
+          setBrandSearch('')
+        }}
+        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+      >
+        Cerrar
+      </button>
+    </div>
+
+    {loadingAssignments ? (
+      <div className="py-10 text-center text-sm text-slate-500">
+        Cargando asignaciones...
+      </div>
+    ) : (
+      <>
+        <div className="mt-6">
+          <label
+            htmlFor="settings-brand-search"
+            className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+          >
+            Buscar marca
+          </label>
+
+          <input
+            id="settings-brand-search"
+            type="search"
+            value={brandSearch}
+            onChange={(event) =>
+              setBrandSearch(
+                event.target.value,
+              )
+            }
+            placeholder="Buscar por nombre o ID..."
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-violet-400"
+          />
+        </div>
+
+        <div className="mt-5 max-h-96 overflow-y-auto rounded-xl border border-slate-200">
+          {filteredBrandOptions.length === 0 ? (
+            <div className="p-6 text-center text-sm text-slate-500">
+              No hay marcas disponibles.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {filteredBrandOptions.map(
+                (brand) => {
+                  const checked =
+                    assignedBrandIds.includes(
+                      brand.brandId,
+                    )
+
+                  return (
+                    <label
+                      key={brand.brandId}
+                      className="flex cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() =>
+                          handleToggleBrand(
+                            brand.brandId,
+                          )
+                        }
+                        className="h-4 w-4 rounded border-slate-300 text-violet-600"
+                      />
+
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {brand.brandName}
+                        </p>
+
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {brand.brandId}
+                        </p>
+                      </div>
+                    </label>
+                  )
+                },
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            disabled={
+              savingAssignments
+            }
+            onClick={() =>
+              void handleSaveAssignments()
+            }
+            className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {savingAssignments
+              ? 'Guardando...'
+              : 'Guardar asignaciones'}
+          </button>
+        </div>
+      </>
+    )}
+  </AtlasCard>
+)}
+
     </div>
   )
 }

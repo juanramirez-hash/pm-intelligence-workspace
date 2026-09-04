@@ -10,7 +10,6 @@ const ALLOWED_ROLES =
     'manager',
     'pm',
     'engineering',
-    'pricing',
   ])
 
 function normalizeEmail(value) {
@@ -48,6 +47,34 @@ function normalizeName(value) {
   return name === ''
     ? null
     : name
+}
+
+function normalizeBrandIds(value) {
+  if (!Array.isArray(value)) {
+    return null
+  }
+
+  const normalized =
+    value
+      .filter(
+        (brandId) =>
+          typeof brandId === 'string',
+      )
+      .map(
+        (brandId) =>
+          brandId
+            .trim()
+            .toLocaleUpperCase('es-MX')
+            .replace(/\s+/g, ' '),
+      )
+      .filter(
+        (brandId) =>
+          brandId !== '',
+      )
+
+  return [
+    ...new Set(normalized),
+  ]
 }
 
 export function createSettingsUsersRouter(
@@ -396,6 +423,230 @@ export function createSettingsUsersRouter(
             error:
               'Settings user update failed',
           })
+      }
+    },
+  )
+
+    router.get(
+    '/:id/brands',
+    async (req, res) => {
+      try {
+        const userId =
+          Number(req.params.id)
+
+        if (
+          !Number.isInteger(userId) ||
+          userId <= 0
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'User id is not valid',
+            })
+        }
+
+        const userResult =
+          await pool.query(
+            `
+              SELECT id
+              FROM app_users
+              WHERE id = $1
+            `,
+            [userId],
+          )
+
+        if (
+          userResult.rows.length === 0
+        ) {
+          return res
+            .status(404)
+            .json({
+              ok: false,
+              error:
+                'User not found',
+            })
+        }
+
+        const result =
+          await pool.query(
+            `
+              SELECT brand_id
+              FROM app_user_brand_assignments
+              WHERE user_id = $1
+              ORDER BY brand_id
+            `,
+            [userId],
+          )
+
+        return res.json({
+          ok: true,
+          brandIds:
+            result.rows.map(
+              (row) =>
+                row.brand_id,
+            ),
+        })
+      } catch (error) {
+        console.error(
+          'Settings user brands load failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'Settings user brands load failed',
+          })
+      }
+    },
+  )
+
+  router.put(
+    '/:id/brands',
+    async (req, res) => {
+      const client =
+        await pool.connect()
+
+      try {
+        const userId =
+          Number(req.params.id)
+
+        if (
+          !Number.isInteger(userId) ||
+          userId <= 0
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'User id is not valid',
+            })
+        }
+
+        const brandIds =
+          normalizeBrandIds(
+            req.body?.brandIds,
+          )
+
+        if (brandIds === null) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'brandIds must be an array',
+            })
+        }
+
+        const createdBy =
+          Number(
+            req.session?.user?.id,
+          )
+
+        await client.query(
+          'BEGIN',
+        )
+
+        const userResult =
+          await client.query(
+            `
+              SELECT id
+              FROM app_users
+              WHERE id = $1
+              FOR UPDATE
+            `,
+            [userId],
+          )
+
+        if (
+          userResult.rows.length === 0
+        ) {
+          await client.query(
+            'ROLLBACK',
+          )
+
+          return res
+            .status(404)
+            .json({
+              ok: false,
+              error:
+                'User not found',
+            })
+        }
+
+        await client.query(
+          `
+            DELETE FROM
+              app_user_brand_assignments
+            WHERE user_id = $1
+          `,
+          [userId],
+        )
+
+        if (
+          brandIds.length > 0
+        ) {
+          await client.query(
+            `
+              INSERT INTO
+                app_user_brand_assignments (
+                  user_id,
+                  brand_id,
+                  created_by
+                )
+              SELECT
+                $1,
+                brand_id,
+                $3
+              FROM
+                unnest(
+                  $2::text[]
+                ) AS brand_id
+            `,
+            [
+              userId,
+              brandIds,
+              Number.isInteger(
+                createdBy,
+              )
+                ? createdBy
+                : null,
+            ],
+          )
+        }
+
+        await client.query(
+          'COMMIT',
+        )
+
+        return res.json({
+          ok: true,
+          brandIds,
+        })
+      } catch (error) {
+        await client.query(
+          'ROLLBACK',
+        )
+
+        console.error(
+          'Settings user brands update failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'Settings user brands update failed',
+          })
+      } finally {
+        client.release()
       }
     },
   )
