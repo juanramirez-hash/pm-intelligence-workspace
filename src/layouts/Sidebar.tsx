@@ -14,6 +14,9 @@ import {
   Users,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import {
+  useAuth,
+} from '../features/auth/useAuth'
 
 const workspaceNavigation = [
   {
@@ -64,6 +67,10 @@ const workspaceNavigation = [
 ]
 
 export function Sidebar() {
+  const {
+    user,
+  } = useAuth()
+
   return (
     <aside data-print-hidden="true" className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-slate-950 lg:flex lg:flex-col">
       <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6">
@@ -165,11 +172,11 @@ export function Sidebar() {
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
           <p className="text-sm font-medium text-white">
-            Juan Ramírez
+            {user.name ?? user.email}
           </p>
 
           <p className="mt-1 text-xs text-slate-400">
-            Product Management
+            {user.roleName}
           </p>
         </div>
       </div>
