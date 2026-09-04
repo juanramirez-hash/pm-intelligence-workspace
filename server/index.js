@@ -5,6 +5,7 @@ import connectPgSimple from 'connect-pg-simple'
 import { OAuth2Client } from 'google-auth-library'
 import { pool } from './db/pool.js'
 import { requireAuth } from './middleware/requireAuth.js'
+import { requireAdmin } from './middleware/requireAdmin.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
 import { createSalesRouter } from './routes/sales.js'
 import { createInventoryRouter } from './routes/inventory.js'
@@ -17,6 +18,8 @@ import { createProjectBillingsRouter } from './routes/projectBillings.js'
 import { createExchangeRatesRouter } from './routes/exchangeRates.js'
 import { createPricingRouter } from './routes/pricing.js'
 import { createCustomersRouter } from './routes/customers.js'
+import { createSettingsUsersRouter } from './routes/settingsUsers.js'
+import { createSettingsRolesRouter } from './routes/settingsRoles.js'
 
 const app = express()
 
@@ -460,6 +463,18 @@ app.use(
   '/api/data/customers',
   requireAuth,
   createCustomersRouter(pool),
+)
+
+app.use(
+  '/api/settings/users',
+  requireAdmin,
+  createSettingsUsersRouter(pool),
+)
+
+app.use(
+  '/api/settings/roles',
+  requireAdmin,
+  createSettingsRolesRouter(pool),
 )
 
 app.listen(
