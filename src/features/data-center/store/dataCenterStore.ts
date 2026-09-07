@@ -809,19 +809,40 @@ export const useDataCenterStore =
                   importScope:
                     importScope ?? 'partial',
                 })
-                .then(() => {
-                  set({
+                .then(async () => {
+                    const persistedSales =
+                      await apiDataRepository
+                        .loadSalesDataset()
+
+                    if (!persistedSales) {
+                      throw new Error(
+                        'No fue posible recargar el dataset consolidado de Ventas.',
+                      )
+                    }
+
+                    set({
+                      salesSummary:
+                        persistedSales.summary,
+
+                      normalizedSales:
+                        persistedSales.normalizedRows,
+
+                      lastImportedFile:
+                        persistedSales.lastImportedFile,
+
+                      lastImportedAt:
+                        persistedSales.lastImportedAt,
 
                       importStatus:
-                      'completed', 
+                        'completed',
 
-                    isPersisting:
-                      false,
+                      isPersisting:
+                        false,
 
-                    persistenceError:
-                      null,
+                      persistenceError:
+                        null,
+                    })
                   })
-                })
                 .catch(
                   (
                     persistenceError,
