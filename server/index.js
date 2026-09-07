@@ -20,8 +20,14 @@ import { createPricingRouter } from './routes/pricing.js'
 import { createCustomersRouter } from './routes/customers.js'
 import { createSettingsUsersRouter } from './routes/settingsUsers.js'
 import { createSettingsRolesRouter } from './routes/settingsRoles.js'
+import {
+  loadAuthenticatedUser,
+} from './middleware/loadAuthenticatedUser.js'
 
 const app = express()
+
+const authenticatedUser =
+  loadAuthenticatedUser(pool)
 
 app.disable('x-powered-by')
 
@@ -240,107 +246,13 @@ app.get(
 app.get(
   '/api/auth/me',
   requireAuth,
-  async (req, res) => {
-    try {
-      const userId =
-        Number(
-          req.session.user?.id,
-        )
-
-      const result =
-        await pool.query(
-          `
-            SELECT
-              u.id,
-              u.email,
-              u.name,
-              u.role,
-              u.active,
-              r.role_name,
-              r.scope,
-              r.write_access,
-              r.active AS role_active,
-              COALESCE(
-                ARRAY_AGG(
-                  a.brand_id
-                  ORDER BY a.brand_id
-                ) FILTER (
-                  WHERE
-                    a.brand_id IS NOT NULL
-                ),
-                ARRAY[]::TEXT[]
-              ) AS brand_ids
-            FROM app_users u
-            LEFT JOIN app_roles r
-              ON r.role_key = u.role
-            LEFT JOIN
-              app_user_brand_assignments a
-              ON a.user_id = u.id
-            WHERE u.id = $1
-            GROUP BY
-              u.id,
-              u.email,
-              u.name,
-              u.role,
-              u.active,
-              r.role_name,
-              r.scope,
-              r.write_access,
-              r.active
-          `,
-          [userId],
-        )
-
-      const user =
-        result.rows[0]
-
-      if (
-        !user ||
-        user.active !== true ||
-        user.role_active !== true
-      ) {
-        return res
-          .status(403)
-          .json({
-            ok: false,
-            authenticated: false,
-            error:
-              'User is not authorized',
-          })
-      }
-
-      return res.json({
-        ok: true,
-        authenticated: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          roleName:
-            user.role_name,
-          scope: user.scope,
-          writeAccess:
-            user.write_access,
-          brandIds:
-            user.brand_ids,
-        },
-      })
-    } catch (error) {
-      console.error(
-        'Auth session load failed:',
-        error,
-      )
-
-      return res
-        .status(500)
-        .json({
-          ok: false,
-          authenticated: false,
-          error:
-            'Auth session load failed',
-        })
-    }
+  authenticatedUser,
+  (req, res) => {
+    return res.json({
+      ok: true,
+      authenticated: true,
+      user: req.authUser,
+    })
   },
 )
 
@@ -491,83 +403,99 @@ app.post(
 app.use(
   '/api/data',
   requireAuth,
+  authenticatedUser,
   createDataStatusRouter(pool),
 )
 
 app.use(
   '/api/data/sales',
   requireAuth,
+  authenticatedUser,
   createSalesRouter(pool),
 )
 
 app.use(
   '/api/data/inventory',
   requireAuth,
+  authenticatedUser,
   createInventoryRouter(pool),
 )
 
 app.use(
   '/api/data/targets',
   requireAuth,
+  authenticatedUser,
   createTargetsRouter(pool),
 )
 
 app.use(
   '/api/data/products',
   requireAuth,
+  authenticatedUser,
   createProductsRouter(pool),
 )
 
 app.use(
   '/api/data/purchases',
   requireAuth,
+  authenticatedUser,
   createPurchasesRouter(pool),
 )
 
 app.use(
   '/api/data/purchase-requests',
   requireAuth,
+  authenticatedUser,
   createPurchaseRequestsRouter(pool),
 )
 
 app.use(
   '/api/data/projects',
   requireAuth,
+  authenticatedUser,
   createProjectsRouter(pool),
 )
 
 app.use(
   '/api/data/project-billings',
   requireAuth,
+  authenticatedUser,
   createProjectBillingsRouter(pool),
 )
 
 app.use(
   '/api/data/exchange-rates',
   requireAuth,
+  authenticatedUser,
   createExchangeRatesRouter(pool),
 )
 
 app.use(
   '/api/data/pricing',
   requireAuth,
+  authenticatedUser,
   createPricingRouter(pool),
 )
 
 app.use(
   '/api/data/customers',
   requireAuth,
+  authenticatedUser,
   createCustomersRouter(pool),
 )
 
 app.use(
   '/api/settings/users',
+  requireAuth,
+  authenticatedUser,
   requireAdmin,
   createSettingsUsersRouter(pool),
 )
 
 app.use(
   '/api/settings/roles',
+  requireAuth,
+  authenticatedUser,
   requireAdmin,
   createSettingsRolesRouter(pool),
 )

@@ -3,25 +3,27 @@ export function requireAdmin(
   res,
   next,
 ) {
-  if (!req.session?.user) {
+  if (!req.authUser) {
     return res
       .status(401)
       .json({
         ok: false,
         authenticated: false,
-        error: 'Authentication required',
+        error:
+          'Authentication required',
       })
   }
 
   if (
-    req.session.user.role !== 'admin'
+    req.authUser.role !== 'admin'
   ) {
     return res
       .status(403)
       .json({
         ok: false,
         authenticated: true,
-        error: 'Administrator access required',
+        error:
+          'Administrator access required',
       })
   }
 
