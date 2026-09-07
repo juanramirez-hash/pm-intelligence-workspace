@@ -20,11 +20,38 @@ import type {
   BrandIntelligenceItem,
 } from '../../../core/analytics/brands'
 
+import {
+  useAuth,
+} from '../../auth/useAuth'
+
+import {
+  scopeBrandIntelligenceSummary,
+} from '../../auth/brandIntelligenceAccess'
+
 const EMPTY_BRANDS: BrandIntelligenceItem[] = []
 
 export function useBrandWorkspace() {
   const workspace =
     useWorkspaceContext()
+
+  const {
+    user,
+  } = useAuth()
+
+  const summary =
+    useMemo(
+      () =>
+        workspace.brands
+          ? scopeBrandIntelligenceSummary(
+              user,
+              workspace.brands,
+            )
+          : null,
+      [
+        user,
+        workspace.brands,
+      ],
+    )
 
   const filters =
     useBrandWorkspaceStore(
@@ -51,7 +78,7 @@ export function useBrandWorkspace() {
     )
 
   const brands =
-    workspace.brands?.brands ??
+    summary?.brands ??
     EMPTY_BRANDS
 
   const filteredBrands =
@@ -89,11 +116,10 @@ export function useBrandWorkspace() {
   return {
     workspace,
 
-    summary:
-      workspace.brands,
+    summary,
 
     summaryAvailable:
-      workspace.brands !== null,
+      summary !== null,
 
     executiveBrief:
       workspace.executiveBrief,
