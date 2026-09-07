@@ -437,24 +437,85 @@ export async function finalizeSalesChunkImport(
         ? staging.period_ids
         : []
 
-    const shouldReplacePeriods =
+        const shouldReplacePeriods =
       importRecord.import_mode ===
       'replace-periods'
 
-    const replacedResult =
+    let replacedResult = {
+      rowCount: 0,
+    }
+
+    if (
       shouldReplacePeriods &&
       periodIds.length > 0
-        ? await client.query(
-            `
-              DELETE FROM sales_facts
-              WHERE period_id =
-                ANY($1::text[])
-            `,
-            [periodIds],
-          )
-        : {
-            rowCount: 0,
-          }
+    ) {
+      replacedResult =
+        await client.query(
+          `
+            DELETE FROM sales_facts
+            WHERE period_id =
+              ANY($1::text[])
+          `,
+          [periodIds],
+        )
+    } else if (
+      importRecord.import_mode ===
+        'append' &&
+      stagedRows > 0
+    ) {
+      replacedResult =
+        await client.query(
+          `
+            DELETE FROM sales_facts existing
+            USING sales_import_staging staging
+            WHERE
+              staging.import_id = $1
+              AND existing.sale_date =
+                staging.sale_date
+              AND COALESCE(
+                existing.document_number,
+                ''
+              ) =
+                COALESCE(
+                  staging.document_number,
+                  ''
+                )
+              AND COALESCE(
+                existing.customer_id,
+                ''
+              ) =
+                COALESCE(
+                  staging.customer_id,
+                  ''
+                )
+              AND COALESCE(
+                existing.product_name,
+                ''
+              ) =
+                COALESCE(
+                  staging.product_name,
+                  ''
+                )
+              AND COALESCE(
+                existing.product_code,
+                ''
+              ) =
+                COALESCE(
+                  staging.product_code,
+                  ''
+                )
+              AND COALESCE(
+                existing.model,
+                ''
+              ) =
+                COALESCE(
+                  staging.model,
+                  ''
+                )
+          `,
+          [importId],
+        )
+    }
 
     let insertedRows = 0
 
