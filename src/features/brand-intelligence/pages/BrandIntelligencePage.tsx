@@ -85,9 +85,40 @@ function BrandKpiCard({
 
 export function BrandIntelligencePage() {
   const {
+    accessDenied,
     brandId,
     workspace,
   } = useBrandIntelligenceWorkspace()
+
+  if (accessDenied) {
+    return (
+      <main className="min-h-screen bg-slate-50">
+        <div className="mx-auto flex max-w-3xl flex-col items-center px-6 py-20 text-center">
+          <ShieldAlert
+            className="text-amber-500"
+            size={48}
+            strokeWidth={1.8}
+          />
+
+          <h1 className="mt-6 text-3xl font-bold text-slate-900">
+            Acceso restringido
+          </h1>
+
+          <p className="mt-3 max-w-xl text-slate-500">
+            La marca {brandId ?? 'seleccionada'} no está asignada a tu usuario.
+          </p>
+
+          <Link
+            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            to="/brands"
+          >
+            <ArrowLeft size={17} />
+            Volver a Brand Workspace
+          </Link>
+        </div>
+      </main>
+    )
+  }
 
   if (!workspace) {
     return (

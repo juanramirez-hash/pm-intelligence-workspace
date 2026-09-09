@@ -15,6 +15,14 @@ import {
   useWorkspaceContext,
 } from '../../workspaces/shared/hooks/useWorkspaceContext'
 
+import {
+  useAuth,
+} from '../../auth/useAuth'
+
+import {
+  canAccessBrand,
+} from '../../auth/brandAccess'
+
 export function useBrandIntelligenceWorkspace() {
   const {
     brandId,
@@ -22,18 +30,34 @@ export function useBrandIntelligenceWorkspace() {
     brandId: string
   }>()
 
+  const {
+    user,
+  } = useAuth()
+
   const workspace =
     useWorkspaceContext()
 
   return useMemo(() => {
+    const accessDenied =
+      Boolean(
+        brandId &&
+        !canAccessBrand(
+          user,
+          brandId,
+        ),
+      )
+
     if (
+      accessDenied ||
       !brandId ||
       !workspace.repository ||
       !workspace.currentPeriodId
     ) {
       return {
-        brandId: brandId ?? null,
+        brandId:
+          brandId ?? null,
         workspace: null,
+        accessDenied,
       }
     }
 
@@ -42,21 +66,25 @@ export function useBrandIntelligenceWorkspace() {
         workspace.repository,
       )
 
-    const decision = engine.evaluate(
-      brandId,
-      workspace.currentPeriodId,
-    )
+    const decision =
+      engine.evaluate(
+        brandId,
+        workspace.currentPeriodId,
+      )
 
     return {
       brandId,
-      workspace: decision
-        ? buildBrandWorkspaceViewModel(
-            decision,
-          )
-        : null,
+      workspace:
+        decision
+          ? buildBrandWorkspaceViewModel(
+              decision,
+            )
+          : null,
+      accessDenied: false,
     }
   }, [
     brandId,
+    user,
     workspace.repository,
     workspace.currentPeriodId,
   ])
