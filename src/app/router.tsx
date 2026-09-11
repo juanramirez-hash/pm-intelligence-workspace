@@ -3,6 +3,10 @@ import {
 } from 'react-router-dom'
 
 import {
+  WorkspaceRouteGuard,
+} from '../features/auth/WorkspaceRouteGuard'
+
+import {
   AppShell,
 } from '../layouts/AppShell'
 
@@ -198,75 +202,216 @@ const loadSettings = async () => {
   }
 }
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <AppShell />,
-    children: [
-      {
-        index: true,
-        lazy: loadExecutiveWorkspace,
-      },
-      {
-        path: 'attention/:domain',
-        lazy: loadExecutiveAttentionQueue,
-      },
-      {
-        path: 'sales',
-        lazy: loadSalesWorkspace,
-      },
-      {
-        path: 'brands',
-        lazy: loadBrandWorkspace,
-      },
-      {
-        path: 'brands/:brandId',
-        lazy: loadBrandIntelligence,
-      },
-      {
-        path: 'customers',
-        lazy: loadCustomerDirectory,
-      },
-      {
-        path: 'customers/:customerId',
-        lazy: loadCustomerIntelligence,
-      },
-      {
-        path: 'products',
-        lazy: loadProductDirectory,
-      },
-      {
-        path: 'products/:productId',
-        lazy: loadProductIntelligence,
-      },
-      {
-        path: 'pricing',
-        lazy: loadPricingLaboratory,
-      },
-      {
-        path: 'forecast',
-        lazy: loadForecastWorkspace,
-      },
-      {
-        path: 'inventory',
-        lazy: loadInventoryWorkspace,
-      },
-      {
-        path: 'purchasing',
-        lazy: loadPurchasingWorkspace,
-      },
-      {
-        path: 'data-center',
-        lazy: loadDataCenter,
-      },
-      {
-        path: 'data-quality/products',
-        lazy: loadProductIdentityQuality,
-      },
-{
-  path: 'settings',
-  lazy: loadSettings,
-},
-    ],
-  },
-])
+export const router =
+  createBrowserRouter([
+    {
+      path: '/',
+      element: <AppShell />,
+      children: [
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="executive"
+            />
+          ),
+          children: [
+            {
+              index: true,
+              lazy:
+                loadExecutiveWorkspace,
+            },
+            {
+              path:
+                'attention/:domain',
+              lazy:
+                loadExecutiveAttentionQueue,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="sales"
+            />
+          ),
+          children: [
+            {
+              path: 'sales',
+              lazy:
+                loadSalesWorkspace,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="brands"
+            />
+          ),
+          children: [
+            {
+              path: 'brands',
+              lazy:
+                loadBrandWorkspace,
+            },
+            {
+              path:
+                'brands/:brandId',
+              lazy:
+                loadBrandIntelligence,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="customers"
+            />
+          ),
+          children: [
+            {
+              path: 'customers',
+              lazy:
+                loadCustomerDirectory,
+            },
+            {
+              path:
+                'customers/:customerId',
+              lazy:
+                loadCustomerIntelligence,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="products"
+            />
+          ),
+          children: [
+            {
+              path: 'products',
+              lazy:
+                loadProductDirectory,
+            },
+            {
+              path:
+                'products/:productId',
+              lazy:
+                loadProductIntelligence,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="pricing"
+            />
+          ),
+          children: [
+            {
+              path: 'pricing',
+              lazy:
+                loadPricingLaboratory,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="forecast"
+            />
+          ),
+          children: [
+            {
+              path: 'forecast',
+              lazy:
+                loadForecastWorkspace,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="inventory"
+            />
+          ),
+          children: [
+            {
+              path: 'inventory',
+              lazy:
+                loadInventoryWorkspace,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="purchasing"
+            />
+          ),
+          children: [
+            {
+              path: 'purchasing',
+              lazy:
+                loadPurchasingWorkspace,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="data-center"
+            />
+          ),
+          children: [
+            {
+              path: 'data-center',
+              lazy:
+                loadDataCenter,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="product-quality"
+            />
+          ),
+          children: [
+            {
+              path:
+                'data-quality/products',
+              lazy:
+                loadProductIdentityQuality,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="settings"
+            />
+          ),
+          children: [
+            {
+              path: 'settings',
+              lazy:
+                loadSettings,
+            },
+          ],
+        },
+      ],
+    },
+  ])
