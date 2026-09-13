@@ -1,10 +1,77 @@
+function buildBrandScopeFilter(
+  access,
+) {
+  if (
+    access?.scope !== 'assigned'
+  ) {
+    return {
+      sql:
+        '',
+      params:
+        [],
+    }
+  }
+
+  return {
+    sql:
+      `
+        AND REGEXP_REPLACE(
+          UPPER(brand),
+          '[^A-Z0-9]',
+          '',
+          'g'
+        ) = ANY($2::TEXT[])
+      `,
+    params:
+      [
+        access.brandIds ?? [],
+      ],
+  }
+}
+
 export async function loadSalesDataset(
   pool,
+  access = {
+    scope: 'all',
+    brandIds: [],
+  },
 ) {
   const client =
     await pool.connect()
 
   try {
+    const importResult =
+      await client.query(
+        `
+          SELECT
+            id,
+            file_name,
+            uploaded_at
+          FROM data_imports
+          WHERE
+            dataset_type = 'sales'
+            AND status = 'completed'
+          ORDER BY
+            completed_at DESC NULLS LAST,
+            id DESC
+          LIMIT 1
+        `,
+      )
+
+    const latestImport =
+      importResult.rows[0] ?? null
+
+    if (
+      latestImport === null
+    ) {
+      return null
+    }
+
+    const brandScopeFilter =
+      buildBrandScopeFilter(
+        access,
+      )
+
     const rowsResult =
       await client.query(
         `
@@ -25,27 +92,17 @@ export async function loadSalesDataset(
             sales_rep,
             currency
           FROM sales_facts
+          WHERE
+            import_id = $1
+            ${brandScopeFilter.sql}
           ORDER BY
             sale_date,
             id
         `,
-      )
-
-    const importResult =
-      await client.query(
-        `
-          SELECT
-            file_name,
-            uploaded_at
-          FROM data_imports
-          WHERE
-            dataset_type = 'sales'
-            AND status = 'completed'
-          ORDER BY
-            completed_at DESC NULLS LAST,
-            id DESC
-          LIMIT 1
-        `,
+        [
+          latestImport.id,
+          ...brandScopeFilter.params,
+        ],
       )
 
     if (
@@ -53,9 +110,6 @@ export async function loadSalesDataset(
     ) {
       return null
     }
-
-    const latestImport =
-      importResult.rows[0] ?? null
 
     const normalizedRows =
       rowsResult.rows.map(
@@ -119,11 +173,11 @@ export async function loadSalesDataset(
       normalizedRows,
 
       lastImportedFile:
-        latestImport?.file_name ??
+        latestImport.file_name ??
         'PostgreSQL Sales',
 
       lastImportedAt:
-        latestImport?.uploaded_at
+        latestImport.uploaded_at
           ? new Date(
               latestImport.uploaded_at,
             ).toISOString()
