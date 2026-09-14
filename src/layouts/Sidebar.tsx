@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 import {
   Boxes,
   Building2,
@@ -12,6 +14,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Users,
+  X,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
@@ -86,7 +89,52 @@ const workspaceNavigation: {
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean
+  onMobileClose?: () => void
+}
+
+const noop = () => {}
+
+export function Sidebar({
+  mobileOpen = false,
+  onMobileClose = noop,
+}: SidebarProps = {}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      return
+    }
+
+    const dialog = dialogRef.current
+    const desktop = window.matchMedia('(min-width: 64rem)')
+
+    if (!dialog || desktop.matches) {
+      onMobileClose()
+      return
+    }
+
+    // The native modal contains keyboard focus and restores it on close.
+    const previousOverflow = document.body.style.overflow
+    dialog.showModal()
+    document.body.style.overflow = 'hidden'
+
+    const handleBreakpoint = () => {
+      if (desktop.matches) {
+        onMobileClose()
+      }
+    }
+
+    desktop.addEventListener('change', handleBreakpoint)
+
+    return () => {
+      desktop.removeEventListener('change', handleBreakpoint)
+      dialog.close()
+      document.body.style.overflow = previousOverflow
+    }
+  }, [mobileOpen, onMobileClose])
+
   const {
     user,
   } = useAuth()
@@ -122,31 +170,36 @@ export function Sidebar() {
     canAccessDataCenter ||
     canAccessProductQuality
 
-  return (
-    <aside
-      data-print-hidden="true"
-      className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-slate-950 lg:flex lg:flex-col"
-    >
-      <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500 text-white">
+  const content = (
+    <>
+      <div className="flex h-20 shrink-0 items-center gap-3 border-b border-white/10 px-4">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
           <Boxes
             size={21}
             strokeWidth={2.2}
           />
         </div>
 
-        <div>
-          <p className="font-semibold tracking-tight text-white">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold tracking-tight text-white">
             PM Intelligence
           </p>
 
-          <p className="text-xs text-slate-400">
+          <p className="truncate text-xs text-slate-400">
             Business Operating System
           </p>
         </div>
+        <button
+          type="button"
+          onClick={onMobileClose}
+          aria-label="Cerrar navegación"
+          className="ml-auto flex size-11 shrink-0 items-center justify-center rounded-xl text-slate-300 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-blue-400 lg:hidden"
+        >
+          <X size={22} />
+        </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav aria-label="Workspaces y administración" className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <p className="mb-3 px-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
           Workspaces
         </p>
@@ -159,6 +212,7 @@ export function Sidebar() {
               icon: Icon,
             }) => (
               <NavLink
+                onClick={onMobileClose}
                 key={path}
                 to={path}
                 end={path === '/'}
@@ -196,6 +250,7 @@ export function Sidebar() {
 
             {canAccessDataCenter && (
               <NavLink
+                onClick={onMobileClose}
                 to="/data-center"
                 className={({
                   isActive,
@@ -221,6 +276,7 @@ export function Sidebar() {
 
             {canAccessProductQuality && (
               <NavLink
+                onClick={onMobileClose}
                 to="/data-quality/products"
                 className={({
                   isActive,
@@ -247,9 +303,10 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t border-white/10 p-4">
+      <div className="shrink-0 border-t border-white/10 p-4">
         {canAccessSettings && (
           <NavLink
+                onClick={onMobileClose}
             to="/settings"
             className={({
               isActive,
@@ -280,6 +337,44 @@ export function Sidebar() {
           </p>
         </div>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      <aside
+        data-print-hidden="true"
+        className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r border-slate-200 bg-slate-950 lg:flex"
+      >
+        {content}
+      </aside>
+
+      <dialog
+        ref={dialogRef}
+        id="mobile-workspace-navigation"
+        aria-label="Menú de navegación"
+        data-print-hidden="true"
+        className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none border-0 bg-transparent p-0 text-slate-950 backdrop:bg-slate-950/50"
+        onCancel={(event) => {
+          event.preventDefault()
+          onMobileClose()
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            onMobileClose()
+          }
+        }}
+      >
+        <aside
+          className="flex h-full w-80 max-w-[90vw] flex-col overflow-hidden bg-slate-950 shadow-2xl"
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          }}
+        >
+          {content}
+        </aside>
+      </dialog>
+    </>
   )
 }

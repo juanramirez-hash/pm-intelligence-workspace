@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from 'react'
@@ -33,6 +34,16 @@ interface AuthState {
 }
 
 export function AppShell() {
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
+
+  const openMobileNavigation = useCallback(() => {
+    setMobileNavigationOpen(true)
+  }, [])
+
+  const closeMobileNavigation = useCallback(() => {
+    setMobileNavigationOpen(false)
+  }, [])
+
   const [
     auth,
     setAuth,
@@ -126,13 +137,20 @@ export function AppShell() {
       data-app-shell="true"
       className="min-h-screen bg-slate-50 text-slate-950"
     >
-      <Sidebar />
+      <Sidebar
+        mobileOpen={mobileNavigationOpen}
+        onMobileClose={closeMobileNavigation}
+      />
 
       <div
         data-app-shell-content="true"
         className="min-h-screen lg:pl-72"
       >
-        <Topbar user={auth.user} />
+        <Topbar
+          user={auth.user}
+          onMenuOpen={openMobileNavigation}
+          navigationOpen={mobileNavigationOpen}
+        />
 
         <main
           data-app-main="true"

@@ -19,6 +19,8 @@ interface TopbarUser {
 
 interface TopbarProps {
   user: TopbarUser
+  onMenuOpen: () => void
+  navigationOpen: boolean
 }
 
 const workspaceTitles: Record<string, string> = {
@@ -65,6 +67,8 @@ function getUserInitials(
 
 export function Topbar({
   user,
+  onMenuOpen,
+  navigationOpen,
 }: TopbarProps) {
   const location = useLocation()
 
@@ -95,45 +99,56 @@ export function Topbar({
   return (
     <header
       data-print-hidden="true"
-      className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur sm:px-8 lg:px-10"
+      className="sticky top-0 z-30 flex min-h-20 items-center justify-between gap-2 py-3 border-b border-slate-200 bg-white/90 px-3 backdrop-blur sm:px-8 lg:px-10"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
         <button
           type="button"
-          className="flex size-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 lg:hidden"
+          onClick={onMenuOpen}
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-600 focus-visible:outline-2 focus-visible:outline-blue-500 lg:hidden"
           aria-label="Abrir navegación"
+          aria-controls="mobile-workspace-navigation"
+          aria-expanded={navigationOpen}
+          aria-haspopup="dialog"
         >
           <Menu size={20} />
         </button>
 
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
             Workspace
           </p>
 
-          <h1 className="text-lg font-semibold text-slate-950">
+          <h1
+            className="truncate text-sm font-semibold text-slate-950 sm:text-lg"
+            title={workspaceTitle}
+          >
             {workspaceTitle}
           </h1>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
         <button
           type="button"
-          className="hidden h-10 min-w-64 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-left text-sm text-slate-400 md:flex"
+          className="hidden h-10 min-w-64 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-left text-sm text-slate-400 xl:flex"
         >
           <Search size={17} />
           Buscar marcas, productos o clientes
         </button>
 
-        <Button variant="secondary">
+        <Button
+          variant="secondary"
+          aria-label="Copilot"
+          className="size-11 min-w-11 shrink-0 px-0 sm:w-auto sm:px-3"
+        >
           <Sparkles size={17} />
-          Copilot
+          <span className="hidden sm:inline">Copilot</span>
         </Button>
 
         <button
           type="button"
-          className="relative flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+          className="relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
           aria-label="Notificaciones"
         >
           <Bell size={18} />
@@ -142,7 +157,7 @@ export function Topbar({
         </button>
 
         <div
-          className="flex size-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white"
           title={
             user.name ??
             user.email
@@ -154,7 +169,8 @@ export function Topbar({
         <button
           type="button"
           onClick={handleLogout}
-          className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          aria-label="Cerrar sesión"
+          className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
         >
           <LogOut size={17} />
           <span className="hidden sm:inline">
