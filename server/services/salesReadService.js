@@ -5,29 +5,29 @@ function buildBrandScopeFilter(
     access?.scope !== 'assigned'
   ) {
     return {
-      sql:
-        '',
-      params:
-        [],
+      sql: '',
+      params: undefined,
     }
   }
 
   return {
-    sql:
-      `
-        AND REGEXP_REPLACE(
-          UPPER(brand),
-          '[^A-Z0-9]',
-          '',
-          'g'
-        ) = ANY($2::TEXT[])
-      `,
-    params:
-      [
-        access.brandIds ?? [],
-      ],
+    sql: `
+      WHERE REGEXP_REPLACE(
+        UPPER(brand),
+        '[^A-Z0-9]',
+        '',
+        'g'
+      ) = ANY($1::TEXT[])
+    `,
+    params: [
+      access.brandIds ?? [],
+    ],
   }
 }
+
+/**
+ * @param {{ scope: 'all' | 'assigned', brandIds: string[] }} [access]
+ */
 
 export async function loadSalesDataset(
   pool,
@@ -72,6 +72,9 @@ export async function loadSalesDataset(
         access,
       )
 
+    // Sales acumula histórico entre cargas.
+    // El último import aporta metadatos,
+    // pero no limita las filas consultadas.
     const rowsResult =
       await client.query(
         `
@@ -92,17 +95,12 @@ export async function loadSalesDataset(
             sales_rep,
             currency
           FROM sales_facts
-          WHERE
-            import_id = $1
-            ${brandScopeFilter.sql}
+          ${brandScopeFilter.sql}
           ORDER BY
             sale_date,
             id
         `,
-        [
-          latestImport.id,
-          ...brandScopeFilter.params,
-        ],
+        brandScopeFilter.params,
       )
 
     if (
