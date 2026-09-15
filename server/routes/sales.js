@@ -19,11 +19,57 @@ export function createSalesRouter(
 
   router.get(
     '/',
-    async (_req, res) => {
+    async (req, res) => {
+      // Permissions must come from the authenticated server-side user.
+      const access = req.authUser
+
+      if (!access) {
+        return res.status(401).json({
+          ok: false,
+          error: 'Authentication required',
+        })
+      }
+
+      if (
+        access.scope !== 'all' &&
+        access.scope !== 'assigned'
+      ) {
+        return res.status(403).json({
+          ok: false,
+          error: 'Sales access scope is invalid',
+        })
+      }
+
+      if (
+        access.scope === 'assigned' &&
+        (
+          !Array.isArray(access.brandIds) ||
+          !access.brandIds.every(
+            (brandId) =>
+              typeof brandId === 'string' &&
+              brandId.trim().length > 0,
+          )
+        )
+      ) {
+        return res.status(403).json({
+          ok: false,
+          error: 'Sales brand assignments are invalid',
+        })
+      }
+
+      res.set('Cache-Control', 'no-store')
+
       try {
         const dataset =
           await loadSalesDataset(
             pool,
+            {
+              scope: access.scope,
+              brandIds:
+                access.scope === 'assigned'
+                  ? access.brandIds
+                  : [],
+            },
           )
 
         return res.json({
