@@ -157,3 +157,15 @@ export async function updateSettingsUserBrands(
 
   return result.brandIds
 }
+
+export async function deleteSettingsUser(
+  userId: number,
+): Promise<void> {
+  await requestJson<{
+    ok: true
+    deletedUserId: number
+  }>(
+    `/api/settings/users/${userId}`,
+    { method: 'DELETE' },
+  )
+}

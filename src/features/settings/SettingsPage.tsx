@@ -1,3 +1,5 @@
+import { useAuth } from '../auth/useAuth'
+
 import {
   CheckCircle2,
   Database,
@@ -21,6 +23,7 @@ import {
 
 import {
   createSettingsUser,
+  deleteSettingsUser,
   loadSettingsUserBrands,
   loadSettingsUsers,
   updateSettingsUser,
@@ -167,6 +170,9 @@ function GeneralSettings() {
 }
 
 function UsersSettings() {
+  const { user: currentUser } = useAuth()
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null)
+
     const workspace =
     useWorkspaceContext()
 
@@ -682,6 +688,58 @@ const handleSaveName =
     }
   }
 
+  const handleDeleteUser = async (user: SettingsUser) => {
+    if (
+      currentUser.role !== 'admin' ||
+      Number(currentUser.id) === Number(user.id) ||
+      deletingUserId !== null || savingUserId !== null ||
+      savingAssignments || loadingAssignments || loading
+    ) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `¿Eliminar a ${user.name ?? user.email} (${user.email})?\n\n` +
+      'Se eliminarán su cuenta, sus asignaciones de marcas y sus sesiones. ' +
+      'Las importaciones y los datos comerciales se conservarán. ' +
+      'La cuenta no podrá volver a entrar salvo que se autorice de nuevo.\n\n' +
+      'Esta acción no se puede deshacer.',
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setDeletingUserId(user.id)
+      setError(null)
+      setSuccessMessage(null)
+
+      await deleteSettingsUser(user.id)
+      setUsers((current) => current.filter((item) => item.id !== user.id))
+
+      if (assignmentUserId === user.id) {
+        setAssignmentUserId(null)
+        setAssignedBrandIds([])
+        setBrandSearch('')
+      }
+      if (editingNameUserId === user.id) {
+        setEditingNameUserId(null)
+        setEditingNameValue('')
+      }
+
+      setSuccessMessage(`Usuario ${user.email} eliminado.`)
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'No fue posible eliminar el usuario.',
+      )
+    } finally {
+      setDeletingUserId(null)
+    }
+  }
+
   const formatLastLogin = (
     value: string | null,
   ) => {
@@ -730,7 +788,7 @@ const handleSaveName =
             onClick={() =>
               void refreshUsers()
             }
-            disabled={loading}
+            disabled={loading || deletingUserId !== null}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading
@@ -914,8 +972,8 @@ const handleSaveName =
                 {users.map(
                   (user) => {
                     const isSaving =
-                      savingUserId ===
-                      user.id
+                      savingUserId === user.id ||
+                      deletingUserId !== null
 
                     return (
                       <tr
@@ -1073,6 +1131,7 @@ const handleSaveName =
                         </td>
 
                         <td className="px-6 py-4 text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
                           <button
                             type="button"
                             disabled={
@@ -1098,6 +1157,27 @@ const handleSaveName =
                                 ? 'Deshabilitar'
                                 : 'Habilitar'}
                           </button>
+                          {currentUser.role === 'admin' && (
+                            <button
+                              type="button"
+                              disabled={
+                                isSaving || savingUserId !== null ||
+                                savingAssignments || loadingAssignments ||
+                                Number(currentUser.id) === Number(user.id)
+                              }
+                              title={
+                                Number(currentUser.id) === Number(user.id)
+                                  ? 'No puedes eliminar tu propia cuenta'
+                                  : `Eliminar a ${user.email}`
+                              }
+                              aria-label={`Eliminar a ${user.email}`}
+                              onClick={() => void handleDeleteUser(user)}
+                              className="rounded-xl border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {deletingUserId === user.id ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                          )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -1234,7 +1314,7 @@ const handleSaveName =
           <button
             type="button"
             disabled={
-              savingAssignments
+              savingAssignments || deletingUserId !== null
             }
             onClick={() =>
               void handleSaveAssignments()

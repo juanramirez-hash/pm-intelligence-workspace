@@ -651,5 +651,133 @@ export function createSettingsUsersRouter(
     },
   )
 
+  router.delete(
+    '/:id',
+    async (req, res) => {
+      const actorId = Number(req.authUser?.id)
+      const userId = Number(req.params.id)
+
+      if (!Number.isSafeInteger(actorId) || actorId <= 0) {
+        return res.status(401).json({
+          ok: false,
+          error: 'Debes iniciar sesión.',
+        })
+      }
+
+      if (req.authUser.role !== 'admin') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Solo un administrador puede eliminar usuarios.',
+        })
+      }
+
+      if (
+        !/^[0-9]+$/.test(req.params.id) ||
+        !Number.isSafeInteger(userId) || userId <= 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: 'El identificador del usuario no es válido.',
+        })
+      }
+
+      if (actorId === userId) {
+        return res.status(409).json({
+          ok: false,
+          error: 'No puedes eliminar tu propia cuenta.',
+        })
+      }
+
+      let client
+      let inTransaction = false
+
+      try {
+        client = await pool.connect()
+        await client.query('BEGIN')
+        inTransaction = true
+
+        // Lock both users in a stable order and recheck administrator access.
+        // A different, active administrator must remain after deletion.
+        const usersResult = await client.query(
+          `
+            SELECT id, email, role, active
+            FROM app_users
+            WHERE id = ANY($1::BIGINT[])
+            ORDER BY id
+            FOR UPDATE
+          `,
+          [[actorId, userId]],
+        )
+
+        const actor = usersResult.rows.find(
+          (user) => Number(user.id) === actorId,
+        )
+        const target = usersResult.rows.find(
+          (user) => Number(user.id) === userId,
+        )
+
+        if (!actor || actor.active !== true || actor.role !== 'admin') {
+          await client.query('ROLLBACK')
+          inTransaction = false
+          return res.status(403).json({
+            ok: false,
+            error: 'Tu cuenta ya no tiene permisos de administrador activo.',
+          })
+        }
+
+        if (!target) {
+          await client.query('ROLLBACK')
+          inTransaction = false
+          return res.status(404).json({
+            ok: false,
+            error: 'El usuario ya no existe.',
+          })
+        }
+
+        await client.query(
+          `
+            DELETE FROM user_sessions
+            WHERE sess::jsonb -> 'user' ->> 'id' = $1
+          `,
+          [String(userId)],
+        )
+
+        // Foreign keys preserve imports (SET NULL) and remove assignments
+        // belonging to the deleted user (CASCADE).
+        await client.query(
+          'DELETE FROM app_users WHERE id = $1',
+          [userId],
+        )
+
+        await client.query('COMMIT')
+        inTransaction = false
+
+        return res.json({
+          ok: true,
+          deletedUserId: userId,
+        })
+      } catch (error) {
+        if (client && inTransaction) {
+          try {
+            await client.query('ROLLBACK')
+          } catch (rollbackError) {
+            console.error('User deletion rollback failed:', rollbackError)
+          }
+        }
+
+        console.error('Settings user delete failed:', error)
+
+        return res.status(error?.code === '23503' ? 409 : 500).json({
+          ok: false,
+          error: error?.code === '23503'
+            ? 'No se pudo eliminar: existen registros vinculados que deben conservarse.'
+            : 'No fue posible eliminar el usuario.',
+        })
+      } finally {
+        client?.release()
+      }
+    },
+  )
+
   return router
 }
