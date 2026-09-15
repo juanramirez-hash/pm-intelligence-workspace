@@ -446,4 +446,47 @@ describe('loadSalesDataset', () => {
       ).toHaveBeenCalledOnce()
     },
   )
+    it(
+    'normalizes assigned brands with spaces and hyphens',
+    async () => {
+      const { pool, query } = buildPool()
+
+      await loadSalesDataset(pool, {
+        scope: 'assigned',
+        brandIds: [
+          'C-DATA',
+          'MARCAS VARIAS',
+          'PLATINUM TOOLS',
+          'NCS JAGUAR',
+          ' mikrotik ',
+          'SONOFF',
+          'CDATA',
+        ],
+      })
+
+      const [
+        salesSql,
+        salesParams,
+      ] = getSalesQueryCall(query)
+
+      expect(salesParams).toEqual([
+        [
+          'CDATA',
+          'MARCASVARIAS',
+          'PLATINUMTOOLS',
+          'NCSJAGUAR',
+          'MIKROTIK',
+          'SONOFF',
+        ],
+      ])
+
+      expect(salesSql).toContain(
+        'ANY($1::TEXT[])',
+      )
+
+      expect(salesSql).not.toMatch(
+        /\bimport_id\b/i,
+      )
+    },
+  )
 })

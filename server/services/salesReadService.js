@@ -1,3 +1,29 @@
+/**
+ * @param {string[]} brandIds
+ */
+function normalizeAssignedBrandIds(
+  brandIds,
+) {
+  return [
+    ...new Set(
+      brandIds
+        .map(
+          (brandId) =>
+            brandId
+              .toUpperCase()
+              .replace(
+                /[^A-Z0-9]/g,
+                '',
+              ),
+        )
+        .filter(
+          (brandId) =>
+            brandId.length > 0,
+        ),
+    ),
+  ]
+}
+
 function buildBrandScopeFilter(
   access,
 ) {
@@ -10,6 +36,11 @@ function buildBrandScopeFilter(
     }
   }
 
+  const brandIds =
+    normalizeAssignedBrandIds(
+      access.brandIds ?? [],
+    )
+
   return {
     sql: `
       WHERE REGEXP_REPLACE(
@@ -20,7 +51,7 @@ function buildBrandScopeFilter(
       ) = ANY($1::TEXT[])
     `,
     params: [
-      access.brandIds ?? [],
+      brandIds,
     ],
   }
 }
@@ -28,7 +59,6 @@ function buildBrandScopeFilter(
 /**
  * @param {{ scope: 'all' | 'assigned', brandIds: string[] }} [access]
  */
-
 export async function loadSalesDataset(
   pool,
   access = {
@@ -72,9 +102,8 @@ export async function loadSalesDataset(
         access,
       )
 
-    // Sales acumula histórico entre cargas.
-    // El último import aporta metadatos,
-    // pero no limita las filas consultadas.
+    // Sales accumulates history across imports.
+    // The latest import supplies metadata only.
     const rowsResult =
       await client.query(
         `
