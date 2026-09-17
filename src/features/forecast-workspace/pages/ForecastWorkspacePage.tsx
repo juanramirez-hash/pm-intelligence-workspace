@@ -217,6 +217,10 @@ export function ForecastWorkspacePage() {
   const [exportError, setExportError] = useState<string | null>(null)
   const [exportFileName, setExportFileName] = useState<string | null>(null)
 
+  const [showAllProjects, setShowAllProjects] = useState(false)
+  const [projectSearch, setProjectSearch] = useState('')
+  const [showQuality, setShowQuality] = useState(false)
+
   const request = useMemo(
     () => ({
       scenarioId,
@@ -227,6 +231,21 @@ export function ForecastWorkspacePage() {
   )
 
   const workspace = useForecastWorkspace(request)
+  const normalizeSearch = (value: string) => value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-MX')
+    .trim()
+  const projectQuery = normalizeSearch(projectSearch)
+  const matchingProjects = workspace.projectPipeline.contributions.filter(
+    (project) => normalizeSearch(
+      [project.projectName, project.projectId, project.brandId]
+        .filter(Boolean).join(' '),
+    ).includes(projectQuery),
+  )
+  const visibleProjects = showAllProjects
+    ? matchingProjects
+    : workspace.projectPipeline.contributions.slice(0, 10)
   const status = workspaceStatusPresentation(workspace.status)
   const filtersActive = hasActiveFilters(filters)
   const visibleRiskRanking = workspace.riskRanking.slice(0, 10)
@@ -643,25 +662,48 @@ export function ForecastWorkspacePage() {
               title="Pipeline de proyectos del Forecast"
               tone="attention"
             >
-              <ForecastProjectPipelinePanel
-                contributions={workspace.projectPipeline.contributions}
-              />
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+                <p className="text-sm text-slate-600" role="status">
+                  {showAllProjects
+                    ? `${matchingProjects.length} coincidencias de ${workspace.projectPipeline.contributions.length} proyectos`
+                    : `Top 10 · Mostrando ${visibleProjects.length} de ${workspace.projectPipeline.contributions.length} proyectos`}
+                </p>
+                <button
+                  type="button"
+                  className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                  aria-expanded={showAllProjects}
+                  aria-controls="forecast-project-search"
+                  onClick={() => {
+                    setShowAllProjects((value) => !value)
+                    setProjectSearch('')
+                  }}
+                >
+                  {showAllProjects ? 'Mostrar menos' : 'Buscar y mostrar todo'}
+                </button>
+              </div>
+              <div id="forecast-project-search" hidden={!showAllProjects} className="mb-4 print:hidden">
+                <label htmlFor="forecast-project-query" className="mb-2 block text-sm font-medium text-slate-700">
+                  Buscar por nombre, código de proyecto o marca
+                </label>
+                <input
+                  id="forecast-project-query"
+                  type="search"
+                  value={projectSearch}
+                  onChange={(event) => setProjectSearch(event.target.value)}
+                  className="w-full rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm text-slate-900 focus:outline-2 focus:outline-blue-500"
+                  placeholder="Nombre, proyecto o marca..."
+                />
+              </div>
+              <div className="print:hidden">
+                <ForecastProjectPipelinePanel contributions={visibleProjects} />
+              </div>
+              <div className="hidden print:block">
+                <ForecastProjectPipelinePanel contributions={workspace.projectPipeline.contributions} />
+              </div>
             </ExecutivePanel>
           </div>
 
-          <div data-forecast-print-section="project-quality">
-            <ExecutivePanel
-              count={workspace.projectPipeline.quality.issues.length}
-              icon={<ShieldAlert size={19} />}
-              subtitle="Controles de conciliación, tipos de cambio, duplicidad, fechas, monto pendiente y cobertura de GP estimado."
-              title="Calidad y disponibilidad oficial"
-              tone={workspace.officialAvailable ? 'positive' : 'critical'}
-            >
-              <ForecastProjectQualityPanel
-                pipeline={workspace.projectPipeline}
-              />
-            </ExecutivePanel>
-          </div>
+
 
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]" data-forecast-print-section="coverage">
             <ExecutivePanel
@@ -820,6 +862,33 @@ export function ForecastWorkspacePage() {
             </ExecutivePanel>
           </div>
 
+          <div data-forecast-print-section="project-quality">
+            <ExecutivePanel
+              count={workspace.projectPipeline.quality.issues.length}
+              icon={<ShieldAlert size={19} />}
+              subtitle="Controles de conciliación, tipos de cambio, duplicidad, fechas, monto pendiente y cobertura de GP estimado."
+              title="Calidad y disponibilidad oficial"
+              tone={workspace.officialAvailable ? 'positive' : 'critical'}
+            >
+              <button
+                type="button"
+                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 print:hidden"
+                aria-expanded={showQuality}
+                aria-controls="forecast-quality-details"
+                onClick={() => setShowQuality((value) => !value)}
+              >
+                {showQuality ? 'Ocultar detalle' : 'Mostrar todo'}
+              </button>
+              <div
+                id="forecast-quality-details"
+                className={showQuality ? 'mt-4' : 'hidden print:mt-4 print:block'}
+              >
+                <ForecastProjectQualityPanel
+                  pipeline={workspace.projectPipeline}
+                />
+              </div>
+            </ExecutivePanel>
+          </div>
         </>
       )}
     </ExecutiveShell>

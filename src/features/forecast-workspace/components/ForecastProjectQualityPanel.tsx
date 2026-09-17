@@ -1,8 +1,5 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-} from 'lucide-react'
+import { useState } from 'react'
+import { AlertTriangle, CheckCircle2, Info } from 'lucide-react'
 
 import type {
   ForecastWorkspaceProjectPipeline,
@@ -17,11 +14,17 @@ export interface ForecastProjectQualityPanelProps {
   pipeline: ForecastWorkspaceProjectPipeline
 }
 
-const MAX_VISIBLE_ISSUES = 40
+function normalizeSearch(value: string): string {
+  return value.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-MX')
+    .trim()
+}
 
 export function ForecastProjectQualityPanel({
   pipeline,
 }: ForecastProjectQualityPanelProps) {
+  const [search, setSearch] = useState('')
   const quality = pipeline.quality
   const severityOrder = {
     blocking: 0,
@@ -35,15 +38,15 @@ export function ForecastProjectQualityPanel({
         Number(left.periodId === quality.currentPeriodId) ||
       severityOrder[left.severity] - severityOrder[right.severity] ||
       (right.periodId ?? '').localeCompare(left.periodId ?? '') ||
-      (left.documentNumber ?? '').localeCompare(
-        right.documentNumber ?? '',
-      ),
+      (left.documentNumber ?? '').localeCompare(right.documentNumber ?? ''),
   )
-  const visibleIssues = orderedIssues.slice(0, MAX_VISIBLE_ISSUES)
-  const hiddenIssues = Math.max(
-    0,
-    orderedIssues.length - visibleIssues.length,
-  )
+  const query = normalizeSearch(search)
+  const matchesSearch = (issue: typeof orderedIssues[number]) =>
+    normalizeSearch([
+      issue.code, issue.severity, issue.message, issue.periodId,
+      issue.projectId, issue.documentNumber, issue.brandId,
+    ].filter(Boolean).join(' ')).includes(query)
+  const matchingCount = orderedIssues.filter(matchesSearch).length
 
   return (
     <div data-forecast-component="project-quality">
@@ -55,9 +58,7 @@ export function ForecastProjectQualityPanel({
           },
           {
             label: 'Cobertura histórica',
-            value: formatForecastPercentage(
-              quality.historicalReconciliationCoverage,
-            ),
+            value: formatForecastPercentage(quality.historicalReconciliationCoverage),
           },
           {
             label: 'Pendientes por corte',
@@ -73,9 +74,7 @@ export function ForecastProjectQualityPanel({
           },
           {
             label: 'Cobertura GP estimado',
-            value: formatForecastPercentage(
-              quality.grossProfitEstimateCoverage,
-            ),
+            value: formatForecastPercentage(quality.grossProfitEstimateCoverage),
           },
         ].map((item) => (
           <article
@@ -101,16 +100,36 @@ export function ForecastProjectQualityPanel({
         </div>
       </div>
 
+      {orderedIssues.length > 0 && (
+        <div className="mt-4 print:hidden">
+          <label htmlFor="forecast-quality-query" className="mb-2 block text-sm font-medium text-slate-700">
+            Buscar incidencia, proyecto, documento o marca
+          </label>
+          <input
+            id="forecast-quality-query"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Código, mensaje, proyecto, documento o marca..."
+            className="w-full rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm text-slate-900 focus:outline-2 focus:outline-blue-500"
+          />
+          <p className="mt-2 text-xs text-slate-500" role="status">
+            {matchingCount} de {orderedIssues.length} incidencias
+          </p>
+        </div>
+      )}
+
       <div className="mt-4 space-y-2">
         {quality.issues.length === 0 ? (
           <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm font-semibold text-emerald-800">
             <CheckCircle2 size={17} />
             No existen incidencias de calidad para el Forecast Project-Aware.
           </div>
-        ) : visibleIssues.map((issue, index) => (
+        ) : orderedIssues.map((issue, index) => (
           <article
             className={[
-              'flex gap-3 rounded-2xl border p-4 text-sm leading-6',
+              matchesSearch(issue) ? 'flex' : 'hidden print:flex',
+              'gap-3 rounded-2xl border p-4 text-sm leading-6',
               issue.severity === 'blocking'
                 ? 'border-rose-100 bg-rose-50/60 text-rose-900'
                 : issue.severity === 'warning'
@@ -127,17 +146,15 @@ export function ForecastProjectQualityPanel({
               <p>{issue.message}</p>
               <p className="mt-1 text-xs opacity-75">
                 {[issue.periodId, issue.projectId, issue.documentNumber, issue.brandId]
-                  .filter(Boolean)
-                  .join(' · ') || 'Sin contexto adicional'}
+                  .filter(Boolean).join(' · ') || 'Sin contexto adicional'}
               </p>
             </div>
           </article>
         ))}
-
-        {hiddenIssues > 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            Se muestran las {visibleIssues.length} incidencias prioritarias. Las {hiddenIssues} adicionales permanecen disponibles en la exportación Excel y en la auditoría de Data Center.
-          </div>
+        {orderedIssues.length > 0 && matchingCount === 0 && (
+          <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 print:hidden">
+            No hay incidencias que coincidan con la búsqueda.
+          </p>
         )}
       </div>
     </div>
