@@ -531,33 +531,33 @@ export function ExecutiveSalesPerformance({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <article className="relative overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-7 text-white shadow-xl shadow-blue-100/60 sm:col-span-2 xl:col-span-2">
-          <div className="absolute -right-16 -top-16 size-52 rounded-full bg-blue-500/20 blur-3xl" />
-          <div className="absolute -bottom-16 left-20 size-44 rounded-full bg-cyan-400/10 blur-3xl" />
+        <article className="relative overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-white via-blue-50/50 to-sky-100/60 p-7 text-blue-950 shadow-sm sm:col-span-2 xl:col-span-2">
+          <div className="absolute -right-16 -top-16 size-52 rounded-full bg-blue-200/30 blur-3xl" />
+          <div className="absolute -bottom-16 left-20 size-44 rounded-full bg-sky-200/20 blur-3xl" />
 
           <div className="relative flex h-full min-h-72 flex-col">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex size-14 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-blue-200 backdrop-blur">
+              <div className="flex size-14 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
                 <CalendarDays size={27} />
               </div>
 
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-100 backdrop-blur">
+              <span className="rounded-full border border-blue-200 bg-white/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
                 {periodBadge}
               </span>
             </div>
 
             <div className="mt-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">
                 Venta del periodo
               </p>
 
-              <p className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
+              <p className="mt-3 text-4xl font-semibold tracking-tight text-blue-950 sm:text-5xl">
                 {formatCompactCurrency(
                   performance.currentRevenue,
                 )}
               </p>
 
-              <p className="mt-2 text-sm font-medium text-slate-300">
+              <p className="mt-2 text-sm font-medium text-slate-600">
                 {formatCurrency(
                   performance.currentRevenue,
                 )}
@@ -565,14 +565,14 @@ export function ExecutiveSalesPerformance({
             </div>
 
             <div className="mt-auto pt-8">
-              <div className="border-t border-white/10 pt-5">
+              <div className="border-t border-blue-200/70 pt-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                       Periodo analizado
                     </p>
 
-                    <p className="mt-1 text-lg font-semibold text-white">
+                    <p className="mt-1 text-lg font-semibold text-blue-950">
                       {performance.currentLabel}
                     </p>
                   </div>
@@ -580,16 +580,16 @@ export function ExecutiveSalesPerformance({
                   {performance.comparison
                     .variationPercentage !==
                   null && (
-                    <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
+                    <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
                       {performance.comparison
                         .variationPercentage >= 0 ? (
                         <TrendingUp
-                          className="text-emerald-400"
+                          className="text-emerald-600"
                           size={17}
                         />
                       ) : (
                         <TrendingDown
-                          className="text-rose-400"
+                          className="text-rose-600"
                           size={17}
                         />
                       )}
