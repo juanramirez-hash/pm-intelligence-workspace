@@ -1,3 +1,4 @@
+// TECNO-TOP-MENU-20260917
 import { useEffect, useRef } from 'react'
 
 import {
@@ -170,10 +171,24 @@ export function Sidebar({
     canAccessDataCenter ||
     canAccessProductQuality
 
+  // Keep the same route order and access rules on desktop and mobile.
+  const desktopNavigation = [
+    ...visibleWorkspaceNavigation,
+    ...(canAccessDataCenter
+      ? [{ label: 'Data Center', path: '/data-center', icon: Database }]
+      : []),
+    ...(canAccessProductQuality
+      ? [{ label: 'Calidad de producto', path: '/data-quality/products', icon: ShieldCheck }]
+      : []),
+    ...(canAccessSettings
+      ? [{ label: 'Settings', path: '/settings', icon: Settings }]
+      : []),
+  ]
+
   const content = (
     <>
-      <div className="flex h-20 shrink-0 items-center gap-3 border-b border-white/10 px-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
+      <div className="flex h-20 shrink-0 items-center gap-3 border-b border-blue-100 px-4">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
           <Boxes
             size={21}
             strokeWidth={2.2}
@@ -181,11 +196,11 @@ export function Sidebar({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold tracking-tight text-white">
+          <p className="truncate font-semibold tracking-tight text-blue-950">
             PM Intelligence
           </p>
 
-          <p className="truncate text-xs text-slate-400">
+          <p className="truncate text-xs text-blue-700">
             Business Operating System
           </p>
         </div>
@@ -193,7 +208,7 @@ export function Sidebar({
           type="button"
           onClick={onMobileClose}
           aria-label="Cerrar navegación"
-          className="ml-auto flex size-11 shrink-0 items-center justify-center rounded-xl text-slate-300 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-blue-400 lg:hidden"
+          className="ml-auto flex size-11 shrink-0 items-center justify-center rounded-xl text-blue-700 hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-blue-400 lg:hidden"
         >
           <X size={22} />
         </button>
@@ -220,10 +235,10 @@ export function Sidebar({
                   isActive,
                 }) =>
                   [
-                    'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
+                    'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
                     isActive
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-950/20'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white',
+                      ? 'bg-[#F58220] text-blue-950 shadow-sm'
+                      : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
                   ].join(' ')
                 }
               >
@@ -242,7 +257,7 @@ export function Sidebar({
 
         {hasAdministrationAccess && (
           <>
-            <div className="my-5 border-t border-white/10" />
+            <div className="my-5 border-t border-blue-100" />
 
             <p className="mb-3 px-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               Administración
@@ -256,10 +271,10 @@ export function Sidebar({
                   isActive,
                 }) =>
                   [
-                    'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
+                    'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
                     isActive
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-950/20'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white',
+                      ? 'bg-[#F58220] text-blue-950 shadow-sm'
+                      : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
                   ].join(' ')
                 }
               >
@@ -282,10 +297,10 @@ export function Sidebar({
                   isActive,
                 }) =>
                   [
-                    'mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
+                    'mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
                     isActive
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-950/20'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white',
+                      ? 'bg-[#F58220] text-blue-950 shadow-sm'
+                      : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
                   ].join(' ')
                 }
               >
@@ -303,7 +318,7 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="shrink-0 border-t border-white/10 p-4">
+      <div className="shrink-0 border-t border-blue-100 p-4">
         {canAccessSettings && (
           <NavLink
                 onClick={onMobileClose}
@@ -312,10 +327,10 @@ export function Sidebar({
               isActive,
             }) =>
               [
-                'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
+                'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
                 isActive
-                  ? 'bg-white/10 text-white'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-white',
+                  ? 'bg-[#F58220] text-blue-950 shadow-sm'
+                  : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
               ].join(' ')
             }
           >
@@ -327,12 +342,12 @@ export function Sidebar({
           </NavLink>
         )}
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm font-medium text-white">
+        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+          <p className="text-sm font-medium text-blue-950">
             {user.name ?? user.email}
           </p>
 
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-blue-700">
             {user.roleName}
           </p>
         </div>
@@ -342,12 +357,32 @@ export function Sidebar({
 
   return (
     <>
-      <aside
+      <div
         data-print-hidden="true"
-        className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r border-slate-200 bg-slate-950 lg:flex"
+        className="hidden border-b border-blue-100 bg-gradient-to-r from-blue-50 via-white to-blue-50 px-8 py-2 lg:block lg:px-10"
       >
-        {content}
-      </aside>
+        <nav
+          aria-label="Navegación principal"
+          className="mx-auto grid w-full max-w-[1600px] grid-cols-6 gap-1.5 xl:grid-cols-12"
+        >
+          {desktopNavigation.map(({ label, path, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={path === '/'}
+              className={({ isActive }) => [
+                'flex min-h-20 min-w-0 flex-col items-center justify-center gap-2 rounded-xl border px-2 py-2 text-center text-[11px] font-semibold leading-4 transition focus-visible:outline-2 focus-visible:outline-blue-600',
+                isActive
+                  ? 'border-orange-400 bg-[#F58220] text-blue-950 shadow-sm'
+                  : 'border-transparent text-blue-800 hover:border-blue-200 hover:bg-blue-100',
+              ].join(' ')}
+            >
+              <Icon size={20} strokeWidth={1.9} className="shrink-0" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
 
       <dialog
         ref={dialogRef}
@@ -366,7 +401,7 @@ export function Sidebar({
         }}
       >
         <aside
-          className="flex h-full w-80 max-w-[90vw] flex-col overflow-hidden bg-slate-950 shadow-2xl"
+          className="flex h-full w-80 max-w-[90vw] flex-col overflow-hidden bg-white shadow-2xl"
           style={{
             paddingTop: 'env(safe-area-inset-top)',
             paddingBottom: 'env(safe-area-inset-bottom)',

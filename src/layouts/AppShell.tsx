@@ -1,3 +1,4 @@
+// TECNO-TOP-MENU-20260917
 import {
   useCallback,
   useEffect,
@@ -130,38 +131,40 @@ export function AppShell() {
   }
 
   return (
-  <AuthProvider
-    user={auth.user}
-  >
-    <div
-      data-app-shell="true"
-      className="min-h-screen bg-slate-50 text-slate-950"
-    >
-      <Sidebar
-        mobileOpen={mobileNavigationOpen}
-        onMobileClose={closeMobileNavigation}
-      />
-
+    <AuthProvider user={auth.user}>
       <div
-        data-app-shell-content="true"
-        className="min-h-screen lg:pl-72"
+        data-app-shell="true"
+        className="min-h-screen bg-slate-50 text-slate-950"
       >
-        <Topbar
-          user={auth.user}
-          onMenuOpen={openMobileNavigation}
-          navigationOpen={mobileNavigationOpen}
-        />
-
-        <main
-          data-app-main="true"
-          className="px-5 py-6 sm:px-8 lg:px-10"
+        <div
+          data-app-shell-content="true"
+          className="min-h-screen"
         >
-          <div className="mx-auto w-full max-w-[1600px]">
-            <Outlet />
+          <div
+            data-print-hidden="true"
+            className="sticky top-0 z-30 bg-white shadow-sm"
+          >
+            <Topbar
+              user={auth.user}
+              onMenuOpen={openMobileNavigation}
+              navigationOpen={mobileNavigationOpen}
+            />
+            <Sidebar
+              mobileOpen={mobileNavigationOpen}
+              onMobileClose={closeMobileNavigation}
+            />
           </div>
-        </main>
+
+          <main
+            data-app-main="true"
+            className="px-5 py-6 sm:px-8 lg:px-10"
+          >
+            <div className="mx-auto w-full max-w-[1600px]">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
-  </AuthProvider>
-)
+    </AuthProvider>
+  )
 }
