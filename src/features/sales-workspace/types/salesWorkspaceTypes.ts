@@ -80,6 +80,7 @@ export interface SalesWorkspaceComparison {
   revenueVariation: number | null
   grossProfitVariation: number | null
   quantityVariation: number | null
+  customerCountVariation?: number | null
   marginPointVariation: number | null
 }
 

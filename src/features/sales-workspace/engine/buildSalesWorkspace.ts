@@ -232,6 +232,11 @@ function buildComparison(
         currentPeriod.quantity,
         previousPeriod?.quantity ?? null,
       ),
+    customerCountVariation:
+      calculateVariation(
+        currentPeriod.customerCount,
+        previousPeriod?.customerCount ?? null,
+      ),
     marginPointVariation:
       previousMargin === null
         ? null
@@ -504,6 +509,7 @@ function buildEmptyComparison(
     revenueVariation: null,
     grossProfitVariation: null,
     quantityVariation: null,
+    customerCountVariation: null,
     marginPointVariation: null,
   }
 }

@@ -5,7 +5,6 @@ import {
 import {
   BadgeDollarSign,
   BarChart3,
-  Boxes,
   Building2,
   CheckCircle2,
   Database,
@@ -421,8 +420,8 @@ export function SalesWorkspacePage() {
               value: current?.brandCount ?? 0,
             },
             {
-              label: 'Productos activos',
-              value: current?.productCount ?? 0,
+              label: 'Clientes activos',
+              value: current?.customerCount ?? 0,
             },
             {
               label: 'Última carga',
@@ -571,17 +570,17 @@ export function SalesWorkspacePage() {
 
         <IntelligentKpiCard
           context={comparisonContext}
-          icon={<Boxes size={19} />}
-          insight="Unidades comerciales registradas en el periodo."
+          icon={<Users size={19} />}
+          insight="Clientes únicos con actividad de venta en el corte seleccionado."
           source="Business Repository"
-          title="Cantidad"
+          title="Clientes activos"
           tone="neutral"
           trend={getTrend(
-            workspace.comparison.quantityVariation,
+            workspace.comparison.customerCountVariation ?? null,
             workspace.comparison.label,
           )}
           value={formatSalesInteger(
-            current?.quantity ?? 0,
+            current?.customerCount ?? 0,
           )}
         />
       </KPIGrid>
