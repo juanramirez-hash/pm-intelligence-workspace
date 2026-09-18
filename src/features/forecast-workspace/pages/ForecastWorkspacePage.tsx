@@ -220,6 +220,8 @@ export function ForecastWorkspacePage() {
   const [showAllProjects, setShowAllProjects] = useState(false)
   const [projectSearch, setProjectSearch] = useState('')
   const [showQuality, setShowQuality] = useState(false)
+  const [showMethodology, setShowMethodology] = useState(false)
+  const [showLimitations, setShowLimitations] = useState(false)
 
   const request = useMemo(
     () => ({
@@ -826,19 +828,33 @@ export function ForecastWorkspacePage() {
               title="Cómo se construye esta lectura"
               tone="intelligence"
             >
-              <ol className="space-y-3">
-                {workspace.explainability.map((message, index) => (
-                  <li
-                    className="flex gap-3 rounded-2xl border border-violet-100 bg-violet-50/50 p-3.5 text-sm leading-6 text-slate-700"
-                    key={message}
-                  >
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
-                      {index + 1}
-                    </span>
-                    <span>{message}</span>
-                  </li>
-                ))}
-              </ol>
+              <button
+                type="button"
+                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 print:hidden"
+                aria-expanded={showMethodology}
+                aria-controls="forecast-methodology-details"
+                onClick={() => setShowMethodology((value) => !value)}
+              >
+                {showMethodology ? 'Ocultar detalle' : 'Mostrar todo'}
+              </button>
+              <div
+                id="forecast-methodology-details"
+                className={showMethodology ? 'mt-4' : 'hidden print:mt-4 print:block'}
+              >
+                <ol className="space-y-3">
+                  {workspace.explainability.map((message, index) => (
+                    <li
+                      className="flex gap-3 rounded-2xl border border-violet-100 bg-violet-50/50 p-3.5 text-sm leading-6 text-slate-700"
+                      key={message}
+                    >
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+                        {index + 1}
+                      </span>
+                      <span>{message}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </ExecutivePanel>
 
             <ExecutivePanel
@@ -848,17 +864,31 @@ export function ForecastWorkspacePage() {
               title="Limitaciones y calidad de fuente"
               tone="attention"
             >
-              <ul className="space-y-3">
-                {workspace.limitations.map((message) => (
-                  <li
-                    className="flex gap-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 text-sm leading-6 text-slate-700"
-                    key={message}
-                  >
-                    <AlertTriangle className="mt-1 shrink-0 text-amber-600" size={15} />
-                    <span>{message}</span>
-                  </li>
-                ))}
-              </ul>
+              <button
+                type="button"
+                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 print:hidden"
+                aria-expanded={showLimitations}
+                aria-controls="forecast-limitations-details"
+                onClick={() => setShowLimitations((value) => !value)}
+              >
+                {showLimitations ? 'Ocultar detalle' : 'Mostrar todo'}
+              </button>
+              <div
+                id="forecast-limitations-details"
+                className={showLimitations ? 'mt-4' : 'hidden print:mt-4 print:block'}
+              >
+                <ul className="space-y-3">
+                  {workspace.limitations.map((message) => (
+                    <li
+                      className="flex gap-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 text-sm leading-6 text-slate-700"
+                      key={message}
+                    >
+                      <AlertTriangle className="mt-1 shrink-0 text-amber-600" size={15} />
+                      <span>{message}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </ExecutivePanel>
           </div>
 
