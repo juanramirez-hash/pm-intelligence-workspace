@@ -1,3 +1,5 @@
+import type { BrandCommercialComparison } from './brandCommercialComparison'
+
 import {
   formatBusinessCurrency,
   formatBusinessNumber,
@@ -74,7 +76,10 @@ export interface BrandWorkspaceViewModel {
     healthLabel: string
   }
   cards: readonly BrandWorkspaceCard[]
+  lossEvaluation?: BrandDecisionModel['lossEvaluation']
   charts: {
+    comparisonDescription?: string
+    comparisonRanges?: Record<string, string>
     comparison: readonly BrandWorkspaceChartPoint[]
   }
   actionCenter: {
@@ -99,6 +104,7 @@ export interface BrandWorkspaceViewModel {
       typeLabel: string
       entityId: string | null
       entityName: string
+      evidence?: readonly string[]
       title: string
       description: string
       urgencyLabel: string
@@ -317,6 +323,7 @@ function toChartPoint(
 
 export function buildBrandWorkspaceViewModel(
   decision: BrandDecisionModel,
+  commercialComparison?: BrandCommercialComparison,
 ): BrandWorkspaceViewModel {
   const revenueAttainment =
     decision.currentSnapshot.attainment
@@ -328,7 +335,7 @@ export function buildBrandWorkspaceViewModel(
     decision.currentSnapshot.attainment
       .grossMargin.attainment
 
-  const comparisonSnapshots = [
+  const comparisonSnapshots = commercialComparison?.snapshots ?? [
     decision.previousSnapshot,
     decision.currentSnapshot,
   ].filter(
@@ -356,7 +363,7 @@ export function buildBrandWorkspaceViewModel(
         snapshot,
         maximumRevenue,
         maximumGrossProfit,
-        decision.previousSnapshot,
+        comparisonSnapshots.find((point) => point.periodId === decision.previousPeriodId) ?? null,
         snapshot.periodId === decision.currentPeriodId,
       ),
   )
@@ -438,7 +445,10 @@ export function buildBrandWorkspaceViewModel(
             : 'positive',
       },
     ],
+    lossEvaluation: decision.lossEvaluation,
     charts: {
+      comparisonDescription: commercialComparison?.description,
+      comparisonRanges: commercialComparison?.ranges,
       comparison,
     },
     actionCenter: {
@@ -475,6 +485,7 @@ export function buildBrandWorkspaceViewModel(
         }[item.type],
         entityId: item.entityId,
         entityName: item.entityName,
+        evidence: item.evidence,
         title: item.title,
         description: item.description,
         urgencyLabel: {

@@ -198,6 +198,13 @@ function getLostCustomers(
         )?.customers ?? new Set<string>(),
     )
 
+  const customerAmounts = new Map(
+    repository.salesSegmentation.groupBy('customer', {
+      periodIds: [basePeriodId],
+      brandIds: [brandId],
+    }).map((customer) => [customer.id, customer]),
+  )
+
   return [...basePeriod.customers]
     .filter(
       (customerId) =>
@@ -208,10 +215,7 @@ function getLostCustomers(
     )
     .map((customerId) => {
       const customerPeriod =
-        repository.customer.findPeriod(
-          customerId,
-          basePeriodId,
-        )
+        customerAmounts.get(customerId)
 
       return {
         customerId,

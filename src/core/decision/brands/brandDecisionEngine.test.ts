@@ -130,6 +130,27 @@ function createModel(): BusinessDataModel {
         },
       ],
     ]),
+    // Dated detail for the recovery base period (April).
+    salesSegments: new Map([
+      [
+        '2026-04-01::BRAND::C002::P002',
+        {
+          id: '2026-04-01::BRAND::C002::P002',
+          dateId: '2026-04-01',
+          periodId: '2026-04',
+          brandId: 'BRAND',
+          customerId: 'C002',
+          productId: 'P002',
+          locationId: 'CDMX',
+          salesRepresentativeId: null,
+          revenue: 30,
+          grossProfit: 9,
+          quantity: 3,
+          rowCount: 1,
+          documentNumbers: new Set(['D-APR-C002']),
+        },
+      ],
+    ]),
     customerBrandPeriods: new Map(),
     brands: new Map([
       [
@@ -391,6 +412,9 @@ describe(
             customerName:
               'Cliente perdido',
             previousRevenue: 30,
+            previousGrossProfit: 9,
+            previousQuantity: 3,
+            previousDocuments: 1,
           }),
         ])
         expect(
@@ -432,6 +456,52 @@ describe(
             (action) => action.code,
           ),
         ).toContain('contact-lost-customers')
+      },
+    )
+
+    it(
+      'keeps recovery amounts scoped to the selected brand for a multi-brand customer',
+      () => {
+        const model = createModel()
+        const baseSegment = model.salesSegments?.get('2026-04-01::BRAND::C002::P002')
+        if (!baseSegment) throw new Error('Missing recovery sales segment fixture')
+
+        model.salesSegments?.set('2026-04-02::OTHER::C002::P003', {
+          ...baseSegment,
+          id: '2026-04-02::OTHER::C002::P003',
+          dateId: '2026-04-02',
+          brandId: 'OTHER',
+          productId: 'P003',
+          revenue: 70,
+          grossProfit: 14,
+          quantity: 7,
+          documentNumbers: new Set(['D-APR-C002-OTHER']),
+        })
+        const customerPeriod = model.customerPeriods.get('2026-04::C002')
+        if (!customerPeriod) throw new Error('Missing recovery customer period fixture')
+        model.customerPeriods.set('2026-04::C002', {
+          ...customerPeriod,
+          revenue: 100,
+          grossProfit: 23,
+          quantity: 10,
+          documents: 2,
+          brands: new Set(['BRAND', 'OTHER']),
+          products: new Set(['P002', 'P003']),
+        })
+
+        const decision = new BrandDecisionEngine(
+          new BusinessRepository(model),
+        ).evaluate('BRAND', '2026-07')
+
+        expect(decision?.lostCustomers).toEqual([
+          expect.objectContaining({
+            customerId: 'C002',
+            previousRevenue: 30,
+            previousGrossProfit: 9,
+            previousQuantity: 3,
+            previousDocuments: 1,
+          }),
+        ])
       },
     )
 

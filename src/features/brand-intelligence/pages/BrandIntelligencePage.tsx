@@ -1,3 +1,5 @@
+import { BrandCommercialPlan } from '../components/BrandCommercialPlan'
+
 import {
   AlertTriangle,
   ArrowLeft,
@@ -216,6 +218,7 @@ export function BrandIntelligencePage() {
               <article className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Siguiente paso</p>
                 <p className="mt-2 text-sm leading-6 text-slate-700">{workspace.executiveIntelligence.nextStep}</p>
+                <BrandCommercialPlan workspace={workspace} request={workspace.prioritizedActions[0] ?? { title: 'Siguiente paso comercial', description: workspace.executiveIntelligence.nextStep }} />
               </article>
             </div>
           </WorkspaceSection>
@@ -297,6 +300,7 @@ export function BrandIntelligencePage() {
                 <div className="mt-4 rounded-xl bg-white p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Prioridad inmediata</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">{workspace.actionCenter.dailyBrief.recommendation}</p>
+                  <BrandCommercialPlan workspace={workspace} request={workspace.actionCenter.agenda[0] ?? workspace.prioritizedActions[0] ?? { title: 'Prioridad inmediata', description: workspace.actionCenter.dailyBrief.recommendation }} />
                 </div>
               </article>
 
@@ -341,6 +345,7 @@ export function BrandIntelligencePage() {
                       <h4 className="mt-2 font-semibold text-slate-950">{item.title}</h4>
                     )}
                     <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p>
+                    <BrandCommercialPlan workspace={workspace} request={item} />
                     <div className="mt-4 flex flex-wrap gap-2 text-xs">
                       <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">Prob. {item.probabilityLabel}</span>
                       {item.estimatedRevenueImpactLabel && (
@@ -527,7 +532,7 @@ export function BrandIntelligencePage() {
         <WorkspaceSection
           className="mt-6"
           icon={BarChart3}
-          subtitle="Periodo anterior contra periodo actual"
+          subtitle={workspace.charts.comparisonDescription ?? 'Periodo anterior contra periodo actual'}
           title="Comparativo comercial"
           tone="blue"
         >
@@ -540,6 +545,7 @@ export function BrandIntelligencePage() {
                 <h3 className="font-semibold text-slate-950">
                   {point.periodId}
                 </h3>
+                <p className="mt-1 text-xs text-slate-500">{workspace.charts.comparisonRanges?.[point.periodId]}</p>
 
                 <div className="mt-5 space-y-5">
                   <div>
@@ -621,6 +627,7 @@ export function BrandIntelligencePage() {
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {action.description}
                 </p>
+                <BrandCommercialPlan workspace={workspace} request={action} />
                 {action.estimatedRevenueImpactLabel && (
                   <p className="mt-4 text-sm font-semibold text-emerald-700">
                     Impacto potencial {action.estimatedRevenueImpactLabel}
@@ -634,7 +641,7 @@ export function BrandIntelligencePage() {
         <div className="mt-6 grid gap-6 xl:grid-cols-2">
           <WorkspaceSection
             icon={Users}
-            subtitle="Clientes activos en el periodo anterior sin compra actual"
+            subtitle="Clientes sin recompra durante los dos meses completos evaluados; importes históricos de esta marca"
             title="Lost Customers"
             tone="rose"
           >
@@ -679,7 +686,7 @@ export function BrandIntelligencePage() {
 
           <WorkspaceSection
             icon={PackageSearch}
-            subtitle="Productos activos en el periodo anterior sin actividad actual"
+            subtitle="Productos sin actividad durante los dos meses completos evaluados"
             title="Lost Products"
             tone="amber"
           >
