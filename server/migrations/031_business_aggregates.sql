@@ -43,8 +43,12 @@ SELECT
   SUM(f.quantity)                                       AS quantity,
   COUNT(DISTINCT f.customer_id)
     FILTER (WHERE f.customer_id IS NOT NULL)            AS active_customers,
-  COUNT(DISTINCT f.product_code)
-    FILTER (WHERE f.product_code IS NOT NULL)           AS active_products,
+  COUNT(
+    DISTINCT NULLIF(
+      UPPER(BTRIM(f.product_name)),
+      ''
+    )
+  )                                                      AS active_products,
   COUNT(DISTINCT f.document_number)
     FILTER (WHERE f.document_number IS NOT NULL)        AS documents,
   MIN(f.sale_date)                                      AS first_sale_date,

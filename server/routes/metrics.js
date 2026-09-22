@@ -41,7 +41,7 @@ export function createMetricsRouter(pool) {
           COALESCE(SUM(f.gross_profit),0) AS gross_profit,
           SUM(f.gross_profit)/NULLIF(SUM(f.revenue),0) AS gross_margin,
           COUNT(DISTINCT NULLIF(f.customer_id,'')) AS active_customers,
-          COUNT(DISTINCT NULLIF(f.product_code,'')) AS active_products,
+          COUNT(DISTINCT NULLIF(UPPER(BTRIM(f.product_name)),'')) AS active_products,
           COUNT(DISTINCT NULLIF(f.document_number,'')) AS documents
         FROM windows w LEFT JOIN sales_facts f ON brand_key(f.brand)=$1 AND f.sale_date BETWEEN w.date_from AND w.date_to
         GROUP BY w.label,w.date_from,w.date_to ORDER BY w.date_from`,
