@@ -729,6 +729,7 @@ export async function finalizeSalesChunkImport(
       [importId],
     )
 
+    await client.query('SELECT refresh_business_aggregates(FALSE)')
     await client.query('COMMIT')
 
     return {

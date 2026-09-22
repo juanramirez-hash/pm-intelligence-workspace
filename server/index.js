@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { registerBusinessRoutes } from './registerBusinessRoutes.js'
 import express from 'express'
 import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
@@ -399,6 +400,8 @@ app.post(
     )
   },
 )
+
+registerBusinessRoutes(app, pool)
 
 app.use(
   '/api/data',
