@@ -13,6 +13,7 @@ export type WorkspaceAccessId =
   | 'forecast'
   | 'inventory'
   | 'purchasing'
+  | 'actions'
   | 'data-center'
   | 'product-quality'
   | 'settings'
@@ -32,6 +33,7 @@ const ROLE_WORKSPACE_ACCESS:
       'forecast',
       'inventory',
       'purchasing',
+      'actions',
       'data-center',
       'product-quality',
       'settings',
@@ -47,6 +49,7 @@ const ROLE_WORKSPACE_ACCESS:
       'forecast',
       'inventory',
       'purchasing',
+      'actions',
       'data-center',
       'product-quality',
     ],
@@ -61,6 +64,7 @@ const ROLE_WORKSPACE_ACCESS:
       'forecast',
       'inventory',
       'purchasing',
+      'actions',
     ],
 
     engineering: [
@@ -69,6 +73,7 @@ const ROLE_WORKSPACE_ACCESS:
       'customers',
       'products',
       'inventory',
+      'actions',
     ],
 
     analyst: [
@@ -81,6 +86,7 @@ const ROLE_WORKSPACE_ACCESS:
       'forecast',
       'inventory',
       'purchasing',
+      'actions',
     ],
 
     viewer: [
@@ -92,6 +98,7 @@ const ROLE_WORKSPACE_ACCESS:
       'forecast',
       'inventory',
       'purchasing',
+      'actions',
     ],
   }
 

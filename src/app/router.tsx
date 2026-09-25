@@ -178,6 +178,18 @@ const loadPurchasingWorkspace = async () => {
   }
 }
 
+const loadActionsWorkspace = async () => {
+  const module =
+    await import(
+      '../features/actions/pages/ActionsWorkspacePage'
+    )
+
+  return {
+    Component:
+      module.ActionsWorkspacePage,
+  }
+}
+
 const loadDataCenter = async () => {
   const module =
     await import(
@@ -363,6 +375,21 @@ export const router =
               path: 'purchasing',
               lazy:
                 loadPurchasingWorkspace,
+            },
+          ],
+        },
+
+        {
+          element: (
+            <WorkspaceRouteGuard
+              workspaceId="actions"
+            />
+          ),
+          children: [
+            {
+              path: 'actions',
+              lazy:
+                loadActionsWorkspace,
             },
           ],
         },

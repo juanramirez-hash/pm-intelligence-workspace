@@ -9,6 +9,7 @@ import {
   Database,
   DollarSign,
   Gauge,
+  ListTodo,
   Package,
   PackageSearch,
   Settings,
@@ -87,6 +88,12 @@ const workspaceNavigation: {
     path: '/purchasing',
     icon: ShoppingCart,
     workspaceId: 'purchasing',
+  },
+  {
+    label: 'Centro de Acciones',
+    path: '/actions',
+    icon: ListTodo,
+    workspaceId: 'actions',
   },
 ]
 
