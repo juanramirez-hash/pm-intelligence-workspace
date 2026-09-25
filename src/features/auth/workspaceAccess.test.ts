@@ -50,7 +50,7 @@ describe('workspace access', () => {
       getAccessibleWorkspaces(
         user,
       ),
-    ).toHaveLength(12)
+    ).toHaveLength(13)
 
     expect(
       canAccessWorkspace(
@@ -166,6 +166,7 @@ describe('workspace access', () => {
       'customers',
       'products',
       'inventory',
+      'actions',
     ])
 
     expect(

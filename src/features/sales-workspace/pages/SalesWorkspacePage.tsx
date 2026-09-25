@@ -25,6 +25,10 @@ import {
 } from 'react-router-dom'
 
 import {
+  useAuth,
+} from '../../auth/useAuth'
+
+import {
   ExecutiveBreadcrumbs,
   ExecutiveShell,
   KPIGrid,
@@ -127,12 +131,58 @@ function getScoreTone(
   return 'critical' as const
 }
 
+type OpportunityActionStatus =
+  | 'creating'
+  | 'created'
+  | 'existing'
+  | 'error'
+
+interface OpportunityActionState {
+  status: OpportunityActionStatus
+  message: string | null
+}
+
+interface CreateActionResponse {
+  ok?: boolean
+  created?: boolean
+  actionId?: number
+  error?: string
+}
+
+function getActionHorizon(
+  priority: SalesCommercialOpportunity['priority'],
+): 'immediate' | 'short' | 'medium' {
+  switch (priority) {
+    case 'critical':
+      return 'immediate'
+    case 'high':
+    case 'medium':
+      return 'short'
+    case 'low':
+      return 'medium'
+  }
+}
+
 export function SalesWorkspacePage() {
   const [isExporting, setIsExporting] =
     useState(false)
 
   const [exportStatus, setExportStatus] =
     useState<string | null>(null)
+
+  const [
+    opportunityActionStates,
+    setOpportunityActionStates,
+  ] =
+    useState<
+      Record<
+        string,
+        OpportunityActionState
+      >
+    >({})
+
+  const { user } =
+    useAuth()
 
   const navigate =
     useNavigate()
@@ -201,6 +251,311 @@ export function SalesWorkspacePage() {
     workspace.actions.clearDimension('salesRepresentative')
     workspace.actions.clearDimension('search')
   }
+
+  const getOpportunityBrandId = (
+    opportunity: SalesCommercialOpportunity,
+  ): string | null => {
+    if (
+      opportunity.entityType === 'brand' &&
+      opportunity.entityId
+    ) {
+      return opportunity.entityId
+    }
+
+    if (
+      opportunity.entityType === 'customer' ||
+      opportunity.entityType === 'product'
+    ) {
+      const selectedBrandIds =
+        workspace.filters.brandIds ?? []
+
+      if (selectedBrandIds.length === 1) {
+        return selectedBrandIds[0]
+      }
+    }
+
+    return null
+  }
+
+  const getOpportunityActionAvailability = (
+    opportunity: SalesCommercialOpportunity,
+  ) => {
+    if (
+      opportunity.entityType === 'workspace'
+    ) {
+      return {
+        enabled: false,
+        reason:
+          'Esta oportunidad no tiene una entidad compatible con Centro de Acciones.',
+      }
+    }
+
+    if (!opportunity.entityId) {
+      return {
+        enabled: false,
+        reason:
+          'La oportunidad no tiene un identificador de entidad.',
+      }
+    }
+
+    if (
+      opportunity.entityType === 'brand'
+    ) {
+      return {
+        enabled: true,
+        reason: null,
+      }
+    }
+
+    const selectedBrandIds =
+      workspace.filters.brandIds ?? []
+
+    if (selectedBrandIds.length !== 1) {
+      return {
+        enabled: false,
+        reason:
+          'Selecciona una sola marca en Sales Workspace para convertir esta oportunidad en acción.',
+      }
+    }
+
+    return {
+      enabled: true,
+      reason: null,
+    }
+  }
+
+  const getOpportunityActionKey = (
+    opportunity: SalesCommercialOpportunity,
+  ): string => {
+    const periodId =
+      workspace.filters.periodId ??
+      current?.periodId ??
+      'sin-periodo'
+
+    const brandId =
+      getOpportunityBrandId(
+        opportunity,
+      ) ?? 'sin-marca'
+
+    return [
+      periodId,
+      brandId,
+      opportunity.id,
+    ].join('::')
+  }
+
+  const getOpportunityActionState = (
+    opportunity: SalesCommercialOpportunity,
+  ) =>
+    opportunityActionStates[
+      getOpportunityActionKey(
+        opportunity,
+      )
+    ]
+
+  const handleCreateOpportunityAction =
+    async (
+      opportunity: SalesCommercialOpportunity,
+    ) => {
+      if (!user.writeAccess) {
+        return
+      }
+
+      const availability =
+        getOpportunityActionAvailability(
+          opportunity,
+        )
+
+      if (!availability.enabled) {
+        return
+      }
+
+      if (
+        opportunity.entityType ===
+          'workspace' ||
+        !opportunity.entityId
+      ) {
+        return
+      }
+
+      const periodId =
+        workspace.filters.periodId ??
+        current?.periodId ??
+        null
+
+      const brandId =
+        getOpportunityBrandId(
+          opportunity,
+        )
+
+      if (!periodId || !brandId) {
+        return
+      }
+
+      const actionKey =
+        getOpportunityActionKey(
+          opportunity,
+        )
+
+      if (
+        opportunityActionStates[
+          actionKey
+        ]?.status === 'creating'
+      ) {
+        return
+      }
+
+      setOpportunityActionStates(
+        (currentStates) => ({
+          ...currentStates,
+          [actionKey]: {
+            status: 'creating',
+            message:
+              'Registrando acción...',
+          },
+        }),
+      )
+
+      try {
+        const response =
+          await fetch(
+            '/api/actions',
+            {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type':
+                  'application/json',
+              },
+              body: JSON.stringify({
+                brandId,
+                periodId,
+                origin: 'rule',
+                originRuleCode:
+                  opportunity.id,
+                originEntityType:
+                  opportunity.entityType,
+                originEntityId:
+                  opportunity.entityId,
+                title:
+                  opportunity.title,
+                description:
+                  `${opportunity.description}\n\nAcción recomendada: ${opportunity.recommendedAction}`,
+                horizon:
+                  getActionHorizon(
+                    opportunity.priority,
+                  ),
+                priority:
+                  opportunity.priority,
+                metricKind: 'none',
+                baselineValue: null,
+                targetValue: null,
+                evidence: {
+                  source:
+                    'sales-workspace',
+                  opportunityId:
+                    opportunity.id,
+                  opportunityType:
+                    opportunity.type,
+                  entityLabel:
+                    opportunity.entityLabel,
+                  recommendedAction:
+                    opportunity.recommendedAction,
+                  impact:
+                    opportunity.impact,
+                  score:
+                    opportunity.score,
+                  confidence:
+                    opportunity.confidence,
+                  effort:
+                    opportunity.effort,
+                  currentRevenue:
+                    opportunity.currentRevenue,
+                  comparisonRevenue:
+                    opportunity.comparisonRevenue,
+                  variance:
+                    opportunity.variance,
+                  variancePercentage:
+                    opportunity.variancePercentage,
+                  dailyRevenueRequired:
+                    opportunity.dailyRevenueRequired,
+                  indicators:
+                    opportunity.evidence,
+                  filters: {
+                    brandIds:
+                      workspace.filters.brandIds ??
+                      [],
+                    customerIds:
+                      workspace.filters.customerIds ??
+                      [],
+                    productIds:
+                      workspace.filters.productIds ??
+                      [],
+                    locationIds:
+                      workspace.filters.locationIds ??
+                      [],
+                    salesRepresentativeIds:
+                      workspace.filters.salesRepresentativeIds ??
+                      [],
+                    searchTerm:
+                      workspace.filters.searchTerm ??
+                      null,
+                  },
+                },
+              }),
+            },
+          )
+
+        const result =
+          await response
+            .json()
+            .catch(
+              () =>
+                null,
+            ) as
+            | CreateActionResponse
+            | null
+
+        if (
+          !response.ok ||
+          !result?.ok
+        ) {
+          throw new Error(
+            result?.error ??
+              'No fue posible crear la acción.',
+          )
+        }
+
+        setOpportunityActionStates(
+          (currentStates) => ({
+            ...currentStates,
+            [actionKey]: {
+              status:
+                result.created === false
+                  ? 'existing'
+                  : 'created',
+              message:
+                result.created === false
+                  ? 'La acción ya estaba abierta; la señal fue reconfirmada en su historial.'
+                  : 'Acción creada y disponible en Centro de Acciones.',
+            },
+          }),
+        )
+      } catch (error) {
+        setOpportunityActionStates(
+          (currentStates) => ({
+            ...currentStates,
+            [actionKey]: {
+              status: 'error',
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'No fue posible crear la acción.',
+            },
+          }),
+        )
+      }
+    }
 
   const openOpportunitySegment = (
     opportunity: SalesCommercialOpportunity,
@@ -622,6 +977,21 @@ export function SalesWorkspacePage() {
       />
 
       <SalesCommercialOpportunityPanel
+        getActionState={
+          getOpportunityActionState
+        }
+        getCreateActionAvailability={
+          getOpportunityActionAvailability
+        }
+        onCreateAction={
+          user.writeAccess
+            ? (opportunity) => {
+                void handleCreateOpportunityAction(
+                  opportunity,
+                )
+              }
+            : undefined
+        }
         onSelect={openOpportunitySegment}
         summary={workspace.commercialOpportunities}
       />

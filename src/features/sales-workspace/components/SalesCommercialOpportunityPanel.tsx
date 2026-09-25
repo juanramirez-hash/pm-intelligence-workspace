@@ -5,7 +5,11 @@ import type {
 import {
   ArrowUpRight,
   BadgeDollarSign,
+  CheckCircle2,
+  CircleAlert,
   CircleGauge,
+  ListTodo,
+  LoaderCircle,
   PackageSearch,
   ShieldAlert,
   Sparkles,
@@ -77,23 +81,60 @@ Record<
   },
 }
 
+type SalesCommercialOpportunityActionStatus =
+  | 'creating'
+  | 'created'
+  | 'existing'
+  | 'error'
+
+interface SalesCommercialOpportunityActionState {
+  status: SalesCommercialOpportunityActionStatus
+  message: string | null
+}
+
+interface SalesCommercialOpportunityActionAvailability {
+  enabled: boolean
+  reason: string | null
+}
+
 interface SalesCommercialOpportunityPanelProps {
   summary: SalesCommercialOpportunitySummary
   onSelect?: (
     opportunity: SalesCommercialOpportunity,
   ) => void
+  onCreateAction?: (
+    opportunity: SalesCommercialOpportunity,
+  ) => void
+  getCreateActionAvailability?: (
+    opportunity: SalesCommercialOpportunity,
+  ) => SalesCommercialOpportunityActionAvailability
+  getActionState?: (
+    opportunity: SalesCommercialOpportunity,
+  ) => SalesCommercialOpportunityActionState | undefined
 }
 
 function OpportunityCard({
   opportunity,
   rank,
   onSelect,
+  onCreateAction,
+  getCreateActionAvailability,
+  getActionState,
 }: {
   opportunity: SalesCommercialOpportunity
   rank: number
   onSelect?: (
     opportunity: SalesCommercialOpportunity,
   ) => void
+  onCreateAction?: (
+    opportunity: SalesCommercialOpportunity,
+  ) => void
+  getCreateActionAvailability?: (
+    opportunity: SalesCommercialOpportunity,
+  ) => SalesCommercialOpportunityActionAvailability
+  getActionState?: (
+    opportunity: SalesCommercialOpportunity,
+  ) => SalesCommercialOpportunityActionState | undefined
 }) {
   const presentation =
     typePresentation[opportunity.type]
@@ -106,6 +147,42 @@ function OpportunityCard({
       opportunity.entityId &&
       opportunity.entityType !== 'workspace',
     )
+
+  const actionState =
+    getActionState?.(opportunity)
+
+  const actionAvailability =
+    getCreateActionAvailability?.(
+      opportunity,
+    ) ?? {
+      enabled: true,
+      reason: null,
+    }
+
+  const actionCompleted =
+    actionState?.status === 'created' ||
+    actionState?.status === 'existing'
+
+  const actionCreating =
+    actionState?.status === 'creating'
+
+  const actionError =
+    actionState?.status === 'error'
+
+  const actionMessage =
+    actionState?.message ??
+    actionAvailability.reason
+
+  const actionLabel =
+    actionCreating
+      ? 'Creando...'
+      : actionState?.status === 'created'
+        ? 'Acción creada'
+        : actionState?.status === 'existing'
+          ? 'Ya existe'
+          : actionError
+            ? 'Reintentar'
+            : 'Crear acción'
 
   return (
     <article
@@ -197,17 +274,77 @@ function OpportunityCard({
           </span>
         </div>
 
-        {actionable && (
-          <button
-            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-50"
-            onClick={() => onSelect?.(opportunity)}
-            type="button"
-          >
-            Abrir segmento
-            <ArrowUpRight size={14} />
-          </button>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {actionable && (
+            <button
+              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-50"
+              onClick={() => onSelect?.(opportunity)}
+              type="button"
+            >
+              Abrir segmento
+              <ArrowUpRight size={14} />
+            </button>
+          )}
+
+          {onCreateAction && (
+            <button
+              className={[
+                'inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
+                actionCompleted
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : actionError
+                    ? 'border-rose-200 bg-white text-rose-700 hover:bg-rose-50'
+                    : 'border-violet-200 bg-white text-violet-700 hover:bg-violet-50',
+              ].join(' ')}
+              disabled={
+                !actionAvailability.enabled ||
+                actionCreating ||
+                actionCompleted
+              }
+              onClick={() =>
+                onCreateAction(
+                  opportunity,
+                )
+              }
+              title={
+                actionAvailability.reason ??
+                undefined
+              }
+              type="button"
+            >
+              {actionCreating ? (
+                <LoaderCircle
+                  className="animate-spin"
+                  size={14}
+                />
+              ) : actionCompleted ? (
+                <CheckCircle2 size={14} />
+              ) : actionError ? (
+                <CircleAlert size={14} />
+              ) : (
+                <ListTodo size={14} />
+              )}
+              {actionLabel}
+            </button>
+          )}
+        </div>
       </div>
+
+      {onCreateAction && actionMessage && (
+        <p
+          aria-live="polite"
+          className={[
+            'mt-2 text-right text-[11px] font-medium',
+            actionState?.status === 'error'
+              ? 'text-rose-600'
+              : actionCompleted
+                ? 'text-emerald-600'
+                : 'text-slate-500',
+          ].join(' ')}
+        >
+          {actionMessage}
+        </p>
+      )}
     </article>
   )
 }
@@ -215,6 +352,9 @@ function OpportunityCard({
 export function SalesCommercialOpportunityPanel({
   summary,
   onSelect,
+  onCreateAction,
+  getCreateActionAvailability,
+  getActionState,
 }: SalesCommercialOpportunityPanelProps) {
   return (
     <section
@@ -295,7 +435,14 @@ export function SalesCommercialOpportunityPanel({
           {summary.opportunities.map(
             (opportunity, index) => (
               <OpportunityCard
+                getActionState={getActionState}
+                getCreateActionAvailability={
+                  getCreateActionAvailability
+                }
                 key={opportunity.id}
+                onCreateAction={
+                  onCreateAction
+                }
                 onSelect={onSelect}
                 opportunity={opportunity}
                 rank={index + 1}
