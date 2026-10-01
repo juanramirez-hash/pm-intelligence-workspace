@@ -134,11 +134,16 @@ export function AppShell() {
     <AuthProvider user={auth.user}>
       <div
         data-app-shell="true"
-        className="min-h-screen bg-slate-50 text-slate-950"
+        className="min-h-screen bg-slate-50 text-slate-950 lg:flex"
       >
+        <Sidebar
+          mobileOpen={mobileNavigationOpen}
+          onMobileClose={closeMobileNavigation}
+        />
+
         <div
           data-app-shell-content="true"
-          className="min-h-screen"
+          className="min-h-screen min-w-0 flex-1"
         >
           <div
             data-print-hidden="true"
@@ -149,15 +154,11 @@ export function AppShell() {
               onMenuOpen={openMobileNavigation}
               navigationOpen={mobileNavigationOpen}
             />
-            <Sidebar
-              mobileOpen={mobileNavigationOpen}
-              onMobileClose={closeMobileNavigation}
-            />
           </div>
 
           <main
             data-app-main="true"
-            className="px-5 py-6 sm:px-8 lg:px-10"
+            className="px-5 py-6 sm:px-8 lg:px-8 xl:px-10"
           >
             <div className="mx-auto w-full max-w-[1600px]">
               <Outlet />
