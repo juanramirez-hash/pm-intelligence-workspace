@@ -67,14 +67,26 @@ function isTotalLabel(
     return false
   }
 
-  return [
-    'total',
-    'totales',
-    'gran total',
-    'grand total',
-    'total general',
-    'subtotal',
-  ].includes(normalizedValue)
+  if (
+    [
+      'total',
+      'totales',
+      'gran total',
+      'grand total',
+      'total general',
+      'subtotal',
+    ].includes(normalizedValue)
+  ) {
+    return true
+  }
+
+  /*
+   * NetSuite native grouped reports emit labels such as:
+   * "Total - UNV" or "Total: BELDEN".
+   */
+  return /^(?:total|subtotal)\s*[-:]\s*.+$/i.test(
+    normalizedValue,
+  )
 }
 
 function isTotalRow(
@@ -202,6 +214,7 @@ function parseProductStatus(value: unknown): 'A' | 'B' | 'C' | 'D' | 'E' | null 
 export function normalizeSalesRow(
   row: RawSalesRow,
   columnMap: SalesColumnMap,
+  inheritedBrand: string | null = null,
 ): NormalizedSalesRow | null {
   if (isCompletelyEmptyRow(row)) {
     return null
@@ -242,7 +255,9 @@ export function normalizeSalesRow(
   )
 
   const date = parseExcelDate(rawDate)
-  const brand = parseString(rawBrand)
+  const brand =
+    parseString(rawBrand) ??
+    inheritedBrand
 
   /*
    * Revenue puede ser cero, por lo que no debemos rechazar
@@ -366,12 +381,40 @@ export function normalizeSalesRows(
     NormalizedSalesRow[] = []
 
   let ignoredRows = 0
+  let currentBrand:
+    string | null = null
 
   for (const rawRow of rawRows) {
+    if (
+      isTotalRow(
+        rawRow,
+        columnMap,
+      )
+    ) {
+      ignoredRows += 1
+      currentBrand = null
+      continue
+    }
+
+    const explicitBrand =
+      parseString(
+        getMappedValue(
+          rawRow,
+          columnMap,
+          'brand',
+        ),
+      )
+
+    if (explicitBrand) {
+      currentBrand =
+        explicitBrand
+    }
+
     const normalizedRow =
       normalizeSalesRow(
         rawRow,
         columnMap,
+        currentBrand,
       )
 
     if (!normalizedRow) {
