@@ -10,9 +10,6 @@ import {
   Home,
   RefreshCcw,
   RotateCcw,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react'
 
 import type {
@@ -36,21 +33,8 @@ import {
 } from '../../../atlas/widgets/executive'
 
 import {
-  defineKpiRegistry,
-  IntelligentKpiCard,
-} from '../../../atlas/widgets/kpi'
-
-import {
   ExecutivePanel,
 } from '../../../atlas/widgets/panel'
-
-import {
-  ExecutiveBriefCard,
-} from '../../../atlas/widgets/executiveBrief'
-
-import {
-  OpportunityRadarCard,
-} from '../../../atlas/widgets/opportunity'
 
 import {
   SmartBrandDirectory,
@@ -92,7 +76,23 @@ function formatPercentage(
   )}%`
 }
 
-function BrandRankingItem({
+function formatConcentration(
+  value: number | null,
+) {
+  if (value === null) {
+    return 'Sin concentración calculable'
+  }
+
+  return `${value.toLocaleString(
+    'es-MX',
+    {
+      maximumFractionDigits: 1,
+      minimumFractionDigits: 1,
+    },
+  )}%`
+}
+
+function BrandPriorityItem({
   brand,
   position,
 }: {
@@ -116,17 +116,24 @@ function BrandRankingItem({
           {brand.brandName}
         </p>
 
-        <p className="mt-1 text-xs text-slate-500">
-          {formatCurrency(
-            brand.currentPeriod.revenue,
-          )}
-        </p>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+          <span>
+            Venta {formatCurrency(
+              brand.currentPeriod.revenue,
+            )}
+          </span>
+
+          <span>
+            Impacto {formatCurrency(
+              brand.revenueVariation,
+            )}
+          </span>
+        </div>
       </div>
 
       <div
         className={[
           'flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold',
-
           isGrowing
             ? 'bg-emerald-50 text-emerald-700'
             : isDeclining
@@ -147,6 +154,51 @@ function BrandRankingItem({
         )}
       </div>
     </article>
+  )
+}
+
+function PortfolioMetric({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string
+  value: number | string
+  tone?:
+    | 'default'
+    | 'positive'
+    | 'critical'
+    | 'attention'
+    | 'intelligence'
+}) {
+  const toneClasses = {
+    default:
+      'border-slate-200 bg-slate-50 text-slate-900',
+    positive:
+      'border-emerald-100 bg-emerald-50 text-emerald-900',
+    critical:
+      'border-rose-100 bg-rose-50 text-rose-900',
+    attention:
+      'border-amber-100 bg-amber-50 text-amber-900',
+    intelligence:
+      'border-violet-100 bg-violet-50 text-violet-900',
+  }
+
+  return (
+    <div
+      className={[
+        'rounded-xl border px-3 py-2.5',
+        toneClasses[tone],
+      ].join(' ')}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-60">
+        {label}
+      </p>
+
+      <p className="mt-1 text-lg font-semibold">
+        {value}
+      </p>
+    </div>
   )
 }
 
@@ -173,6 +225,72 @@ export function BrandWorkspacePage() {
       ? (
           summary.activeBrands /
           summary.totalBrands
+        ) * 100
+      : null
+
+  const decliningGrossLoss =
+    summary?.brands.reduce(
+      (total, brand) =>
+        brand.revenueVariation < 0
+          ? total +
+            Math.abs(
+              brand.revenueVariation,
+            )
+          : total,
+      0,
+    ) ?? 0
+
+  const topDecliningLoss =
+    summary?.topDecliningBrands
+      .slice(0, 5)
+      .reduce(
+        (total, brand) =>
+          total +
+          Math.abs(
+            Math.min(
+              brand.revenueVariation,
+              0,
+            ),
+          ),
+        0,
+      ) ?? 0
+
+  const decliningConcentration =
+    decliningGrossLoss > 0
+      ? (
+          topDecliningLoss /
+          decliningGrossLoss
+        ) * 100
+      : null
+
+  const growingGrossGain =
+    summary?.brands.reduce(
+      (total, brand) =>
+        brand.revenueVariation > 0
+          ? total +
+            brand.revenueVariation
+          : total,
+      0,
+    ) ?? 0
+
+  const topGrowingGain =
+    summary?.topGrowingBrands
+      .slice(0, 5)
+      .reduce(
+        (total, brand) =>
+          total +
+          Math.max(
+            brand.revenueVariation,
+            0,
+          ),
+        0,
+      ) ?? 0
+
+  const growingConcentration =
+    growingGrossGain > 0
+      ? (
+          topGrowingGain /
+          growingGrossGain
         ) * 100
       : null
 
@@ -220,47 +338,73 @@ export function BrandWorkspacePage() {
           description="Analiza desempeño, crecimiento, rentabilidad, concentración y prioridades comerciales por marca."
           eyebrow="Brand Intelligence"
           icon={<Building2 size={22} />}
-          metadata={<span>Periodo actual: {periodLabel}</span>}
+          metadata={
+            <span>
+              Periodo actual: {periodLabel}
+            </span>
+          }
           metrics={[
             {
               label: 'Venta del periodo',
-              value: formatCurrency(summary?.currentPeriodRevenue ?? 0),
-              helper: `Periodo anterior: ${formatCurrency(summary?.previousPeriodRevenue ?? 0)}`,
+              value: formatCurrency(
+                summary?.currentPeriodRevenue ??
+                0,
+              ),
+              helper: `Periodo anterior: ${formatCurrency(
+                summary?.previousPeriodRevenue ??
+                0,
+              )}`,
               icon: <BarChart3 size={17} />,
               tone: 'intelligence',
             },
             {
               label: 'Variación de venta',
-              value: formatPercentage(summary?.revenueVariationPercentage ?? null),
-              helper: `${formatCurrency(summary?.revenueVariation ?? 0)} contra el periodo anterior`,
+              value: formatPercentage(
+                summary?.revenueVariationPercentage ??
+                null,
+              ),
+              helper: `${formatCurrency(
+                summary?.revenueVariation ??
+                0,
+              )} contra el periodo anterior`,
               icon: <RefreshCcw size={17} />,
-              tone: (summary?.revenueVariationPercentage ?? 0) >= 0
-                ? 'positive'
-                : 'critical',
+              tone:
+                (
+                  summary?.revenueVariationPercentage ??
+                  0
+                ) >= 0
+                  ? 'positive'
+                  : 'critical',
             },
             {
               label: 'Marcas analizadas',
-              value: summary?.totalBrands ?? 0,
+              value:
+                summary?.totalBrands ??
+                0,
               helper: `${summary?.activeBrands ?? 0} activas`,
               icon: <Building2 size={17} />,
               tone: 'default',
             },
             {
               label: 'Requieren atención',
-              value: summary?.brandsRequiringAttention ?? 0,
+              value:
+                summary?.brandsRequiringAttention ??
+                0,
               helper: `${summary?.decliningBrands ?? 0} con tendencia decreciente`,
               icon: <AlertTriangle size={17} />,
               tone: 'attention',
             },
           ]}
           score={{
-            score: activeBrandCoverage,
+            score:
+              activeBrandCoverage,
             label:
               summary &&
               summary.totalBrands > 0
                 ? `${summary.activeBrands} de ${summary.totalBrands} activas`
                 : 'Sin datos',
-            caption: 'Cobertura activa',
+            caption:
+              'Cobertura activa',
             emptyStateMessage:
               'Disponible cuando existan marcas analizadas en el periodo.',
             tone: 'neutral',
@@ -274,15 +418,26 @@ export function BrandWorkspacePage() {
                   : 'bg-slate-100 text-slate-600',
               ].join(' ')}
             >
-              {workspaceIsAvailable && <CheckCircle2 size={13} />}
-              {workspaceIsAvailable ? 'Datos disponibles' : 'Sin datos'}
+              {workspaceIsAvailable && (
+                <CheckCircle2 size={13} />
+              )}
+
+              {workspaceIsAvailable
+                ? 'Datos disponibles'
+                : 'Sin datos'}
             </span>
           }
           summaryItems={[
             {
               label: 'Estado',
-              value: workspaceIsAvailable ? 'Datos actualizados' : 'Pendiente de importación',
-              tone: workspaceIsAvailable ? 'positive' : 'attention',
+              value:
+                workspaceIsAvailable
+                  ? 'Datos actualizados'
+                  : 'Pendiente de importación',
+              tone:
+                workspaceIsAvailable
+                  ? 'positive'
+                  : 'attention',
             },
             {
               label: 'Periodo',
@@ -290,7 +445,8 @@ export function BrandWorkspacePage() {
             },
             {
               label: 'Repositorio',
-              value: 'Business Repository',
+              value:
+                'Business Repository',
             },
             {
               label: 'Cobertura',
@@ -298,12 +454,16 @@ export function BrandWorkspacePage() {
             },
             {
               label: 'En crecimiento',
-              value: summary?.growingBrands ?? 0,
+              value:
+                summary?.growingBrands ??
+                0,
               tone: 'positive',
             },
             {
               label: 'En descenso',
-              value: summary?.decliningBrands ?? 0,
+              value:
+                summary?.decliningBrands ??
+                0,
               tone: 'critical',
             },
           ]}
@@ -313,166 +473,335 @@ export function BrandWorkspacePage() {
       }
       width="wide"
     >
-      {workspace.executiveBrief && (
-        <ExecutiveBriefCard
-          brief={workspace.executiveBrief}
-          className="mb-6"
-        />
-      )}
-
-      {workspace.opportunityRadar && (
-        <OpportunityRadarCard
-          className="mb-6"
-          currency="MXN"
-          locale="es-MX"
-          maximumVisible={6}
-          radar={workspace.opportunityRadar}
-          showMatrix
-        />
-      )}
-
-      <KPIGrid columns={4} gap="compact">
-        {defineKpiRegistry([
-          {
-            id: 'new-brands',
-            title: 'Nuevas',
-            value: summary?.newBrands ?? 0,
-            icon: <Sparkles size={18} />,
-            tone: 'intelligence',
-            status: {
-              label: 'Adquisición',
-              tone: 'intelligence',
-            },
-            insight: 'Marcas con actividad registrada por primera vez en el periodo analizado.',
-            source: 'Business Repository',
-            context: periodLabel,
-          },
-          {
-            id: 'recovered-brands',
-            title: 'Recuperadas',
-            value: summary?.recoveredBrands ?? 0,
-            icon: <RefreshCcw size={18} />,
-            tone: 'positive',
-            status: {
-              label: 'Reactivación',
-              tone: 'positive',
-            },
-            insight: 'Marcas que retomaron actividad comercial después de un periodo sin venta.',
-            source: 'Business Repository',
-            context: periodLabel,
-          },
-          {
-            id: 'growing-brands',
-            title: 'En crecimiento',
-            value: summary?.growingBrands ?? 0,
-            icon: <TrendingUp size={18} />,
-            tone: 'positive',
-            status: {
-              label: 'Favorable',
-              tone: 'positive',
-            },
-            insight: 'Marcas con variación positiva frente al periodo comparable anterior.',
-            source: 'Business Repository',
-            context: periodLabel,
-          },
-          {
-            id: 'declining-brands',
-            title: 'En descenso',
-            value: summary?.decliningBrands ?? 0,
-            icon: <TrendingDown size={18} />,
-            tone: 'critical',
-            status: {
-              label: 'Seguimiento',
-              tone: 'critical',
-            },
-            insight: 'Marcas con variación negativa que requieren diagnóstico y seguimiento comercial.',
-            source: 'Business Repository',
-            context: periodLabel,
-          },
-        ]).map(({ id, ...kpi }) => (
-          <IntelligentKpiCard
-            {...kpi}
-            key={id}
-          />
-        ))}
-      </KPIGrid>
-
       {summary ? (
-        <KPIGrid columns={3} gap="spacious" className="mt-6">
+        <KPIGrid
+          columns={3}
+          gap="spacious"
+        >
           <ExecutivePanel
-            count={summary.topGrowingBrands.length}
-            icon={<ArrowUpRight size={19} />}
-            subtitle="Variación positiva contra el periodo anterior"
-            title="Marcas con mayor crecimiento"
-            tone="positive"
-          >
-            <div className="space-y-3">
-              {summary.topGrowingBrands.slice(0, 5).map((brand, index) => (
-                <BrandRankingItem brand={brand} key={brand.brandId} position={index + 1} />
-              ))}
-              {summary.topGrowingBrands.length === 0 && (
-                <p className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">
-                  No existen marcas con crecimiento para este periodo.
-                </p>
-              )}
-            </div>
-          </ExecutivePanel>
-
-          <ExecutivePanel
-            count={summary.topDecliningBrands.length}
-            icon={<ArrowDownRight size={19} />}
-            subtitle="Principales variaciones negativas"
-            title="Marcas con mayor descenso"
+            count={
+              summary.decliningBrands
+            }
+            icon={
+              <ArrowDownRight
+                size={19}
+              />
+            }
+            subtitle={`${formatCurrency(
+              summary.revenueVariation,
+            )} netos frente al periodo anterior`}
+            title="Recuperación prioritaria"
             tone="critical"
           >
-            <div className="space-y-3">
-              {summary.topDecliningBrands.slice(0, 5).map((brand, index) => (
-                <BrandRankingItem brand={brand} key={brand.brandId} position={index + 1} />
-              ))}
-              {summary.topDecliningBrands.length === 0 && (
-                <p className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">
-                  No existen marcas con descenso para este periodo.
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <PortfolioMetric
+                  label="En descenso"
+                  tone="critical"
+                  value={
+                    summary.decliningBrands
+                  }
+                />
+
+                <PortfolioMetric
+                  label="Pérdida bruta"
+                  tone="critical"
+                  value={formatCurrency(
+                    -decliningGrossLoss,
+                  )}
+                />
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Mayor impacto negativo
+                  </p>
+
+                  {decliningConcentration !==
+                    null && (
+                    <span className="text-xs font-medium text-rose-600">
+                      Top 5 explican{' '}
+                      {formatConcentration(
+                        decliningConcentration,
+                      )}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {summary.topDecliningBrands
+                    .slice(0, 5)
+                    .map(
+                      (
+                        brand,
+                        index,
+                      ) => (
+                        <BrandPriorityItem
+                          brand={brand}
+                          key={
+                            brand.brandId
+                          }
+                          position={
+                            index + 1
+                          }
+                        />
+                      ),
+                    )}
+
+                  {summary
+                    .topDecliningBrands
+                    .length === 0 && (
+                    <p className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">
+                      No existen
+                      marcas con
+                      descenso para
+                      este periodo.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-700">
+                  Prioridad
                 </p>
-              )}
+
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Prioriza las marcas
+                  con mayor pérdida
+                  absoluta y revisa
+                  clientes, productos,
+                  disponibilidad y
+                  precio antes de
+                  ampliar portafolio.
+                </p>
+              </div>
             </div>
           </ExecutivePanel>
 
           <ExecutivePanel
-            count={summary.attentionBrands.length}
-            icon={<AlertTriangle size={19} />}
-            subtitle="Marcas que requieren seguimiento"
-            title="Atención comercial"
+            count={
+              summary.growingBrands
+            }
+            icon={
+              <ArrowUpRight
+                size={19}
+              />
+            }
+            subtitle="Marcas con tracción positiva frente al periodo comparable"
+            title="Crecimiento a proteger"
+            tone="positive"
+          >
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <PortfolioMetric
+                  label="En crecimiento"
+                  tone="positive"
+                  value={
+                    summary.growingBrands
+                  }
+                />
+
+                <PortfolioMetric
+                  label="Crecimiento bruto"
+                  tone="positive"
+                  value={formatCurrency(
+                    growingGrossGain,
+                  )}
+                />
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Principales impulsores
+                  </p>
+
+                  {growingConcentration !==
+                    null && (
+                    <span className="text-xs font-medium text-emerald-600">
+                      Top 5 concentran{' '}
+                      {formatConcentration(
+                        growingConcentration,
+                      )}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {summary.topGrowingBrands
+                    .slice(0, 5)
+                    .map(
+                      (
+                        brand,
+                        index,
+                      ) => (
+                        <BrandPriorityItem
+                          brand={brand}
+                          key={
+                            brand.brandId
+                          }
+                          position={
+                            index + 1
+                          }
+                        />
+                      ),
+                    )}
+
+                  {summary
+                    .topGrowingBrands
+                    .length === 0 && (
+                    <p className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">
+                      No existen
+                      marcas con
+                      crecimiento para
+                      este periodo.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                  Protección
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Protege inventario,
+                  órdenes abiertas y
+                  cobertura comercial
+                  de las marcas que
+                  sostienen el
+                  crecimiento antes de
+                  incrementar demanda.
+                </p>
+              </div>
+            </div>
+          </ExecutivePanel>
+
+          <ExecutivePanel
+            count={
+              summary.brandsRequiringAttention
+            }
+            icon={
+              <AlertTriangle
+                size={19}
+              />
+            }
+            subtitle="Cobertura y reactivación del portafolio"
+            title="Cobertura comercial"
             tone="attention"
           >
-            <div className="space-y-3">
-              {summary.attentionBrands.slice(0, 5).map((brand, index) => (
-                <article
-                  className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4 transition-colors duration-200 hover:border-amber-200 hover:bg-amber-50 motion-reduce:transition-none"
-                  key={brand.brandId}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-semibold text-amber-700 shadow-sm">
-                      {index + 1}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{brand.brandName}</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-600">
-                        {brand.attentionReason ?? 'Requiere revisión comercial.'}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-              {summary.attentionBrands.length === 0 && (
-                <p className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">
-                  No existen alertas comerciales para este periodo.
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <PortfolioMetric
+                  label="Inactivas"
+                  tone="attention"
+                  value={
+                    summary.inactiveBrands
+                  }
+                />
+
+                <PortfolioMetric
+                  label="Perdidas"
+                  tone="critical"
+                  value={
+                    summary.lostBrands
+                  }
+                />
+
+                <PortfolioMetric
+                  label="Recuperadas"
+                  tone="positive"
+                  value={
+                    summary.recoveredBrands
+                  }
+                />
+
+                <PortfolioMetric
+                  label="Nuevas"
+                  tone="intelligence"
+                  value={
+                    summary.newBrands
+                  }
+                />
+              </div>
+
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Prioridad de atención
                 </p>
-              )}
+
+                <div className="space-y-3">
+                  {summary.attentionBrands
+                    .slice(0, 5)
+                    .map(
+                      (
+                        brand,
+                        index,
+                      ) => (
+                        <article
+                          className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4 transition-colors duration-200 hover:border-amber-200 hover:bg-amber-50 motion-reduce:transition-none"
+                          key={
+                            brand.brandId
+                          }
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-semibold text-amber-700 shadow-sm">
+                              {index + 1}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">
+                                {
+                                  brand.brandName
+                                }
+                              </p>
+
+                              <p className="mt-1 text-xs leading-5 text-slate-600">
+                                {brand.attentionReason ??
+                                  'Requiere revisión comercial.'}
+                              </p>
+                            </div>
+                          </div>
+                        </article>
+                      ),
+                    )}
+
+                  {summary
+                    .attentionBrands
+                    .length === 0 && (
+                    <p className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">
+                      No existen
+                      alertas
+                      comerciales para
+                      este periodo.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
+                  Reactivación
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Prioriza las marcas
+                  con historial
+                  comercial reciente y
+                  concentra seguimiento
+                  en las oportunidades
+                  recuperables antes de
+                  ampliar cobertura.
+                </p>
+              </div>
             </div>
           </ExecutivePanel>
         </KPIGrid>
       ) : (
-        <section className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+        <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
           <CircleDashed
             className="mx-auto text-slate-300"
             size={42}
@@ -483,9 +812,11 @@ export function BrandWorkspacePage() {
           </h2>
 
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
-            Importa un archivo de ventas desde Data
-            Center para generar los indicadores de
-            Brand Intelligence.
+            Importa un archivo de
+            ventas desde Data Center
+            para generar los
+            indicadores de Brand
+            Intelligence.
           </p>
         </section>
       )}
@@ -493,23 +824,66 @@ export function BrandWorkspacePage() {
       {summary && (
         <div className="mt-6">
           <SmartBrandDirectory
-            brands={workspace.filteredBrands}
-            filters={workspace.filters}
-            onAttentionChange={workspace.actions.setRequiresAttention}
-            onLifecycleChange={workspace.actions.setLifecycleFilter}
-            onResetFilters={workspace.actions.resetFilters}
-            onSearchChange={workspace.actions.setSearch}
-            onSelectBrand={(brandId) => {
-              workspace.actions.setSelectedBrandId(brandId)
-              navigate(`/brands/${encodeURIComponent(brandId)}`)
+            brands={
+              workspace.filteredBrands
+            }
+            filters={
+              workspace.filters
+            }
+            onAttentionChange={
+              workspace.actions
+                .setRequiresAttention
+            }
+            onLifecycleChange={
+              workspace.actions
+                .setLifecycleFilter
+            }
+            onResetFilters={
+              workspace.actions
+                .resetFilters
+            }
+            onSearchChange={
+              workspace.actions
+                .setSearch
+            }
+            onSelectBrand={(
+              brandId,
+            ) => {
+              workspace.actions
+                .setSelectedBrandId(
+                  brandId,
+                )
+
+              navigate(
+                `/brands/${encodeURIComponent(
+                  brandId,
+                )}`,
+              )
             }}
-            onSortDirectionChange={workspace.actions.setSortDirection}
-            onSortFieldChange={workspace.actions.setSortField}
-            onTrendChange={workspace.actions.setTrendFilter}
-            selectedBrandId={workspace.selectedBrandId}
-            sortDirection={workspace.sortDirection}
-            sortField={workspace.sortField}
-            totalBrands={summary.totalBrands}
+            onSortDirectionChange={
+              workspace.actions
+                .setSortDirection
+            }
+            onSortFieldChange={
+              workspace.actions
+                .setSortField
+            }
+            onTrendChange={
+              workspace.actions
+                .setTrendFilter
+            }
+            selectedBrandId={
+              workspace.selectedBrandId
+            }
+            sortDirection={
+              workspace.sortDirection
+            }
+            sortField={
+              workspace.sortField
+            }
+            totalBrands={
+              summary.totalBrands
+            }
           />
         </div>
       )}
