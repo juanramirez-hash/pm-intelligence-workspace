@@ -166,6 +166,38 @@ function normalizeText(
   return normalizedValue || null
 }
 
+function normalizeBrandIdentifier(
+  value: string | null,
+): string | null {
+  const normalized =
+    normalizeIdentifier(value)
+
+  if (
+    normalized ===
+    'MERIVA TECHNOLOGY - STREAMAX'
+  ) {
+    return 'STREAMAX - MERIVA'
+  }
+
+  return normalized
+}
+
+function normalizeBrandName(
+  value: string | null,
+): string | null {
+  const normalized =
+    normalizeText(value)
+
+  if (
+    normalized?.toLocaleUpperCase('es-MX') ===
+    'MERIVA TECHNOLOGY - STREAMAX'
+  ) {
+    return 'STREAMAX - MERIVA'
+  }
+
+  return normalized
+}
+
 function parseDate(
   value: string,
 ): Date | null {
@@ -1190,7 +1222,7 @@ export function buildBusinessDataModel(
       parseDate(row.date)
 
     const brandId =
-      normalizeIdentifier(
+      normalizeBrandIdentifier(
         row.brand,
       )
 
@@ -1217,7 +1249,7 @@ export function buildBusinessDataModel(
       )
 
     const brandName =
-      normalizeText(row.brand) ??
+      normalizeBrandName(row.brand) ??
       brandId
 
     const customerId =

@@ -22,7 +22,15 @@ export function normalizeBrandKey(value) {
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
 
-  return normalized.length > 0 ? normalized : null
+  if (!normalized) {
+    return null
+  }
+
+  if (normalized === 'MERIVATECHNOLOGYSTREAMAX') {
+    return 'STREAMAXMERIVA'
+  }
+
+  return normalized
 }
 
 export function normalizeBrandKeys(values) {

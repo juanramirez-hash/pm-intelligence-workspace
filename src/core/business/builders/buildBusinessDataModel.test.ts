@@ -814,6 +814,83 @@ describe(
         )
       },
     )
+        it(
+      'consolida MERIVA TECHNOLOGY - STREAMAX bajo STREAMAX - MERIVA',
+      () => {
+        const model =
+          buildBusinessDataModel([
+            {
+              date: '2025-10-15',
+              brand: 'MERIVA TECHNOLOGY - STREAMAX',
+              revenue: 100,
+              grossProfit: 30,
+
+              customerId: 'STREAMAX-001',
+              customerName: 'Cliente Historico',
+
+              model: 'MDVR-HIST',
+              quantity: 1,
+
+              documentNumber: 'STX-001',
+              location: 'CDMX',
+              salesRep: 'Javier',
+              currency: 'MXN',
+            },
+            {
+              date: '2026-10-15',
+              brand: 'STREAMAX - MERIVA',
+              revenue: 200,
+              grossProfit: 60,
+
+              customerId: 'STREAMAX-002',
+              customerName: 'Cliente Actual',
+
+              model: 'MDVR-ACTUAL',
+              quantity: 2,
+
+              documentNumber: 'STX-002',
+              location: 'CDMX',
+              salesRep: 'Javier',
+              currency: 'MXN',
+            },
+          ])
+
+        expect(
+          model.brands.size,
+        ).toBe(1)
+
+        expect(
+          model.brands.has(
+            'MERIVA TECHNOLOGY - STREAMAX',
+          ),
+        ).toBe(false)
+
+        const streamax =
+          model.brands.get(
+            'STREAMAX - MERIVA',
+          )
+
+        expect(streamax).toBeDefined()
+
+        expect(
+          streamax?.name,
+        ).toBe(
+          'STREAMAX - MERIVA',
+        )
+
+        expect(
+          streamax?.revenue,
+        ).toBe(300)
+
+        expect(
+          streamax?.grossProfit,
+        ).toBe(90)
+
+        expect(
+          streamax?.quantity,
+        ).toBe(3)
+      },
+    )
 
   },
 )
