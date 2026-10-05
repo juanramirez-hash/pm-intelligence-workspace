@@ -95,9 +95,11 @@ function formatConcentration(
 function BrandPriorityItem({
   brand,
   position,
+  onSelect,
 }: {
   brand: BrandIntelligenceItem
   position: number
+  onSelect: (brandId: string) => void
 }) {
   const isGrowing =
     brand.revenueVariation > 0
@@ -106,7 +108,15 @@ function BrandPriorityItem({
     brand.revenueVariation < 0
 
   return (
-    <article className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition-[background-color,border-color,transform] duration-200 hover:-translate-y-px hover:border-slate-200 hover:bg-white motion-reduce:transform-none motion-reduce:transition-none">
+    <button
+      className="flex w-full items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 text-left transition-[background-color,border-color,transform] duration-200 hover:-translate-y-px hover:border-violet-200 hover:bg-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-200 motion-reduce:transform-none motion-reduce:transition-none"
+      onClick={() =>
+        onSelect(
+          brand.brandId,
+        )
+      }
+      type="button"
+    >
       <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-semibold text-slate-500 shadow-sm">
         {position}
       </div>
@@ -118,17 +128,28 @@ function BrandPriorityItem({
 
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
           <span>
-            Venta {formatCurrency(
+            Venta{' '}
+            {formatCurrency(
               brand.currentPeriod.revenue,
             )}
           </span>
 
           <span>
-            Impacto {formatCurrency(
+            Impacto{' '}
+            {formatCurrency(
               brand.revenueVariation,
             )}
           </span>
         </div>
+
+        {brand.attentionReason && (
+          <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">
+            {brand.attentionReason}
+          </p>
+        )}
+        <p className="mt-2 text-[11px] font-semibold text-violet-600">
+          Abrir inteligencia de marca →
+        </p>
       </div>
 
       <div
@@ -153,7 +174,7 @@ function BrandPriorityItem({
           brand.revenueVariationPercentage,
         )}
       </div>
-    </article>
+    </button>
   )
 }
 
@@ -539,12 +560,15 @@ export function BrandWorkspacePage() {
                       ) => (
                         <BrandPriorityItem
                           brand={brand}
-                          key={
-                            brand.brandId
+                          key={brand.brandId}
+                          onSelect={(brandId) =>
+                            navigate(
+                              `/brands/${encodeURIComponent(
+                                brandId,
+                              )}`,
+                            )
                           }
-                          position={
-                            index + 1
-                          }
+                          position={index + 1}
                         />
                       ),
                     )}
@@ -639,12 +663,15 @@ export function BrandWorkspacePage() {
                       ) => (
                         <BrandPriorityItem
                           brand={brand}
-                          key={
-                            brand.brandId
+                          key={brand.brandId}
+                          onSelect={(brandId) =>
+                            navigate(
+                              `/brands/${encodeURIComponent(
+                                brandId,
+                              )}`,
+                            )
                           }
-                          position={
-                            index + 1
-                          }
+                          position={index + 1}
                         />
                       ),
                     )}
@@ -741,11 +768,17 @@ export function BrandWorkspacePage() {
                         brand,
                         index,
                       ) => (
-                        <article
-                          className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4 transition-colors duration-200 hover:border-amber-200 hover:bg-amber-50 motion-reduce:transition-none"
-                          key={
-                            brand.brandId
+                        <button
+                          className="w-full rounded-2xl border border-amber-100 bg-amber-50/60 p-4 text-left transition-colors duration-200 hover:border-violet-200 hover:bg-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-200 motion-reduce:transition-none"
+                          key={brand.brandId}
+                          onClick={() =>
+                            navigate(
+                              `/brands/${encodeURIComponent(
+                                brand.brandId,
+                              )}`,
+                            )
                           }
+                          type="button"
                         >
                           <div className="flex items-start gap-3">
                             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-semibold text-amber-700 shadow-sm">
@@ -765,7 +798,7 @@ export function BrandWorkspacePage() {
                               </p>
                             </div>
                           </div>
-                        </article>
+                        </button>
                       ),
                     )}
 
