@@ -1,4 +1,7 @@
-import type { BrandCommercialComparison } from './brandCommercialComparison'
+import type {
+  BrandCommercialComparison,
+  BrandCommercialWindow,
+} from './brandCommercialComparison'
 
 import {
   formatBusinessCurrency,
@@ -47,6 +50,93 @@ export interface BrandWorkspaceChartPoint {
   productsChangeLabel: string | null
 }
 
+export interface BrandWorkspaceCommercialWindow {
+  year: number
+  periodId: string
+
+  dateFrom: string
+  dateTo: string
+  workingDays: number
+  rangeLabel: string
+
+  revenue: number
+  revenueLabel: string
+
+  grossProfit: number
+  grossProfitLabel: string
+
+  grossMargin: number | null
+  grossMarginLabel: string
+
+  customers: number
+  customersLabel: string
+
+  products: number
+  productsLabel: string
+}
+
+export interface BrandWorkspaceCommercialDelta {
+  revenueAmount: number
+  revenueAmountLabel: string
+  revenuePercent: number | null
+  revenuePercentLabel: string | null
+
+  grossProfitAmount: number
+  grossProfitAmountLabel: string
+  grossProfitPercent: number | null
+  grossProfitPercentLabel: string | null
+
+  grossMarginPoints: number | null
+  grossMarginPointsLabel: string | null
+
+  customersChange: number
+  customersChangeLabel: string | null
+
+  productsChange: number
+  productsChangeLabel: string | null
+}
+
+export interface BrandWorkspaceCommercialComparisonSet {
+  current: BrandWorkspaceCommercialWindow | null
+  previousYear: BrandWorkspaceCommercialWindow | null
+  twoYearsBack: BrandWorkspaceCommercialWindow | null
+
+  vsPreviousYear: BrandWorkspaceCommercialDelta | null
+  vsTwoYearsBack: BrandWorkspaceCommercialDelta | null
+}
+
+export interface BrandWorkspaceAnnualProjection {
+  year: number
+
+  revenue: number
+  revenueLabel: string
+
+  grossProfit: number | null
+  grossProfitLabel: string
+
+  grossMargin: number | null
+  grossMarginLabel: string
+
+  historicalRevenueCompletionRatio: number
+  historicalRevenueCompletionRatioLabel: string
+
+  historicalGrossProfitCompletionRatio: number | null
+  historicalGrossProfitCompletionRatioLabel: string
+
+  historicalYearsUsed: readonly number[]
+  historicalYearsLabel: string
+}
+
+export interface BrandWorkspaceAnnualComparison {
+  projection: BrandWorkspaceAnnualProjection | null
+
+  previousYear: BrandWorkspaceCommercialWindow | null
+  twoYearsBack: BrandWorkspaceCommercialWindow | null
+
+  vsPreviousYear: BrandWorkspaceCommercialDelta | null
+  vsTwoYearsBack: BrandWorkspaceCommercialDelta | null
+}
+
 export interface BrandWorkspaceInsight extends BrandDecisionInsight {
   severityLabel: string
 }
@@ -81,6 +171,14 @@ export interface BrandWorkspaceViewModel {
     comparisonDescription?: string
     comparisonRanges?: Record<string, string>
     comparison: readonly BrandWorkspaceChartPoint[]
+  }
+    commercialComparison: {
+    currentYear: number | null
+    description: string
+
+    monthly: BrandWorkspaceCommercialComparisonSet
+    ytd: BrandWorkspaceCommercialComparisonSet
+    annual: BrandWorkspaceAnnualComparison
   }
   actionCenter: {
     status: 'ready' | 'limited'
@@ -320,7 +418,288 @@ function toChartPoint(
         : null,
   }
 }
+function toCommercialWindow(
+  window: BrandCommercialWindow | null,
+): BrandWorkspaceCommercialWindow | null {
+  if (!window) {
+    return null
+  }
 
+  return {
+    year:
+      window.year,
+
+    periodId:
+      window.periodId,
+
+    dateFrom:
+      window.dateFrom,
+
+    dateTo:
+      window.dateTo,
+
+    workingDays:
+      window.workingDays,
+
+    rangeLabel:
+      `${window.dateFrom} al ${window.dateTo} · ${window.workingDays} días laborables`,
+
+    revenue:
+      window.revenue,
+
+    revenueLabel:
+      formatBusinessCurrency(
+        window.revenue,
+      ),
+
+    grossProfit:
+      window.grossProfit,
+
+    grossProfitLabel:
+      formatBusinessCurrency(
+        window.grossProfit,
+      ),
+
+    grossMargin:
+      window.grossMargin,
+
+    grossMarginLabel:
+      window.grossMargin === null
+        ? 'Sin dato'
+        : formatBusinessPercent(
+            window.grossMargin,
+          ),
+
+    customers:
+      window.customers,
+
+    customersLabel:
+      formatBusinessNumber(
+        window.customers,
+      ),
+
+    products:
+      window.products,
+
+    productsLabel:
+      formatBusinessNumber(
+        window.products,
+      ),
+  }
+}
+
+function resolvePercentChange(
+  currentValue: number,
+  referenceValue: number,
+): number | null {
+  if (referenceValue === 0) {
+    return null
+  }
+
+  return (
+    currentValue -
+    referenceValue
+  ) / referenceValue
+}
+
+function formatSignedCurrency(
+  value: number,
+): string {
+  if (value === 0) {
+    return formatBusinessCurrency(0)
+  }
+
+  const formatted =
+    formatBusinessCurrency(
+      Math.abs(value),
+    )
+
+  return value > 0
+    ? `+${formatted}`
+    : `-${formatted}`
+}
+
+function formatSignedPercent(
+  value: number | null,
+): string | null {
+  if (value === null) {
+    return null
+  }
+
+  if (value === 0) {
+    return formatBusinessPercent(0)
+  }
+
+  const formatted =
+    formatBusinessPercent(
+      Math.abs(value),
+    )
+
+  return value > 0
+    ? `+${formatted}`
+    : `-${formatted}`
+}
+
+function formatPercentagePoints(
+  value: number | null,
+): string | null {
+  if (value === null) {
+    return null
+  }
+
+  const points =
+    value * 100
+
+  if (points === 0) {
+    return '0.0 pp'
+  }
+
+  return `${points > 0 ? '+' : '-'}${Math.abs(points).toFixed(1)} pp`
+}
+
+function buildCommercialDelta(
+  current: BrandCommercialWindow | null,
+  reference: BrandCommercialWindow | null,
+): BrandWorkspaceCommercialDelta | null {
+  if (
+    !current ||
+    !reference
+  ) {
+    return null
+  }
+
+  const revenueAmount =
+    current.revenue -
+    reference.revenue
+
+  const grossProfitAmount =
+    current.grossProfit -
+    reference.grossProfit
+
+  const grossMarginPoints =
+    current.grossMargin !== null &&
+    reference.grossMargin !== null
+      ? current.grossMargin -
+        reference.grossMargin
+      : null
+
+  const customersChange =
+    current.customers -
+    reference.customers
+
+  const productsChange =
+    current.products -
+    reference.products
+
+  const revenuePercent =
+    resolvePercentChange(
+      current.revenue,
+      reference.revenue,
+    )
+
+  const grossProfitPercent =
+    resolvePercentChange(
+      current.grossProfit,
+      reference.grossProfit,
+    )
+
+  return {
+    revenueAmount,
+    revenueAmountLabel:
+      formatSignedCurrency(
+        revenueAmount,
+      ),
+
+    revenuePercent,
+    revenuePercentLabel:
+      formatSignedPercent(
+        revenuePercent,
+      ),
+
+    grossProfitAmount,
+    grossProfitAmountLabel:
+      formatSignedCurrency(
+        grossProfitAmount,
+      ),
+
+    grossProfitPercent,
+    grossProfitPercentLabel:
+      formatSignedPercent(
+        grossProfitPercent,
+      ),
+
+    grossMarginPoints,
+    grossMarginPointsLabel:
+      formatPercentagePoints(
+        grossMarginPoints,
+      ),
+
+    customersChange,
+
+    customersChangeLabel:
+      formatSignedNumber(
+        customersChange,
+      ),
+
+    productsChange,
+
+    productsChangeLabel:
+      formatSignedNumber(
+        productsChange,
+      ),
+  }
+}
+
+function formatSignedNumber(
+  value: number,
+): string {
+  if (value === 0) {
+    return '0'
+  }
+
+  const formatted =
+    formatBusinessNumber(
+      Math.abs(value),
+    )
+
+  return value > 0
+    ? `+${formatted}`
+    : `-${formatted}`
+}
+
+function buildCommercialComparisonSet(
+  comparison:
+    BrandCommercialComparison['monthly'],
+): BrandWorkspaceCommercialComparisonSet {
+  return {
+    current:
+      toCommercialWindow(
+        comparison.current,
+      ),
+
+    previousYear:
+      toCommercialWindow(
+        comparison.previousYear,
+      ),
+
+    twoYearsBack:
+      toCommercialWindow(
+        comparison.twoYearsBack,
+      ),
+
+    vsPreviousYear:
+      buildCommercialDelta(
+        comparison.current,
+        comparison.previousYear,
+      ),
+
+    vsTwoYearsBack:
+      buildCommercialDelta(
+        comparison.current,
+        comparison.twoYearsBack,
+      ),
+  }
+}
 export function buildBrandWorkspaceViewModel(
   decision: BrandDecisionModel,
   commercialComparison?: BrandCommercialComparison,
@@ -450,6 +829,278 @@ export function buildBrandWorkspaceViewModel(
       comparisonDescription: commercialComparison?.description,
       comparisonRanges: commercialComparison?.ranges,
       comparison,
+    },
+        commercialComparison: {
+      currentYear:
+        commercialComparison
+          ?.currentYear ?? null,
+
+      description:
+        commercialComparison
+          ?.multiYearDescription ??
+        'No hay información suficiente para construir el comparativo multi-año.',
+
+      monthly:
+        commercialComparison
+          ? buildCommercialComparisonSet(
+              commercialComparison.monthly,
+            )
+          : {
+              current: null,
+              previousYear: null,
+              twoYearsBack: null,
+              vsPreviousYear: null,
+              vsTwoYearsBack: null,
+            },
+
+      ytd:
+        commercialComparison
+          ? buildCommercialComparisonSet(
+              commercialComparison.ytd,
+            )
+          : {
+              current: null,
+              previousYear: null,
+              twoYearsBack: null,
+              vsPreviousYear: null,
+              vsTwoYearsBack: null,
+            },
+
+      annual: {
+        projection:
+          commercialComparison
+            ?.annual.projection
+            ? {
+                year:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .year,
+
+                revenue:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .revenue,
+
+                revenueLabel:
+                  formatBusinessCurrency(
+                    commercialComparison
+                      .annual
+                      .projection
+                      .revenue,
+                  ),
+
+                grossProfit:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .grossProfit,
+
+                grossProfitLabel:
+                  commercialComparison
+                      .annual
+                      .projection
+                      .grossProfit === null
+                    ? 'Sin dato'
+                    : formatBusinessCurrency(
+                        commercialComparison
+                          .annual
+                          .projection
+                          .grossProfit,
+                      ),
+
+                grossMargin:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .grossMargin,
+
+                grossMarginLabel:
+                  commercialComparison
+                      .annual
+                      .projection
+                      .grossMargin === null
+                    ? 'Sin dato'
+                    : formatBusinessPercent(
+                        commercialComparison
+                          .annual
+                          .projection
+                          .grossMargin,
+                      ),
+
+                historicalRevenueCompletionRatio:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .historicalRevenueCompletionRatio,
+
+                historicalRevenueCompletionRatioLabel:
+                  formatBusinessPercent(
+                    commercialComparison
+                      .annual
+                      .projection
+                      .historicalRevenueCompletionRatio,
+                  ),
+
+                historicalGrossProfitCompletionRatio:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .historicalGrossProfitCompletionRatio,
+
+                historicalGrossProfitCompletionRatioLabel:
+                  commercialComparison
+                      .annual
+                      .projection
+                      .historicalGrossProfitCompletionRatio === null
+                    ? 'Sin dato'
+                    : formatBusinessPercent(
+                        commercialComparison
+                          .annual
+                          .projection
+                          .historicalGrossProfitCompletionRatio,
+                      ),
+
+                historicalYearsUsed:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .historicalYearsUsed,
+
+                historicalYearsLabel:
+                  commercialComparison
+                    .annual
+                    .projection
+                    .historicalYearsUsed
+                    .join(' / '),
+              }
+            : null,
+
+        previousYear:
+          toCommercialWindow(
+            commercialComparison
+              ?.annual
+              .previousYear ?? null,
+          ),
+
+        twoYearsBack:
+          toCommercialWindow(
+            commercialComparison
+              ?.annual
+              .twoYearsBack ?? null,
+          ),
+
+        vsPreviousYear:
+          commercialComparison
+            ?.annual.projection &&
+          commercialComparison
+            .annual.previousYear
+            ? buildCommercialDelta(
+                {
+                  year:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .year,
+
+                  periodId:
+                    `${commercialComparison.annual.projection.year}-FY-PROJECTION`,
+
+                  dateFrom:
+                    `${commercialComparison.annual.projection.year}-01-01`,
+
+                  dateTo:
+                    `${commercialComparison.annual.projection.year}-12-31`,
+
+                  workingDays: 0,
+
+                  revenue:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .revenue,
+
+                  grossProfit:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .grossProfit ?? 0,
+
+                  grossMargin:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .grossMargin,
+
+                  quantity: 0,
+                  documents: 0,
+                  customers: 0,
+                  products: 0,
+                  rowCount: 0,
+                },
+
+                commercialComparison
+                  .annual
+                  .previousYear,
+              )
+            : null,
+
+        vsTwoYearsBack:
+          commercialComparison
+            ?.annual.projection &&
+          commercialComparison
+            .annual.twoYearsBack
+            ? buildCommercialDelta(
+                {
+                  year:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .year,
+
+                  periodId:
+                    `${commercialComparison.annual.projection.year}-FY-PROJECTION`,
+
+                  dateFrom:
+                    `${commercialComparison.annual.projection.year}-01-01`,
+
+                  dateTo:
+                    `${commercialComparison.annual.projection.year}-12-31`,
+
+                  workingDays: 0,
+
+                  revenue:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .revenue,
+
+                  grossProfit:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .grossProfit ?? 0,
+
+                  grossMargin:
+                    commercialComparison
+                      .annual
+                      .projection
+                      .grossMargin,
+
+                  quantity: 0,
+                  documents: 0,
+                  customers: 0,
+                  products: 0,
+                  rowCount: 0,
+                },
+
+                commercialComparison
+                  .annual
+                  .twoYearsBack,
+              )
+            : null,
+      },
     },
     actionCenter: {
       status: decision.actionCenter.status,

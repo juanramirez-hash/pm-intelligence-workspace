@@ -1,4 +1,5 @@
 import { BrandCommercialPlan } from '../components/BrandCommercialPlan'
+import { BrandCommercialComparisonPanel } from '../components/BrandCommercialComparisonPanel'
 
 import {
   AlertTriangle,
@@ -529,76 +530,9 @@ export function BrandIntelligencePage() {
           </WorkspaceSection>
         </div>
 
-        <WorkspaceSection
-          className="mt-6"
-          icon={BarChart3}
-          subtitle={workspace.charts.comparisonDescription ?? 'Periodo anterior contra periodo actual'}
-          title="Comparativo comercial"
-          tone="blue"
-        >
-          <div className="grid gap-5 lg:grid-cols-2">
-            {workspace.charts.comparison.map((point) => (
-              <article
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
-                key={point.periodId}
-              >
-                <h3 className="font-semibold text-slate-950">
-                  {point.periodId}
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">{workspace.charts.comparisonRanges?.[point.periodId]}</p>
-
-                <div className="mt-5 space-y-5">
-                  <div>
-                    <div className="flex justify-between gap-4 text-sm">
-                      <span className="text-slate-500">Venta</span>
-                      <span className="flex items-center gap-2">
-                        {point.revenueChangeLabel && (
-                          <small className={`font-semibold ${point.revenueChangeLabel.startsWith('↓') ? 'text-rose-600' : 'text-emerald-600'}`}>{point.revenueChangeLabel}</small>
-                        )}
-                        <strong className="text-slate-900">{point.revenueLabel}</strong>
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                      <div className="h-full rounded-full bg-violet-500" style={{ width: `${point.revenueWidth}%` }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between gap-4 text-sm">
-                      <span className="text-slate-500">GP</span>
-                      <span className="flex items-center gap-2">
-                        {point.grossProfitChangeLabel && (
-                          <small className={`font-semibold ${point.grossProfitChangeLabel.startsWith('↓') ? 'text-rose-600' : 'text-emerald-600'}`}>{point.grossProfitChangeLabel}</small>
-                        )}
-                        <strong className="text-slate-900">{point.grossProfitLabel}</strong>
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${point.grossProfitWidth}%` }} />
-                    </div>
-                  </div>
-
-                  <dl className="grid grid-cols-3 gap-3 text-center">
-                    <div className="rounded-xl bg-white p-3">
-                      <dt className="text-xs text-slate-400">Margen</dt>
-                      <dd className="mt-1 text-sm font-semibold text-slate-900">{point.grossMarginLabel}</dd>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <dt className="text-xs text-slate-400">Clientes</dt>
-                      <dd className="mt-1 text-sm font-semibold text-slate-900">{point.customersLabel}</dd>
-                      {point.customersChangeLabel && <p className={`mt-1 text-[10px] font-semibold ${point.customersChangeLabel.startsWith('↓') ? 'text-rose-600' : 'text-emerald-600'}`}>{point.customersChangeLabel}</p>}
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <dt className="text-xs text-slate-400">Productos</dt>
-                      <dd className="mt-1 text-sm font-semibold text-slate-900">{point.productsLabel}</dd>
-                      {point.productsChangeLabel && <p className={`mt-1 text-[10px] font-semibold ${point.productsChangeLabel.startsWith('↓') ? 'text-rose-600' : 'text-emerald-600'}`}>{point.productsChangeLabel}</p>}
-                    </div>
-                  </dl>
-                </div>
-              </article>
-            ))}
-          </div>
-        </WorkspaceSection>
+        <BrandCommercialComparisonPanel
+          comparison={workspace.commercialComparison}
+        />
 
         <WorkspaceSection
           className="mt-6"
