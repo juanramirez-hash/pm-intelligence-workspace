@@ -24,8 +24,13 @@ import {
 } from 'react-router-dom'
 
 import {
-  useWorkspaceContext,
-} from '../features/workspaces/shared/hooks/useWorkspaceContext'
+  useGlobalSearch,
+} from '../features/global-search/useGlobalSearch'
+
+import type {
+  GlobalSearchResult,
+  GlobalSearchResultType,
+} from '../features/global-search/repositories/globalSearchRepository'
 
 interface TopbarUser {
   email: string
@@ -37,26 +42,6 @@ interface TopbarProps {
   user: TopbarUser
   onMenuOpen: () => void
   navigationOpen: boolean
-}
-
-type GlobalSearchResultType =
-  | 'brand'
-  | 'customer'
-  | 'product'
-
-interface GlobalSearchResult {
-  id: string
-  type: GlobalSearchResultType
-  primary: string
-  secondary: string
-  route: string
-  score: number
-}
-
-interface GlobalSearchGroup {
-  type: GlobalSearchResultType
-  label: string
-  items: GlobalSearchResult[]
 }
 
 const workspaceTitles: Record<string, string> = {
@@ -141,86 +126,6 @@ function getUserInitials(
     .toUpperCase()
 }
 
-function normalizeSearchValue(
-  value: string | null | undefined,
-): string {
-  return (value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLocaleUpperCase('es-MX')
-}
-
-function getSearchScore(
-  query: string,
-  values: Array<
-    string | null | undefined
-  >,
-): number | null {
-  let bestScore:
-    number | null = null
-
-  for (const value of values) {
-    const normalized =
-      normalizeSearchValue(value)
-
-    if (!normalized) {
-      continue
-    }
-
-    let score:
-      number | null = null
-
-    if (normalized === query) {
-      score = 0
-    } else if (
-      normalized.startsWith(query)
-    ) {
-      score = 1
-    } else if (
-      normalized
-        .split(/\s+/)
-        .some((word) =>
-          word.startsWith(query),
-        )
-    ) {
-      score = 2
-    } else if (
-      normalized.includes(query)
-    ) {
-      score = 3
-    }
-
-    if (
-      score !== null &&
-      (
-        bestScore === null ||
-        score < bestScore
-      )
-    ) {
-      bestScore = score
-    }
-  }
-
-  return bestScore
-}
-
-function sortSearchResults(
-  items: GlobalSearchResult[],
-): GlobalSearchResult[] {
-  return [...items].sort(
-    (left, right) =>
-      left.score - right.score ||
-      left.primary.localeCompare(
-        right.primary,
-        'es-MX',
-        {
-          sensitivity: 'base',
-        },
-      ),
-  )
-}
-
 export function Topbar({
   user,
   onMenuOpen,
@@ -228,10 +133,6 @@ export function Topbar({
 }: TopbarProps) {
   const location = useLocation()
   const navigate = useNavigate()
-
-  const {
-    repository,
-  } = useWorkspaceContext()
 
   const [
     searchQuery,
@@ -265,192 +166,15 @@ export function Topbar({
     )
 
   const normalizedQuery =
-    normalizeSearchValue(
-      searchQuery,
-    )
+  searchQuery.trim()
 
-  const searchGroups =
-    useMemo<
-      GlobalSearchGroup[]
-    >(() => {
-      if (
-        !repository ||
-        normalizedQuery.length < 2
-      ) {
-        return []
-      }
-
-      const brands =
-        sortSearchResults(
-          repository.brand
-            .getAll()
-            .flatMap((brand): GlobalSearchResult[] => {
-              const score =
-                getSearchScore(
-                  normalizedQuery,
-                  [
-                    brand.id,
-                    brand.name,
-                  ],
-                )
-
-              if (score === null) {
-                return []
-              }
-
-              return [
-                {
-                  id: brand.id,
-                  type: 'brand',
-                  primary:
-                    brand.name ||
-                    brand.id,
-                  secondary:
-                    brand.id ===
-                    brand.name
-                      ? 'Marca'
-                      : `ID ${brand.id}`,
-                  route:
-                    `/brands/${encodeURIComponent(brand.id)}`,
-                  score,
-                },
-              ]
-            }),
-        ).slice(0, 5)
-
-      const customers =
-        sortSearchResults(
-          repository.customer
-            .getAll()
-            .flatMap((customer): GlobalSearchResult[] => {
-              const score =
-                getSearchScore(
-                  normalizedQuery,
-                  [
-                    customer.id,
-                    customer.name,
-                    customer.erpInternalId,
-                    customer.email,
-                    customer.phone,
-                    customer.salesRep,
-                    customer.assignedKam,
-                    customer.taxId,
-                  ],
-                )
-
-              if (score === null) {
-                return []
-              }
-
-              const detailParts = [
-                customer.id,
-                customer.salesRep,
-              ].filter(Boolean)
-
-              return [
-                {
-                  id: customer.id,
-                  type:
-                    'customer',
-                  primary:
-                    customer.name ||
-                    customer.id,
-                  secondary:
-                    detailParts.join(
-                      ' · ',
-                    ),
-                  route:
-                    `/customers/${encodeURIComponent(customer.id)}`,
-                  score,
-                },
-              ]
-            }),
-        ).slice(0, 5)
-
-      const products =
-        sortSearchResults(
-          repository.product
-            .getAll()
-            .flatMap((product): GlobalSearchResult[] => {
-              const score =
-                getSearchScore(
-                  normalizedQuery,
-                  [
-                    product.id,
-                    product.model,
-                    product.sku,
-                    product.brand,
-                    product.name,
-                    product.code,
-                    product.erpInternalId,
-                    product.vendorCode,
-                    product.description,
-                  ],
-                )
-
-              if (score === null) {
-                return []
-              }
-
-              const primary =
-                product.model ||
-                product.name ||
-                product.sku ||
-                product.id
-
-              const detailParts = [
-                product.brand,
-                product.sku !== primary
-                  ? product.sku
-                  : null,
-              ].filter(Boolean)
-
-              return [
-                {
-                  id: product.id,
-                  type:
-                    'product',
-                  primary,
-                  secondary:
-                    detailParts.join(
-                      ' · ',
-                    ),
-                  route:
-                    `/products/${encodeURIComponent(product.id)}`,
-                  score,
-                },
-              ]
-            }),
-        ).slice(0, 5)
-
-      const groups:
-        GlobalSearchGroup[] = [
-          {
-            type: 'brand',
-            label: 'Marcas',
-            items: brands,
-          },
-          {
-            type: 'customer',
-            label: 'Clientes',
-            items: customers,
-          },
-          {
-            type: 'product',
-            label: 'Productos',
-            items: products,
-          },
-        ]
-
-      return groups.filter(
-        (group) =>
-          group.items.length > 0,
-      )
-    }, [
-      normalizedQuery,
-      repository,
-    ])
-
+const {
+  groups: searchGroups,
+  loading: searchLoading,
+  error: searchError,
+} = useGlobalSearch(
+  searchQuery,
+)
   const flatSearchResults =
     useMemo(
       () =>
@@ -672,12 +396,11 @@ export function Topbar({
                 onKeyDown={
                   handleSearchKeyDown
                 }
-                disabled={!repository}
-                placeholder={
-                  repository
-                    ? 'Buscar marcas, productos o clientes'
-                    : 'Búsqueda no disponible'
-                }
+               placeholder={
+                searchLoading
+                  ? 'Buscando...'
+                  : 'Buscar marcas, productos o clientes'
+              }
                 aria-label="Buscar marcas, productos o clientes"
                 aria-expanded={
                   searchOpen
@@ -694,14 +417,22 @@ export function Topbar({
                 role="listbox"
                 className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-[70vh] w-full min-w-[24rem] overflow-y-auto rounded-2xl border border-blue-100 bg-white p-2 shadow-xl"
               >
-                {normalizedQuery.length <
-                2 ? (
-                  <div className="px-3 py-4 text-sm text-slate-500">
-                    Escribe al menos 2
-                    caracteres para buscar.
-                  </div>
-                ) : flatSearchResults.length ===
-                  0 ? (
+                  {normalizedQuery.length <
+                  2 ? (
+                    <div className="px-3 py-4 text-sm text-slate-500">
+                      Escribe al menos 2
+                      caracteres para buscar.
+                    </div>
+                  ) : searchError ? (
+                    <div className="px-3 py-4 text-sm text-red-600">
+                      {searchError}
+                    </div>
+                  ) : searchLoading ? (
+                    <div className="px-3 py-4 text-sm text-slate-500">
+                      Buscando...
+                    </div>
+                  ) : flatSearchResults.length ===
+                    0 ? (
                   <div className="px-3 py-4 text-sm text-slate-500">
                     No se encontraron
                     coincidencias.
