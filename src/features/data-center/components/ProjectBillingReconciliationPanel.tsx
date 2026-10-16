@@ -15,8 +15,8 @@ import {
 } from '../../../atlas/layout/SectionHeader'
 
 import {
-  useWorkspaceContext,
-} from '../../workspaces/shared/hooks/useWorkspaceContext'
+  useProjectBillingReconciliation,
+} from '../hooks/useProjectBillingReconciliation'
 
 const currencyFormatter =
   new Intl.NumberFormat(
@@ -56,12 +56,9 @@ function formatDate(
 }
 
 export function ProjectBillingReconciliationPanel() {
-  const workspace = useWorkspaceContext()
-
-  const report =
-    workspace.repository
-      ?.projectBillingReconciliation
-      .getReport() ?? null
+  const {
+  report,
+} = useProjectBillingReconciliation()
 
   if (
     !report ||

@@ -11,11 +11,52 @@ import {
   loadProjectBillingDataset,
 } from '../services/projectBillingReadService.js'
 
+import {
+  loadProjectBillingReconciliationSummary,
+} from '../services/projectBillingReconciliationReadService.js'
+
 export function createProjectBillingsRouter(
   pool,
 ) {
   const router =
     Router()
+
+  router.get(
+    '/reconciliation',
+    async (_req, res) => {
+      try {
+        const report =
+          await loadProjectBillingReconciliationSummary(
+            pool,
+          )
+
+        res.set(
+          'Cache-Control',
+          'no-store',
+        )
+
+        return res.json({
+          ok: true,
+          dataset:
+            'projectBillingReconciliation',
+          data: report,
+        })
+      } catch (error) {
+        console.error(
+          'Project Billing reconciliation load failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'Project Billing reconciliation load failed',
+          })
+      }
+    },
+  )
 
   router.get(
     '/',
