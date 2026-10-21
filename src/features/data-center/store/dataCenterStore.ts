@@ -1253,28 +1253,27 @@ case 'purchases': {
         importedAt,
     })
     .then(async () => {
-      const persistedProjectBillings =
+      const persistedProjectBillingSummary =
         await apiDataRepository
-          .loadProjectBillingDataset()
+          .loadProjectBillingSummary()
 
-      if (!persistedProjectBillings) {
+      if (!persistedProjectBillingSummary) {
         throw new Error(
-          'La facturacion de proyectos se guardo, pero no fue posible recuperar el dataset desde PostgreSQL.',
+          'La facturacion de proyectos se guardo, pero no fue posible recuperar su resumen desde PostgreSQL.',
         )
       }
 
       set({
         projectBillingSummary:
-          persistedProjectBillings.summary,
+          persistedProjectBillingSummary.summary,
 
-        normalizedProjectBillings:
-          persistedProjectBillings.normalizedRows,
+        normalizedProjectBillings: [],
 
         projectBillingLastImportedFile:
-          persistedProjectBillings.lastImportedFile,
+          persistedProjectBillingSummary.lastImportedFile,
 
         projectBillingLastImportedAt:
-          persistedProjectBillings.lastImportedAt,
+          persistedProjectBillingSummary.lastImportedAt,
 
         importStatus: 'completed',
         isPersisting: false,
@@ -1678,7 +1677,7 @@ case 'purchases': {
               persistedPurchaseOrders,
               persistedPurchaseRequests,
               persistedProjects,
-              persistedProjectBillings,
+              persistedProjectBillingSummary,
               persistedExchangeRates,
               persistedPricing,
               persistedCustomers,
@@ -1690,7 +1689,7 @@ case 'purchases': {
               apiDataRepository.loadPurchaseOrderDataset(),
               apiDataRepository.loadPurchaseRequestDataset(),
               apiDataRepository.loadProjectDataset(),
-              apiDataRepository.loadProjectBillingDataset(),
+              apiDataRepository.loadProjectBillingSummary(),
               apiDataRepository.loadExchangeRateDataset(),
               apiDataRepository.loadPricingDataset(),
               apiDataRepository.loadCustomerMasterDataset(),
@@ -1711,7 +1710,7 @@ case 'purchases': {
                 ? 'pricing'
                 : persistedExchangeRates
                   ? 'exchange-rates'
-                  : persistedProjectBillings
+                  : persistedProjectBillingSummary
                     ? 'project-billing'
                     : persistedProjects
                       ? 'projects'
@@ -1737,7 +1736,7 @@ case 'purchases': {
                 persistedPurchaseOrders ||
                 persistedPurchaseRequests ||
                 persistedProjects ||
-                persistedProjectBillings ||
+                persistedProjectBillingSummary ||
                 persistedExchangeRates ||
                 persistedPricing ||
                 persistedCustomers
@@ -1784,10 +1783,16 @@ case 'purchases': {
               normalizedProjects: persistedProjects?.normalizedRows ?? [],
               projectsLastImportedFile: persistedProjects?.lastImportedFile ?? null,
               projectsLastImportedAt: persistedProjects?.lastImportedAt ?? null,
-              projectBillingSummary: persistedProjectBillings?.summary ?? null,
-              normalizedProjectBillings: persistedProjectBillings?.normalizedRows ?? [],
-              projectBillingLastImportedFile: persistedProjectBillings?.lastImportedFile ?? null,
-              projectBillingLastImportedAt: persistedProjectBillings?.lastImportedAt ?? null,
+              projectBillingSummary:
+                persistedProjectBillingSummary?.summary ?? null,
+
+              normalizedProjectBillings: [],
+
+              projectBillingLastImportedFile:
+                persistedProjectBillingSummary?.lastImportedFile ?? null,
+
+              projectBillingLastImportedAt:
+                persistedProjectBillingSummary?.lastImportedAt ?? null,
               exchangeRateSummary: persistedExchangeRates?.summary ?? null,
               normalizedExchangeRates: persistedExchangeRates?.normalizedRows ?? [],
               exchangeRateLastImportedFile: persistedExchangeRates?.lastImportedFile ?? null,

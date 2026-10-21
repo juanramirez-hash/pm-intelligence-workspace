@@ -6,6 +6,7 @@ import type {
   PersistedPricingDataset,
   PersistedProductMasterDataset,
   PersistedProjectBillingDataset,
+  PersistedProjectBillingSummary,
   PersistedProjectDataset,
   PersistedPurchaseOrderDataset,
   PersistedPurchaseRequestDataset,
@@ -1414,6 +1415,23 @@ async loadProjectBillingDataset():
     lastImportedAt:
       response.data.lastImportedAt ?? '',
   }
+},
+
+async loadProjectBillingSummary():
+  Promise<PersistedProjectBillingSummary | null> {
+  const response =
+    await requestJson<{
+      ok: true
+      dataset: 'projectBillingSummary'
+      data: PersistedProjectBillingSummary | null
+    }>(
+      '/api/data/project-billings/summary',
+      {
+        method: 'GET',
+      },
+    )
+
+  return response.data
 },
 
         async saveExchangeRateDataset(

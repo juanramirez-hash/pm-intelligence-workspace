@@ -5,6 +5,7 @@ import type {
   PersistedInventoryDataset,
   PersistedProductMasterDataset,
   PersistedProjectBillingDataset,
+  PersistedProjectBillingSummary,
   PersistedProjectDataset,
   PersistedPricingDataset,
   PersistedPurchaseOrderDataset,
@@ -570,6 +571,33 @@ export const indexedDbDataRepository:
       lastImportedAt: metadata.lastImportedAt,
     }
   },
+
+  async loadProjectBillingSummary():
+    Promise<PersistedProjectBillingSummary | null> {
+    const database =
+      await getDataCenterDatabase()
+
+    const metadata =
+      await database.get(
+        'projectBillingMetadata',
+        PROJECT_BILLING_METADATA_KEY,
+      )
+
+    if (!metadata) {
+      return null
+    }
+
+    return {
+      summary:
+        metadata.summary,
+
+      lastImportedFile:
+        metadata.lastImportedFile,
+
+      lastImportedAt:
+        metadata.lastImportedAt,
+    }
+},
 
   async saveExchangeRateDataset(
     dataset: PersistedExchangeRateDataset,

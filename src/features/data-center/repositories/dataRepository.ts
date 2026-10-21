@@ -102,6 +102,12 @@ export interface PersistedProjectBillingDataset {
   lastImportedAt: string
 }
 
+export interface PersistedProjectBillingSummary {
+  summary: ProjectBillingDatasetSummary
+  lastImportedFile: string
+  lastImportedAt: string
+}
+
 export interface PersistedExchangeRateDataset {
   summary: ExchangeRateDatasetSummary
   normalizedRows: NormalizedExchangeRateRow[]
@@ -179,6 +185,9 @@ export interface DataRepository {
 
   loadProjectBillingDataset: () =>
     Promise<PersistedProjectBillingDataset | null>
+
+  loadProjectBillingSummary: () =>
+    Promise<PersistedProjectBillingSummary | null>
 
   saveExchangeRateDataset: (
     dataset: PersistedExchangeRateDataset,

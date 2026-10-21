@@ -9,6 +9,7 @@ import {
 
 import {
   loadProjectBillingDataset,
+  loadProjectBillingSummary,
 } from '../services/projectBillingReadService.js'
 
 import {
@@ -53,6 +54,43 @@ export function createProjectBillingsRouter(
             ok: false,
             error:
               'Project Billing reconciliation load failed',
+          })
+      }
+    },
+  )
+
+  router.get(
+    '/summary',
+    async (_req, res) => {
+      try {
+        const summary =
+          await loadProjectBillingSummary(
+            pool,
+          )
+
+        res.set(
+          'Cache-Control',
+          'no-store',
+        )
+
+        return res.json({
+          ok: true,
+          dataset:
+            'projectBillingSummary',
+          data: summary,
+        })
+      } catch (error) {
+        console.error(
+          'Project Billing summary load failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'Project Billing summary load failed',
           })
       }
     },
