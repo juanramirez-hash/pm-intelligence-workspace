@@ -299,6 +299,42 @@ describe('FW-003 Forecast Inventory Intelligence', () => {
     ).toBe(false)
   })
 
+it('mantiene Forecast ready cuando existen posiciones históricas no conciliadas', () => {
+  const model = buildBusinessDataModel(
+    [
+      salesRow('2026-01-30', 'P-1', 100, 10),
+      salesRow('2026-02-27', 'P-1', 120, 12),
+      salesRow('2026-03-13', 'P-1', 100, 10),
+    ],
+    {
+      brandTargets: [
+        {
+          brandId: 'UNV',
+          periodId: '2026-03',
+          targetRevenue: 300,
+          workingDays: 22,
+        },
+      ],
+      productMaster: [
+        productMasterRow('P-1'),
+      ],
+      inventory: [
+        inventoryRow('P-1', 5),
+        inventoryRow('HISTORICAL-SKU', 0),
+      ],
+    },
+  )
+
+  const report = new ForecastDataQueries(model)
+    .getInventoryIntelligenceReport()
+
+  expect(report.status).toBe('ready')
+  expect(report.quality.unresolvedInventoryPositions).toBe(1)
+  expect(report.quality.notes).toContain(
+    '1 posiciones de inventario no pueden vincularse a Product Master.',
+  )
+})
+
   it('devuelve clones y consultas priorizadas desde repository.forecast', () => {
     const queries = new ForecastDataQueries(
       buildModelWithInventory(),

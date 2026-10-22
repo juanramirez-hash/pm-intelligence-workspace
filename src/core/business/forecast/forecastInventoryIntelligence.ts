@@ -725,7 +725,7 @@ function resolveItemStatus(
 function resolveReportStatus(
   projections: readonly ForecastBaselineProjection[],
   inventorySourceAvailable: boolean,
-  unresolvedInventoryPositions: number,
+  _unresolvedInventoryPositions: number,
 ): ForecastInventoryReportStatus {
   if (projections.length === 0 && !inventorySourceAvailable) {
     return 'unavailable'
@@ -733,8 +733,7 @@ function resolveReportStatus(
 
   if (
     projections.length === 0 ||
-    !inventorySourceAvailable ||
-    unresolvedInventoryPositions > 0
+    !inventorySourceAvailable
   ) {
     return 'partial'
   }
