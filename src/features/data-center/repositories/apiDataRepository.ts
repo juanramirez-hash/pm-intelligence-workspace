@@ -1,3 +1,7 @@
+import {
+  authenticatedFetch,
+} from '../../../shared/http/authenticatedFetch'
+
 import type {
   DataRepository,
   PersistedCustomerMasterDataset,
@@ -18,7 +22,7 @@ async function requestJson<T>(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     input,
     {
       credentials: 'include',

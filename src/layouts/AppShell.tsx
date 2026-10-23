@@ -29,6 +29,10 @@ import {
   type AuthenticatedUser,
 } from '../features/auth/authTypes'
 
+import {
+  AUTH_SESSION_EXPIRED_EVENT,
+} from '../shared/http/authenticatedFetch'
+
 interface AuthState {
   loading: boolean
   user: AuthenticatedUser | null
@@ -52,6 +56,27 @@ export function AppShell() {
     loading: true,
     user: null,
   })
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setAuth({
+        loading: false,
+        user: null,
+      })
+    }
+
+    window.addEventListener(
+      AUTH_SESSION_EXPIRED_EVENT,
+      handleSessionExpired,
+    )
+
+    return () => {
+      window.removeEventListener(
+        AUTH_SESSION_EXPIRED_EVENT,
+        handleSessionExpired,
+      )
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
