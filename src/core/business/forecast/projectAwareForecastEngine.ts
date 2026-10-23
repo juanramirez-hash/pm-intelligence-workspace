@@ -1165,9 +1165,18 @@ function resolveStatus(
     return 'blocked'
   }
 
+  const currentWarnings = quality.issues.filter(
+    (candidate) =>
+      candidate.severity === 'warning' &&
+      (
+        candidate.periodId === null ||
+        candidate.periodId === quality.currentPeriodId
+      ),
+  ).length
+
   if (
     baseline.status === 'partial' ||
-    quality.warnings > 0 ||
+    currentWarnings > 0 ||
     quality.grossProfitEstimateCoverage < 1
   ) {
     return 'partial'

@@ -280,6 +280,7 @@ describe('FW-009 Project-Aware Forecast Engine', () => {
     expect(projection).toBeDefined()
     expect(projection?.methodologyVersion).toBe('project-aware-v1')
     expect(projection?.officialAvailable).toBe(true)
+    expect(projection?.status).toBe('ready')
     expect(projection?.quality.blockingIssues).toBe(0)
     expect(projection?.quality.pendingCutoffDocuments).toBe(1)
     expect(projection?.quality.reconciliationCoverage).toBe(1)
