@@ -796,3 +796,363 @@ export async function summarizeSalesSegmentation(
     client.release()
   }
 }
+const salesSegmentationDimensionColumns = {
+  period: 'period_id',
+  brand: 'brand_id',
+  customer: 'customer_id',
+  product: 'product_id',
+  location: 'location_id',
+  salesRepresentative:
+    'sales_representative_id',
+}
+
+const normalizeTextSql = (column) => `
+  NULLIF(
+    REGEXP_REPLACE(
+      BTRIM(${column}),
+      '[[:space:]]+',
+      ' ',
+      'g'
+    ),
+    ''
+  )
+`
+
+function getSalesSegmentationDimensionColumn(
+  dimension,
+) {
+  const column =
+    salesSegmentationDimensionColumns[dimension]
+
+  if (!column) {
+    throw new Error(
+      `Unsupported sales segmentation dimension: ${dimension}`,
+    )
+  }
+
+  return column
+}
+
+function buildSalesSegmentationLabelQuery(
+  dimension,
+  brandScopeSql,
+) {
+  switch (dimension) {
+    case 'brand':
+      return {
+        ctes: `
+          brand_labels AS (
+            SELECT DISTINCT ON (sales.brand_id)
+              sales.brand_id,
+              CASE
+                WHEN UPPER(
+                  ${normalizeTextSql('source.brand')}
+                ) = 'MERIVA TECHNOLOGY - STREAMAX'
+                  THEN 'STREAMAX - MERIVA'
+                ELSE ${normalizeTextSql('source.brand')}
+              END AS label
+            FROM normalized_sales AS sales
+            INNER JOIN sales_source AS source
+              ON source.id = sales.id
+            WHERE sales.brand_id IS NOT NULL
+            ORDER BY
+              sales.brand_id,
+              sales.sale_date,
+              sales.id
+          )
+        `,
+        labelSql:
+          'COALESCE(brand_label.label, group_data.id)',
+        joinSql: `
+          LEFT JOIN brand_labels AS brand_label
+            ON brand_label.brand_id = group_data.id
+        `,
+      }
+
+    case 'customer':
+      return {
+        ctes: `
+          customer_master_labels AS (
+            SELECT
+              customer_id,
+              name
+            FROM customers
+          ),
+          scoped_customer_sales AS (
+            SELECT
+              id,
+              sale_date,
+              customer_id,
+              customer_name,
+              brand
+            FROM sales_facts
+            ${brandScopeSql}
+          ),
+          customer_label_source AS (
+            SELECT
+              scoped.id,
+              scoped.sale_date,
+              ${normalizeSql('scoped.customer_id')} AS customer_id,
+              ${normalizeTextSql('scoped.customer_name')} AS customer_name
+            FROM scoped_customer_sales AS scoped
+          ),
+          customer_sales_labels AS (
+            SELECT DISTINCT ON (customer_id)
+              customer_id,
+              customer_name
+            FROM customer_label_source
+            WHERE
+              customer_id IS NOT NULL
+              AND customer_name IS NOT NULL
+            ORDER BY
+              customer_id,
+              sale_date DESC,
+              id DESC
+          )
+        `,
+        labelSql: `
+          group_data.id || ' ' ||
+          COALESCE(
+            NULLIF(customer_master.name, ''),
+            customer_sales.customer_name,
+            'Cliente ' || group_data.id
+          )
+        `,
+        joinSql: `
+          LEFT JOIN customer_master_labels AS customer_master
+            ON customer_master.customer_id = group_data.id
+          LEFT JOIN customer_sales_labels AS customer_sales
+            ON customer_sales.customer_id = group_data.id
+        `,
+      }
+
+    case 'product':
+      return {
+        ctes: `
+          product_master_labels AS (
+            SELECT DISTINCT ON (name_key)
+              name_key AS product_id,
+              model
+            FROM normalized_products
+            WHERE name_key IS NOT NULL
+            ORDER BY
+              name_key,
+              id
+          ),
+          product_fallback_labels AS (
+            SELECT DISTINCT ON (canonical.product_id)
+              canonical.product_id,
+              COALESCE(
+                ${normalizeTextSql('source.model')},
+                reconciled.product_name_key,
+                reconciled.product_code_key,
+                canonical.product_id
+              ) AS label
+            FROM canonical_sales AS canonical
+            INNER JOIN reconciled_sales AS reconciled
+              ON reconciled.id = canonical.id
+            INNER JOIN sales_source AS source
+              ON source.id = canonical.id
+            WHERE canonical.product_id IS NOT NULL
+            ORDER BY
+              canonical.product_id,
+              canonical.sale_date,
+              canonical.id
+          )
+        `,
+        labelSql: `
+          COALESCE(
+            NULLIF(product_master.model, ''),
+            product_master.product_id,
+            product_fallback.label,
+            group_data.id
+          )
+        `,
+        joinSql: `
+          LEFT JOIN product_master_labels AS product_master
+            ON product_master.product_id = group_data.id
+          LEFT JOIN product_fallback_labels AS product_fallback
+            ON product_fallback.product_id = group_data.id
+        `,
+      }
+
+    case 'period':
+    case 'location':
+    case 'salesRepresentative':
+      return {
+        ctes: '',
+        labelSql: 'group_data.id',
+        joinSql: '',
+      }
+
+    default:
+      throw new Error(
+        `Unsupported sales segmentation dimension: ${dimension}`,
+      )
+  }
+}
+
+function mapSalesSegmentationGroup(row) {
+  const revenue =
+    Number(row.revenue ?? 0)
+
+  const grossProfit =
+    Number(row.gross_profit ?? 0)
+
+  return {
+    id: String(row.id),
+    label: String(row.label ?? row.id),
+    revenue,
+    grossProfit,
+    grossMargin:
+      revenue === 0
+        ? 0
+        : (grossProfit / revenue) * 100,
+    quantity:
+      Number(row.quantity ?? 0),
+    documents:
+      Number(row.documents ?? 0),
+    customerCount:
+      Number(row.customer_count ?? 0),
+    productCount:
+      Number(row.product_count ?? 0),
+    rowCount:
+      Number(row.row_count ?? 0),
+  }
+}
+
+function sortSalesSegmentationGroups(
+  dimension,
+  groups,
+) {
+  if (dimension === 'period') {
+    return groups.sort(
+      (left, right) =>
+        left.id.localeCompare(right.id),
+    )
+  }
+
+  return groups.sort(
+    (left, right) =>
+      right.revenue - left.revenue ||
+      left.label.localeCompare(
+        right.label,
+        'es-MX',
+      ),
+  )
+}
+
+/**
+ * Server-side equivalent of SalesSegmentationQueries.groupBy()
+ * for the complete access-scoped sales history.
+ *
+ * SQL-002 still intentionally excludes workspace segmentation filters.
+ * This phase establishes base dimensional parity before filtered queries.
+ *
+ * @param {import('pg').Pool} pool
+ * @param {'period' | 'brand' | 'customer' | 'product' | 'location' | 'salesRepresentative'} dimension
+ * @param {{ scope: 'all' | 'assigned', brandIds: string[] }} [access]
+ */
+export async function groupSalesSegmentation(
+  pool,
+  dimension,
+  access = {
+    scope: 'all',
+    brandIds: [],
+  },
+) {
+  const dimensionColumn =
+    getSalesSegmentationDimensionColumn(
+      dimension,
+    )
+
+  const client = await pool.connect()
+
+  try {
+    const brandScopeFilter =
+      buildBrandScopeFilter(access)
+
+    const ctes =
+      buildProductIdentityCtes(
+        brandScopeFilter.sql,
+      )
+
+    const labelQuery =
+      buildSalesSegmentationLabelQuery(
+        dimension,
+        brandScopeFilter.sql,
+      )
+
+    const extraLabelCtes =
+      labelQuery.ctes.trim()
+        ? `,${labelQuery.ctes}`
+        : ''
+
+    const result = await client.query(
+      `
+        ${ctes}
+        ${extraLabelCtes},
+        grouped_documents AS (
+          SELECT
+            canonical.${dimensionColumn} AS id,
+            COUNT(
+              DISTINCT canonical.document_number
+            )::INTEGER AS documents
+          FROM canonical_sales AS canonical
+          WHERE
+            canonical.brand_id IS NOT NULL
+            AND canonical.${dimensionColumn} IS NOT NULL
+          GROUP BY canonical.${dimensionColumn}
+        ),
+        dimension_groups AS (
+          SELECT
+            segment.${dimensionColumn} AS id,
+            SUM(segment.revenue) AS revenue,
+            SUM(segment.gross_profit) AS gross_profit,
+            SUM(segment.quantity) AS quantity,
+            COUNT(
+              DISTINCT segment.customer_id
+            )::INTEGER AS customer_count,
+            COUNT(
+              DISTINCT segment.product_id
+            )::INTEGER AS product_count,
+            SUM(segment.row_count)::INTEGER AS row_count
+          FROM sales_segments AS segment
+          WHERE segment.${dimensionColumn} IS NOT NULL
+          GROUP BY segment.${dimensionColumn}
+        )
+
+        SELECT
+          group_data.id,
+          ${labelQuery.labelSql} AS label,
+          group_data.revenue,
+          group_data.gross_profit,
+          group_data.quantity,
+          COALESCE(
+            document_data.documents,
+            0
+          )::INTEGER AS documents,
+          group_data.customer_count,
+          group_data.product_count,
+          group_data.row_count
+        FROM dimension_groups AS group_data
+        LEFT JOIN grouped_documents AS document_data
+          ON document_data.id = group_data.id
+        ${labelQuery.joinSql}
+      `,
+      brandScopeFilter.params,
+    )
+
+    const groups =
+      result.rows.map(
+        mapSalesSegmentationGroup,
+      )
+
+    return sortSalesSegmentationGroups(
+      dimension,
+      groups,
+    )
+  } finally {
+    client.release()
+  }
+}
