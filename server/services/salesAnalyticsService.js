@@ -1690,3 +1690,347 @@ export async function loadSalesSegmentationFilterOptions(
     ),
   )
 }
+
+function bindSalesSegmentationLabelQuery(
+  labelQuery,
+  idSql,
+) {
+  return {
+    ctes: labelQuery.ctes,
+    labelSql:
+      labelQuery.labelSql.replaceAll(
+        'group_data.id',
+        idSql,
+      ),
+    joinSql:
+      labelQuery.joinSql.replaceAll(
+        'group_data.id',
+        idSql,
+      ),
+  }
+}
+
+function buildSalesSegmentationSegmentIdSql(
+  alias,
+) {
+  return `
+    ${alias}.sale_date::TEXT ||
+    '::' || ${alias}.period_id ||
+    '::' || ${alias}.brand_id ||
+    '::' || COALESCE(
+      ${alias}.customer_id,
+      'NO_CUSTOMER'
+    ) ||
+    '::' || COALESCE(
+      ${alias}.product_id,
+      'NO_PRODUCT'
+    ) ||
+    '::' || COALESCE(
+      ${alias}.location_id,
+      'NO_LOCATION'
+    ) ||
+    '::' || COALESCE(
+      ${alias}.sales_representative_id,
+      'NO_SALES_REP'
+    )
+  `
+}
+
+function mapSalesSegmentationDetailRow(row) {
+  const revenue =
+    Number(row.revenue ?? 0)
+
+  const grossProfit =
+    Number(row.gross_profit ?? 0)
+
+  return {
+    id: String(row.id),
+    periodId: String(row.period_id),
+    brandId: String(row.brand_id),
+    brandLabel:
+      String(
+        row.brand_label ??
+        row.brand_id,
+      ),
+    customerId:
+      row.customer_id == null
+        ? null
+        : String(row.customer_id),
+    customerLabel:
+      String(
+        row.customer_label ??
+        'Sin cliente',
+      ),
+    productId:
+      row.product_id == null
+        ? null
+        : String(row.product_id),
+    productLabel:
+      String(
+        row.product_label ??
+        'Sin producto',
+      ),
+    locationId:
+      row.location_id == null
+        ? null
+        : String(row.location_id),
+    locationLabel:
+      String(
+        row.location_label ??
+        'Sin ubicación',
+      ),
+    salesRepresentativeId:
+      row.sales_representative_id == null
+        ? null
+        : String(
+          row.sales_representative_id,
+        ),
+    salesRepresentativeLabel:
+      String(
+        row.sales_representative_label ??
+        'Sin vendedor',
+      ),
+    revenue,
+    grossProfit,
+    grossMargin:
+      revenue === 0
+        ? 0
+        : (grossProfit / revenue) * 100,
+    quantity:
+      Number(row.quantity ?? 0),
+    documents:
+      Number(row.documents ?? 0),
+    rowCount:
+      Number(row.row_count ?? 0),
+  }
+}
+
+/**
+ * Server-side equivalent of SalesSegmentationQueries.getDetailRows().
+ *
+ * Preserves the current segmentation grain, filters, labels, document counts,
+ * revenue ordering, segment-id tie break and limit semantics.
+ *
+ * @param {import('pg').Pool} pool
+ * @param {{ scope: 'all' | 'assigned', brandIds: string[] }} [access]
+ * @param {{
+ *   periodIds?: readonly string[],
+ *   dateFrom?: string,
+ *   dateTo?: string,
+ *   brandIds?: readonly string[],
+ *   customerIds?: readonly string[],
+ *   productIds?: readonly string[],
+ *   locationIds?: readonly string[],
+ *   salesRepresentativeIds?: readonly string[],
+ *   searchTerm?: string,
+ * }} [filter]
+ * @param {number} [limit]
+ */
+export async function loadSalesSegmentationDetailRows(
+  pool,
+  access = {
+    scope: 'all',
+    brandIds: [],
+  },
+  filter = {},
+  limit = 100,
+) {
+  const normalizedLimit =
+    Number.isFinite(limit) && limit > 0
+      ? Math.floor(limit)
+      : 0
+
+  if (normalizedLimit === 0) {
+    return []
+  }
+
+  const client = await pool.connect()
+
+  try {
+    const brandScopeFilter =
+      buildBrandScopeFilter(access)
+
+    const ctes =
+      buildProductIdentityCtes(
+        brandScopeFilter.sql,
+      )
+
+    const filterQuery =
+      buildSalesSegmentationFilterQuery(
+        filter,
+        brandScopeFilter.sql,
+        brandScopeFilter.params.length + 1,
+      )
+
+    const brandLabelQuery =
+      bindSalesSegmentationLabelQuery(
+        buildSalesSegmentationLabelQuery(
+          'brand',
+          brandScopeFilter.sql,
+        ),
+        'group_data.brand_id',
+      )
+
+    const customerLabelQuery =
+      bindSalesSegmentationLabelQuery(
+        buildSalesSegmentationLabelQuery(
+          'customer',
+          brandScopeFilter.sql,
+        ),
+        'group_data.customer_id',
+      )
+
+    const productLabelQuery =
+      bindSalesSegmentationLabelQuery(
+        buildSalesSegmentationLabelQuery(
+          'product',
+          brandScopeFilter.sql,
+        ),
+        'group_data.product_id',
+      )
+
+    const labelCtes = [
+      brandLabelQuery.ctes,
+      customerLabelQuery.ctes,
+      productLabelQuery.ctes,
+    ]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join(',\n')
+
+    const extraLabelCtes =
+      labelCtes
+        ? ',\n' + labelCtes
+        : ''
+
+    const limitParameter =
+      brandScopeFilter.params.length +
+      filterQuery.params.length +
+      1
+
+    const result = await client.query(
+      `
+        ${ctes}
+        ${filterQuery.ctes}
+        ${extraLabelCtes},
+        segment_documents AS (
+          SELECT
+            canonical.sale_date,
+            canonical.period_id,
+            canonical.brand_id,
+            canonical.customer_id,
+            canonical.product_id,
+            canonical.location_id,
+            canonical.sales_representative_id,
+            COUNT(
+              DISTINCT canonical.document_number
+            )::INTEGER AS documents
+          FROM ${filterQuery.canonicalSource} AS canonical
+          WHERE canonical.brand_id IS NOT NULL
+          GROUP BY
+            canonical.sale_date,
+            canonical.period_id,
+            canonical.brand_id,
+            canonical.customer_id,
+            canonical.product_id,
+            canonical.location_id,
+            canonical.sales_representative_id
+        ),
+        detail_groups AS (
+          SELECT
+            ${buildSalesSegmentationSegmentIdSql(
+              'segment',
+            )} AS id,
+            segment.period_id,
+            segment.brand_id,
+            segment.customer_id,
+            segment.product_id,
+            segment.location_id,
+            segment.sales_representative_id,
+            segment.revenue,
+            segment.gross_profit,
+            segment.quantity,
+            COALESCE(
+              document_data.documents,
+              0
+            )::INTEGER AS documents,
+            segment.row_count
+          FROM ${filterQuery.segmentSource} AS segment
+          LEFT JOIN segment_documents AS document_data
+            ON document_data.sale_date =
+              segment.sale_date
+            AND document_data.period_id =
+              segment.period_id
+            AND document_data.brand_id =
+              segment.brand_id
+            AND document_data.customer_id
+              IS NOT DISTINCT FROM
+                segment.customer_id
+            AND document_data.product_id
+              IS NOT DISTINCT FROM
+                segment.product_id
+            AND document_data.location_id
+              IS NOT DISTINCT FROM
+                segment.location_id
+            AND document_data.sales_representative_id
+              IS NOT DISTINCT FROM
+                segment.sales_representative_id
+        )
+
+        SELECT
+          group_data.id,
+          group_data.period_id,
+          group_data.brand_id,
+          ${brandLabelQuery.labelSql}
+            AS brand_label,
+          group_data.customer_id,
+          CASE
+            WHEN group_data.customer_id IS NULL
+              THEN 'Sin cliente'
+            ELSE ${customerLabelQuery.labelSql}
+          END AS customer_label,
+          group_data.product_id,
+          CASE
+            WHEN group_data.product_id IS NULL
+              THEN 'Sin producto'
+            ELSE ${productLabelQuery.labelSql}
+          END AS product_label,
+          group_data.location_id,
+          COALESCE(
+            group_data.location_id,
+            'Sin ubicación'
+          ) AS location_label,
+          group_data.sales_representative_id,
+          COALESCE(
+            group_data.sales_representative_id,
+            'Sin vendedor'
+          ) AS sales_representative_label,
+          group_data.revenue,
+          group_data.gross_profit,
+          group_data.quantity,
+          group_data.documents,
+          group_data.row_count
+        FROM detail_groups AS group_data
+        ${brandLabelQuery.joinSql}
+        ${customerLabelQuery.joinSql}
+        ${productLabelQuery.joinSql}
+        ORDER BY
+          group_data.revenue DESC,
+          group_data.id ASC
+        LIMIT $${limitParameter}
+      `,
+      [
+        ...brandScopeFilter.params,
+        ...filterQuery.params,
+        normalizedLimit,
+      ],
+    )
+
+    return result.rows.map(
+      mapSalesSegmentationDetailRow,
+    )
+  } finally {
+    client.release()
+  }
+}
+
