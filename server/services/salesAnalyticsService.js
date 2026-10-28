@@ -1576,3 +1576,117 @@ export async function groupSalesSegmentation(
     client.release()
   }
 }
+
+const salesSegmentationFilterDimensionFields = {
+  brand: 'brandIds',
+  customer: 'customerIds',
+  product: 'productIds',
+  location: 'locationIds',
+  salesRepresentative: 'salesRepresentativeIds',
+}
+
+function buildFacetedSalesSegmentationFilter(
+  filter,
+  periodId,
+  dimension,
+) {
+  const field =
+    salesSegmentationFilterDimensionFields[dimension]
+
+  if (!field) {
+    throw new Error(
+      `Unsupported sales filter option dimension: ${dimension}`,
+    )
+  }
+
+  const facetedFilter = {
+    ...filter,
+    periodIds: [periodId],
+  }
+
+  delete facetedFilter[field]
+
+  return facetedFilter
+}
+
+function mapSalesSegmentationOptions(groups) {
+  return groups
+    .map((group) => ({
+      id: group.id,
+      label: group.label,
+      revenue: group.revenue,
+    }))
+    .sort((left, right) =>
+      left.label.localeCompare(
+        right.label,
+        'es-MX',
+      ),
+    )
+}
+
+/**
+ * Server-side equivalent of Sales Workspace buildFilterOptions().
+ *
+ * Each facet keeps the selected period and all active segmentation filters,
+ * except its own dimension. Search remains active for every facet.
+ *
+ * @param {import('pg').Pool} pool
+ * @param {string} periodId
+ * @param {{ scope: 'all' | 'assigned', brandIds: string[] }} [access]
+ * @param {{
+ *   dateFrom?: string,
+ *   dateTo?: string,
+ *   brandIds?: readonly string[],
+ *   customerIds?: readonly string[],
+ *   productIds?: readonly string[],
+ *   locationIds?: readonly string[],
+ *   salesRepresentativeIds?: readonly string[],
+ *   searchTerm?: string,
+ * }} [filter]
+ */
+export async function loadSalesSegmentationFilterOptions(
+  pool,
+  periodId,
+  access = {
+    scope: 'all',
+    brandIds: [],
+  },
+  filter = {},
+) {
+  const dimensions = [
+    ['brands', 'brand'],
+    ['customers', 'customer'],
+    ['products', 'product'],
+    ['locations', 'location'],
+    [
+      'salesRepresentatives',
+      'salesRepresentative',
+    ],
+  ]
+
+  const grouped = await Promise.all(
+    dimensions.map(([, dimension]) =>
+      groupSalesSegmentation(
+        pool,
+        dimension,
+        access,
+        buildFacetedSalesSegmentationFilter(
+          filter,
+          periodId,
+          dimension,
+        ),
+      ),
+    ),
+  )
+
+  return Object.fromEntries(
+    dimensions.map(
+      ([key], index) => [
+        key,
+        mapSalesSegmentationOptions(
+          grouped[index],
+        ),
+      ],
+    ),
+  )
+}
