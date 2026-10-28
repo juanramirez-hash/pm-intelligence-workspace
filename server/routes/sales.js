@@ -12,10 +12,19 @@ import {
   startSalesChunkImport,
 } from '../services/salesChunkImportService.js'
 
+import {
+  createSalesAnalyticsRouter,
+} from './salesAnalytics.js'
+
 export function createSalesRouter(
   pool,
 ) {
   const router = Router()
+
+  router.use(
+    '/analytics',
+    createSalesAnalyticsRouter(pool),
+  )
 
   router.get(
     '/',
