@@ -246,7 +246,7 @@ describe(
 
         const brandModelPosition =
           compactSql.indexOf(
-            "sales.brand_key IS NOT NULL",
+            "sales.reconciliation_brand_key IS NOT NULL",
             codePosition + 1,
           )
 
