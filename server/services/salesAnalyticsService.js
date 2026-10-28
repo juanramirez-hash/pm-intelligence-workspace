@@ -685,11 +685,19 @@ export async function loadSalesProductIdentityDiagnostics(
  * Server-side equivalent of SalesSegmentationQueries.summarize()
  * for the complete access-scoped sales history.
  *
- * SQL-002 intentionally starts without workspace filters. The next phase
- * will add period/date/dimension/search filters after base parity is proven.
- *
  * @param {import('pg').Pool} pool
  * @param {{ scope: 'all' | 'assigned', brandIds: string[] }} [access]
+ * @param {{
+ *   periodIds?: readonly string[],
+ *   dateFrom?: string,
+ *   dateTo?: string,
+ *   brandIds?: readonly string[],
+ *   customerIds?: readonly string[],
+ *   productIds?: readonly string[],
+ *   locationIds?: readonly string[],
+ *   salesRepresentativeIds?: readonly string[],
+ *   searchTerm?: string,
+ * }} [filter]
  */
 export async function summarizeSalesSegmentation(
   pool,
@@ -697,6 +705,7 @@ export async function summarizeSalesSegmentation(
     scope: 'all',
     brandIds: [],
   },
+  filter = {},
 ) {
   const client = await pool.connect()
 
@@ -709,9 +718,17 @@ export async function summarizeSalesSegmentation(
         brandScopeFilter.sql,
       )
 
+    const filterQuery =
+      buildSalesSegmentationFilterQuery(
+        filter,
+        brandScopeFilter.sql,
+        brandScopeFilter.params.length + 1,
+      )
+
     const result = await client.query(
       `
         ${ctes}
+        ${filterQuery.ctes}
 
         SELECT
           COALESCE(
@@ -731,7 +748,7 @@ export async function summarizeSalesSegmentation(
 
           (
             SELECT COUNT(DISTINCT document_number)
-            FROM canonical_sales
+            FROM ${filterQuery.canonicalSource}
             WHERE
               brand_id IS NOT NULL
               AND document_number IS NOT NULL
@@ -756,9 +773,12 @@ export async function summarizeSalesSegmentation(
 
           COUNT(*)::INTEGER AS segment_count
 
-        FROM sales_segments AS segment
+        FROM ${filterQuery.segmentSource} AS segment
       `,
-      brandScopeFilter.params,
+      [
+        ...brandScopeFilter.params,
+        ...filterQuery.params,
+      ],
     )
 
     const row =
@@ -817,6 +837,386 @@ const normalizeTextSql = (column) => `
     ''
   )
 `
+
+function normalizeSalesSegmentationValue(
+  value,
+) {
+  return value
+    .trim()
+    .toLocaleUpperCase('es-MX')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+}
+
+function normalizeSalesSegmentationList(
+  values,
+) {
+  if (!values || values.length === 0) {
+    return null
+  }
+
+  return [
+    ...new Set(
+      values
+        .map(
+          normalizeSalesSegmentationValue,
+        )
+        .filter(Boolean),
+    ),
+  ]
+}
+
+const normalizeSalesSegmentationSql =
+  (expression) => `
+    NULLIF(
+      REGEXP_REPLACE(
+        REGEXP_REPLACE(
+          NORMALIZE(
+            UPPER(
+              BTRIM(${expression})
+            ),
+            NFD
+          ),
+          U&'[\\0300-\\036F]',
+          '',
+          'g'
+        ),
+        '[[:space:]]+',
+        ' ',
+        'g'
+      ),
+      ''
+    )
+  `
+
+function buildSalesSegmentationSearchCtes(
+  brandScopeSql,
+) {
+  return `
+    filter_brand_labels AS (
+      SELECT DISTINCT ON (sales.brand_id)
+        sales.brand_id,
+        CASE
+          WHEN UPPER(
+            ${normalizeTextSql('source.brand')}
+          ) = 'MERIVA TECHNOLOGY - STREAMAX'
+            THEN 'STREAMAX - MERIVA'
+          ELSE ${normalizeTextSql('source.brand')}
+        END AS label
+      FROM normalized_sales AS sales
+      INNER JOIN sales_source AS source
+        ON source.id = sales.id
+      WHERE sales.brand_id IS NOT NULL
+      ORDER BY
+        sales.brand_id,
+        sales.sale_date,
+        sales.id
+    ),
+    filter_customer_master_labels AS (
+      SELECT
+        customer_id,
+        name
+      FROM customers
+    ),
+    filter_scoped_customer_sales AS (
+      SELECT
+        id,
+        sale_date,
+        customer_id,
+        customer_name,
+        brand
+      FROM sales_facts
+      ${brandScopeSql}
+    ),
+    filter_customer_label_source AS (
+      SELECT
+        scoped.id,
+        scoped.sale_date,
+        ${normalizeSql('scoped.customer_id')} AS customer_id,
+        ${normalizeTextSql('scoped.customer_name')} AS customer_name
+      FROM filter_scoped_customer_sales AS scoped
+    ),
+    filter_customer_sales_labels AS (
+      SELECT DISTINCT ON (customer_id)
+        customer_id,
+        customer_name
+      FROM filter_customer_label_source
+      WHERE
+        customer_id IS NOT NULL
+        AND customer_name IS NOT NULL
+      ORDER BY
+        customer_id,
+        sale_date DESC,
+        id DESC
+    ),
+    filter_product_master_labels AS (
+      SELECT DISTINCT ON (name_key)
+        name_key AS product_id,
+        model
+      FROM normalized_products
+      WHERE name_key IS NOT NULL
+      ORDER BY
+        name_key,
+        id
+    ),
+    filter_product_fallback_labels AS (
+      SELECT DISTINCT ON (canonical.product_id)
+        canonical.product_id,
+        COALESCE(
+          ${normalizeTextSql('source.model')},
+          reconciled.product_name_key,
+          reconciled.product_code_key,
+          canonical.product_id
+        ) AS label
+      FROM canonical_sales AS canonical
+      INNER JOIN reconciled_sales AS reconciled
+        ON reconciled.id = canonical.id
+      INNER JOIN sales_source AS source
+        ON source.id = canonical.id
+      WHERE canonical.product_id IS NOT NULL
+      ORDER BY
+        canonical.product_id,
+        canonical.sale_date,
+        canonical.id
+    )
+  `
+}
+
+function buildSalesSegmentationFilterQuery(
+  filter,
+  brandScopeSql,
+  firstParameterIndex,
+) {
+  const params = []
+  const conditions = []
+
+  const addParameter = (value) => {
+    const index =
+      firstParameterIndex + params.length
+
+    params.push(value)
+    return `$${index}`
+  }
+
+  const addListFilter = (
+    values,
+    column,
+  ) => {
+    const normalized =
+      normalizeSalesSegmentationList(values)
+
+    if (!normalized || normalized.length === 0) {
+      return
+    }
+
+    const parameter =
+      addParameter(normalized)
+
+    conditions.push(`
+      ${normalizeSalesSegmentationSql(column)} =
+        ANY(${parameter}::TEXT[])
+    `)
+  }
+
+  addListFilter(
+    filter.periodIds,
+    'canonical.period_id',
+  )
+
+  if (filter.dateFrom) {
+    const parameter =
+      addParameter(filter.dateFrom)
+
+    conditions.push(`
+      canonical.sale_date::TEXT >= ${parameter}
+    `)
+  }
+
+  if (filter.dateTo) {
+    const parameter =
+      addParameter(filter.dateTo)
+
+    conditions.push(`
+      canonical.sale_date::TEXT <= ${parameter}
+    `)
+  }
+
+  addListFilter(
+    filter.brandIds,
+    'canonical.brand_id',
+  )
+  addListFilter(
+    filter.customerIds,
+    'canonical.customer_id',
+  )
+  addListFilter(
+    filter.productIds,
+    'canonical.product_id',
+  )
+  addListFilter(
+    filter.locationIds,
+    'canonical.location_id',
+  )
+  addListFilter(
+    filter.salesRepresentativeIds,
+    'canonical.sales_representative_id',
+  )
+
+  const normalizedSearch =
+    filter.searchTerm
+      ? normalizeSalesSegmentationValue(
+          filter.searchTerm,
+        )
+      : ''
+
+  let searchCtes = ''
+  let searchJoins = ''
+
+  if (normalizedSearch) {
+    const searchParameter =
+      addParameter(normalizedSearch)
+
+    searchCtes = `
+      ${buildSalesSegmentationSearchCtes(
+        brandScopeSql,
+      )},
+    `
+
+    searchJoins = `
+      LEFT JOIN filter_brand_labels
+        AS filter_brand
+        ON filter_brand.brand_id =
+          canonical.brand_id
+      LEFT JOIN filter_customer_master_labels
+        AS filter_customer_master
+        ON filter_customer_master.customer_id =
+          canonical.customer_id
+      LEFT JOIN filter_customer_sales_labels
+        AS filter_customer_sales
+        ON filter_customer_sales.customer_id =
+          canonical.customer_id
+      LEFT JOIN filter_product_master_labels
+        AS filter_product_master
+        ON filter_product_master.product_id =
+          canonical.product_id
+      LEFT JOIN filter_product_fallback_labels
+        AS filter_product_fallback
+        ON filter_product_fallback.product_id =
+          canonical.product_id
+    `
+
+    const brandLabel = `
+      COALESCE(
+        filter_brand.label,
+        canonical.brand_id
+      )
+    `
+
+    const customerLabel = `
+      canonical.customer_id || ' ' ||
+      COALESCE(
+        NULLIF(
+          filter_customer_master.name,
+          ''
+        ),
+        filter_customer_sales.customer_name,
+        'Cliente ' || canonical.customer_id
+      )
+    `
+
+    const productLabel = `
+      COALESCE(
+        NULLIF(
+          filter_product_master.model,
+          ''
+        ),
+        filter_product_master.product_id,
+        filter_product_fallback.label,
+        canonical.product_id
+      )
+    `
+
+    const searchableExpressions = [
+      'canonical.period_id',
+      'canonical.brand_id',
+      brandLabel,
+      'canonical.customer_id',
+      customerLabel,
+      'canonical.product_id',
+      productLabel,
+      'canonical.location_id',
+      'canonical.sales_representative_id',
+    ]
+
+    conditions.push(`
+      (
+        ${searchableExpressions
+          .map(
+            (expression) => `
+              ${normalizeSalesSegmentationSql(
+                expression,
+              )} LIKE
+                '%' || ${searchParameter} || '%'
+            `,
+          )
+          .join(' OR ')}
+      )
+    `)
+  }
+
+  if (conditions.length === 0) {
+    return {
+      ctes: '',
+      params,
+      canonicalSource: 'canonical_sales',
+      segmentSource: 'sales_segments',
+    }
+  }
+
+  return {
+    ctes: `
+      ,
+      ${searchCtes}
+      filtered_canonical_sales AS (
+        SELECT canonical.*
+        FROM canonical_sales AS canonical
+        ${searchJoins}
+        WHERE
+          canonical.brand_id IS NOT NULL
+          AND ${conditions.join('\n          AND ')}
+      ),
+      filtered_sales_segments AS (
+        SELECT
+          sale_date,
+          period_id,
+          brand_id,
+          customer_id,
+          product_id,
+          location_id,
+          sales_representative_id,
+          SUM(revenue) AS revenue,
+          SUM(gross_profit) AS gross_profit,
+          SUM(quantity) AS quantity,
+          COUNT(*)::INTEGER AS row_count
+        FROM filtered_canonical_sales
+        GROUP BY
+          sale_date,
+          period_id,
+          brand_id,
+          customer_id,
+          product_id,
+          location_id,
+          sales_representative_id
+      )
+    `,
+    params,
+    canonicalSource:
+      'filtered_canonical_sales',
+    segmentSource:
+      'filtered_sales_segments',
+  }
+}
 
 function getSalesSegmentationDimensionColumn(
   dimension,
@@ -1046,12 +1446,20 @@ function sortSalesSegmentationGroups(
  * Server-side equivalent of SalesSegmentationQueries.groupBy()
  * for the complete access-scoped sales history.
  *
- * SQL-002 still intentionally excludes workspace segmentation filters.
- * This phase establishes base dimensional parity before filtered queries.
- *
  * @param {import('pg').Pool} pool
  * @param {'period' | 'brand' | 'customer' | 'product' | 'location' | 'salesRepresentative'} dimension
  * @param {{ scope: 'all' | 'assigned', brandIds: string[] }} [access]
+ * @param {{
+ *   periodIds?: readonly string[],
+ *   dateFrom?: string,
+ *   dateTo?: string,
+ *   brandIds?: readonly string[],
+ *   customerIds?: readonly string[],
+ *   productIds?: readonly string[],
+ *   locationIds?: readonly string[],
+ *   salesRepresentativeIds?: readonly string[],
+ *   searchTerm?: string,
+ * }} [filter]
  */
 export async function groupSalesSegmentation(
   pool,
@@ -1060,6 +1468,7 @@ export async function groupSalesSegmentation(
     scope: 'all',
     brandIds: [],
   },
+  filter = {},
 ) {
   const dimensionColumn =
     getSalesSegmentationDimensionColumn(
@@ -1077,6 +1486,13 @@ export async function groupSalesSegmentation(
         brandScopeFilter.sql,
       )
 
+    const filterQuery =
+      buildSalesSegmentationFilterQuery(
+        filter,
+        brandScopeFilter.sql,
+        brandScopeFilter.params.length + 1,
+      )
+
     const labelQuery =
       buildSalesSegmentationLabelQuery(
         dimension,
@@ -1091,6 +1507,7 @@ export async function groupSalesSegmentation(
     const result = await client.query(
       `
         ${ctes}
+        ${filterQuery.ctes}
         ${extraLabelCtes},
         grouped_documents AS (
           SELECT
@@ -1098,7 +1515,7 @@ export async function groupSalesSegmentation(
             COUNT(
               DISTINCT canonical.document_number
             )::INTEGER AS documents
-          FROM canonical_sales AS canonical
+          FROM ${filterQuery.canonicalSource} AS canonical
           WHERE
             canonical.brand_id IS NOT NULL
             AND canonical.${dimensionColumn} IS NOT NULL
@@ -1117,7 +1534,7 @@ export async function groupSalesSegmentation(
               DISTINCT segment.product_id
             )::INTEGER AS product_count,
             SUM(segment.row_count)::INTEGER AS row_count
-          FROM sales_segments AS segment
+          FROM ${filterQuery.segmentSource} AS segment
           WHERE segment.${dimensionColumn} IS NOT NULL
           GROUP BY segment.${dimensionColumn}
         )
@@ -1140,7 +1557,10 @@ export async function groupSalesSegmentation(
           ON document_data.id = group_data.id
         ${labelQuery.joinSql}
       `,
-      brandScopeFilter.params,
+      [
+        ...brandScopeFilter.params,
+        ...filterQuery.params,
+      ],
     )
 
     const groups =
