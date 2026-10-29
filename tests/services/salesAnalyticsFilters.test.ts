@@ -12,7 +12,10 @@ import {
 
 function buildPool() {
   const query = vi.fn(
-    async () => ({
+    async (
+      _sql: string,
+      _params?: unknown[],
+    ) => ({
       rowCount: 0,
       rows: [],
     }),
@@ -103,6 +106,7 @@ describe(
         )
         expect(params).toEqual([
           ['2026-10'],
+          ['2026-10'],
           ['MERIVA'],
           ['JOSE NUNEZ'],
           ['PRODUCTO A'],
@@ -190,11 +194,16 @@ describe(
         expect(sql).toContain(
           'ANY($3::TEXT[])',
         )
+        expect(sql).toContain(
+          'ANY($4::TEXT[])',
+        )
+
         expect(params).toEqual([
           [
             'UNVUNIVIEW',
             'BELDEN',
           ],
+          ['2026-10'],
           ['2026-10'],
           ['012035'],
         ])
