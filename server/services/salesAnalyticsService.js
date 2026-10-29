@@ -536,46 +536,6 @@ function buildProductIdentityCtes(
   `
 }
 
-function buildPeriodScopedProductIdentityCtes(
-  brandScopeSql,
-  salesSourceScopeSql,
-) {
-  const historicalCtes =
-    buildProductIdentityCtes(
-      brandScopeSql,
-    )
-
-  const scopedCtes =
-    buildProductIdentityCtes(
-      salesSourceScopeSql,
-    )
-
-  const scopedWithoutWith =
-    scopedCtes.replace(
-      /^\s*WITH\s+/,
-      '',
-    )
-
-  const scopedWithHistoricalOwners =
-    scopedWithoutWith.replace(
-      'LEFT JOIN fallback_owners AS owner',
-      'LEFT JOIN historical_fallback_owners AS owner',
-    )
-
-  return `
-    WITH historical_fallback_owners AS (
-      ${historicalCtes}
-
-      SELECT
-        base_id,
-        brand_id,
-        resolved_model_key
-      FROM fallback_owners
-    ),
-    ${scopedWithHistoricalOwners}
-  `
-}
-
 /**
  * Diagnostic query used while migrating Sales Workspace segmentation
  * from the in-memory BusinessDataModel to PostgreSQL.
@@ -753,29 +713,16 @@ export async function summarizeSalesSegmentation(
     const brandScopeFilter =
       buildBrandScopeFilter(access)
 
-    const sourceQuery =
-      buildSalesSegmentationSourceQuery(
-        filter,
-        brandScopeFilter,
-      )
-
     const ctes =
-      sourceQuery.params.length > 0
-        ? buildPeriodScopedProductIdentityCtes(
-            brandScopeFilter.sql,
-            sourceQuery.sql,
-          )
-        : buildProductIdentityCtes(
-            brandScopeFilter.sql,
-          )
+      buildProductIdentityCtes(
+        brandScopeFilter.sql,
+      )
 
     const filterQuery =
       buildSalesSegmentationFilterQuery(
         filter,
         brandScopeFilter.sql,
-        brandScopeFilter.params.length +
-          sourceQuery.params.length +
-          1,
+        brandScopeFilter.params.length + 1,
       )
 
     const result = await client.query(
@@ -830,7 +777,6 @@ export async function summarizeSalesSegmentation(
       `,
       [
         ...brandScopeFilter.params,
-        ...sourceQuery.params,
         ...filterQuery.params,
       ],
     )
@@ -1035,41 +981,6 @@ function buildSalesSegmentationSearchCtes(
         canonical.id
     )
   `
-}
-
-function buildSalesSegmentationSourceQuery(
-  filter,
-  brandScopeFilter,
-) {
-  const periodIds =
-    normalizeSalesSegmentationList(
-      filter.periodIds,
-    )
-
-  if (
-    !periodIds ||
-    periodIds.length === 0
-  ) {
-    return {
-      sql: brandScopeFilter.sql,
-      params: [],
-    }
-  }
-
-  const parameterIndex =
-    brandScopeFilter.params.length + 1
-
-  const periodCondition =
-    `period_id = ANY($${parameterIndex}::TEXT[])`
-
-  return {
-    sql:
-      brandScopeFilter.sql.trim()
-        ? `${brandScopeFilter.sql}
-      AND ${periodCondition}`
-        : `WHERE ${periodCondition}`,
-    params: [periodIds],
-  }
 }
 
 function buildSalesSegmentationFilterQuery(
@@ -1570,29 +1481,16 @@ export async function groupSalesSegmentation(
     const brandScopeFilter =
       buildBrandScopeFilter(access)
 
-    const sourceQuery =
-      buildSalesSegmentationSourceQuery(
-        filter,
-        brandScopeFilter,
-      )
-
     const ctes =
-      sourceQuery.params.length > 0
-        ? buildPeriodScopedProductIdentityCtes(
-            brandScopeFilter.sql,
-            sourceQuery.sql,
-          )
-        : buildProductIdentityCtes(
-            brandScopeFilter.sql,
-          )
+      buildProductIdentityCtes(
+        brandScopeFilter.sql,
+      )
 
     const filterQuery =
       buildSalesSegmentationFilterQuery(
         filter,
         brandScopeFilter.sql,
-        brandScopeFilter.params.length +
-          sourceQuery.params.length +
-          1,
+        brandScopeFilter.params.length + 1,
       )
 
     const labelQuery =
@@ -1661,7 +1559,6 @@ export async function groupSalesSegmentation(
       `,
       [
         ...brandScopeFilter.params,
-        ...sourceQuery.params,
         ...filterQuery.params,
       ],
     )
@@ -1953,29 +1850,16 @@ export async function loadSalesSegmentationDetailRows(
     const brandScopeFilter =
       buildBrandScopeFilter(access)
 
-    const sourceQuery =
-      buildSalesSegmentationSourceQuery(
-        filter,
-        brandScopeFilter,
-      )
-
     const ctes =
-      sourceQuery.params.length > 0
-        ? buildPeriodScopedProductIdentityCtes(
-            brandScopeFilter.sql,
-            sourceQuery.sql,
-          )
-        : buildProductIdentityCtes(
-            brandScopeFilter.sql,
-          )
+      buildProductIdentityCtes(
+        brandScopeFilter.sql,
+      )
 
     const filterQuery =
       buildSalesSegmentationFilterQuery(
         filter,
         brandScopeFilter.sql,
-        brandScopeFilter.params.length +
-          sourceQuery.params.length +
-          1,
+        brandScopeFilter.params.length + 1,
       )
 
     const brandLabelQuery =
@@ -2021,7 +1905,6 @@ export async function loadSalesSegmentationDetailRows(
 
     const limitParameter =
       brandScopeFilter.params.length +
-      sourceQuery.params.length +
       filterQuery.params.length +
       1
 
@@ -2138,7 +2021,6 @@ export async function loadSalesSegmentationDetailRows(
       `,
       [
         ...brandScopeFilter.params,
-        ...sourceQuery.params,
         ...filterQuery.params,
         normalizedLimit,
       ],
