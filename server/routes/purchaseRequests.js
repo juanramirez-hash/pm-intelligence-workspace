@@ -1,4 +1,7 @@
 import { Router } from 'express'
+import {
+  datasetCache,
+} from '../middleware/datasetCache.js'
 
 import {
   appendPurchaseRequestChunk,
@@ -19,6 +22,9 @@ export function createPurchaseRequestsRouter(
 
   router.get(
     '/',
+    datasetCache(pool, {
+      datasetType: 'purchaseRequests',
+    }),
     async (_req, res) => {
       try {
         const dataset =

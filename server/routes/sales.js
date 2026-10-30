@@ -15,6 +15,9 @@ import {
 import {
   createSalesAnalyticsRouter,
 } from './salesAnalytics.js'
+import {
+  applyDatasetCache,
+} from '../middleware/datasetCache.js'
 
 export function createSalesRouter(
   pool,
@@ -66,19 +69,36 @@ export function createSalesRouter(
         })
       }
 
-      res.set('Cache-Control', 'no-store')
+      const salesAccess = {
+        scope: access.scope,
+        brandIds:
+          access.scope === 'assigned'
+            ? access.brandIds
+            : [],
+      }
+
+      // Revalidate only after the scope is validated, so the tag always
+      // matches the rows this user is allowed to read.
+      const notModified =
+        await applyDatasetCache(
+          pool,
+          req,
+          res,
+          {
+            datasetType: 'sales',
+            access: salesAccess,
+          },
+        )
+
+      if (notModified) {
+        return
+      }
 
       try {
         const dataset =
           await loadSalesDataset(
             pool,
-            {
-              scope: access.scope,
-              brandIds:
-                access.scope === 'assigned'
-                  ? access.brandIds
-                  : [],
-            },
+            salesAccess,
           )
 
         return res.json({

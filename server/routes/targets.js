@@ -1,4 +1,7 @@
 import { Router } from 'express'
+import {
+  datasetCache,
+} from '../middleware/datasetCache.js'
 
 import {
   importTargetDataset,
@@ -15,6 +18,9 @@ export function createTargetsRouter(
 
   router.get(
     '/',
+    datasetCache(pool, {
+      datasetType: 'salesTargets',
+    }),
     async (_req, res) => {
       try {
         const dataset =

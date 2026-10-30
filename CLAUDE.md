@@ -85,7 +85,7 @@ Capa de servidor (en curso en la rama v0.57.0, "production platform foundation")
 - `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, dataStatus, settingsUsers, settingsRoles).
 - `server/services/`: importación por chunks con tablas staging, agregados de negocio (`refresh_business_aggregates`), analítica de ventas en SQL, búsqueda global y conciliación de facturación de proyectos.
 - `server/middleware/`: `requireAuth`, `requireAdmin`, `requireBrandScope`, `requireWriteAccess` (usuarios, roles y asignación de marcas por PM).
-- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `034`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
+- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `036`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
 
 Reglas de arquitectura:
 
@@ -167,6 +167,7 @@ Selector global de periodo: Mes, Últimos 3 meses, Últimos 6 meses, Año actual
 - No hacer `commit`, `push`, merge ni cambio de versión sin validación funcional previa del usuario.
 - Revisar `git status` antes de cualquier operación de Git.
 - No reescribir historial (`rebase`, `reset --hard`, `push --force`) sin autorización explícita.
+- No agregar la línea `Co-Authored-By` (ni otras líneas de atribución) en los mensajes de commit.
 
 ## 10. Al iniciar una sesión nueva
 
@@ -206,6 +207,7 @@ Claude Code **nunca** ejecuta migraciones ni comandos en producción; solo prepa
 | Repo | `/home/nexus/apps/pm-intelligence-workspace` (usuario `nexus`) |
 | Backend | Servicio systemd `pm-intelligence-api.service` (no pm2). `WorkingDirectory`: `server/`. Escucha en `127.0.0.1:3001`. `Restart=on-failure` |
 | Frontend | Nginx, sitio `pm-intelligence`, dominio `pm.botintelligence.cloud`. Sirve `/opt/pm-intelligence-workspace/dist`; `/api/` y `/signin/google` van a `127.0.0.1:3001` |
+| Compresión | nginx comprime JSON, CSS y JS (gzip en el sitio `pm-intelligence`, 30 oct 2026). Respaldo de la configuración anterior en `~/respaldos/nginx-pm-intelligence-*.conf` |
 | `/opt/pm-intelligence-workspace` | Clon viejo de `main`: **solo se usa su `dist/`** |
 | n8n | Corre en el mismo servidor: respaldos, restauraciones y refresh de vistas se hacen **fuera de horario** |
 
@@ -233,6 +235,7 @@ Rollback de frontend: `sudo rsync -a --delete /opt/pm-intelligence-workspace/dis
 ### Migraciones
 
 - Se aplican **manualmente** en producción: el usuario entra por SSH y corre `psql -f`.
+- La aplicación y las migraciones usan el **mismo usuario de PostgreSQL** (`pm_intelligence`), que es dueño de los objetos que crean las migraciones. Los `GRANT` a ese usuario no restringen nada: las restricciones de escritura son de código.
 - No hay tabla de control de migraciones; el número del archivo (`NNN_`) es la referencia.
 - Cada migración nueva lleva su rollback en `server/migrations/rollback/` con el mismo número (`NNN_descripcion.rollback.sql`).
 - Toda migración nueva debe probarse primero fuera de producción.
@@ -245,3 +248,23 @@ Rollback de frontend: `sudo rsync -a --delete /opt/pm-intelligence-workspace/dis
   6. Validación funcional en la interfaz.
 
 > Algunas migraciones (017–023, 026 y 031 en adelante) traen su propio `BEGIN;` … `COMMIT;` alrededor de todo el archivo. Con `-1`, psql muestra dos `WARNING` (transacción ya iniciada / no hay transacción en curso). Son esperados: la migración sigue siendo atómica porque su propio bloque la cubre completa. Las que no lo traen dependen de `-1` para ser atómicas.
+
+### Caché HTTP de `/api/data/*` (desde la migración 036)
+
+- Los `GET /api/data/<dataset>` responden con `Cache-Control: private, no-cache` y un ETag débil calculado **antes** de consultar los datos, a partir de: imports completados del dataset en `data_imports`, alcance y marcas del usuario (solo ventas), versión de formato de respuesta (`DATASET_RESPONSE_FORMAT_VERSION` en `server/services/datasetCacheService.js`) y la versión manual de datos (`public.data_cache_version`). Si coincide con `If-None-Match`, el servidor responde 304 sin consultar las tablas.
+- Si no puede leer ese estado (por ejemplo, falta la 036), responde como antes, con `no-store`.
+- **Toda migración que modifique datos** (INSERT, UPDATE o DELETE sobre tablas de datos) debe subir la versión de datos al final, antes de su `COMMIT`:
+
+  ```sql
+  UPDATE public.data_cache_version
+  SET version = version + 1, updated_at = NOW(), note = 'NNN_descripcion'
+  WHERE id = 1;
+  ```
+
+- Subirla a mano después de cualquier cambio de datos que no pase por un import (corrección con `psql`, restauración parcial):
+
+  ```bash
+  psql -U pm_intelligence -h 127.0.0.1 -d pm_intelligence_db -v ON_ERROR_STOP=1 -c "UPDATE public.data_cache_version SET version = version + 1, updated_at = NOW(), note = 'motivo' WHERE id = 1;"
+  ```
+
+- Si cambia el formato JSON de alguna respuesta de `/api/data/*`, subir `DATASET_RESPONSE_FORMAT_VERSION` en el mismo commit.

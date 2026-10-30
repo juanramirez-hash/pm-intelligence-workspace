@@ -38,6 +38,11 @@ type TestHandler = (
 
 const mocks = vi.hoisted(() => ({
   loadSalesDataset: vi.fn(),
+  applyDatasetCache: vi.fn(),
+}))
+
+vi.mock('../../server/middleware/datasetCache.js', () => ({
+  applyDatasetCache: mocks.applyDatasetCache,
 }))
 
 vi.mock('../../server/services/salesReadService.js', () => ({
@@ -108,6 +113,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.loadSalesDataset.mockReset()
   mocks.loadSalesDataset.mockResolvedValue(null)
+  mocks.applyDatasetCache.mockReset()
+  mocks.applyDatasetCache.mockResolvedValue(false)
 })
 
 describe('Sales GET route access', () => {
@@ -128,9 +135,14 @@ describe('Sales GET route access', () => {
       dataset: 'sales',
       data: null,
     })
-    expect(res.set).toHaveBeenCalledWith(
-      'Cache-Control',
-      'no-store',
+    expect(mocks.applyDatasetCache).toHaveBeenCalledExactlyOnceWith(
+      pool,
+      expect.anything(),
+      res,
+      {
+        datasetType: 'sales',
+        access: { scope: 'all', brandIds: [] },
+      },
     )
   })
 
@@ -162,9 +174,17 @@ describe('Sales GET route access', () => {
       dataset: 'sales',
       data: dataset,
     })
-    expect(res.set).toHaveBeenCalledWith(
-      'Cache-Control',
-      'no-store',
+    expect(mocks.applyDatasetCache).toHaveBeenCalledExactlyOnceWith(
+      pool,
+      expect.anything(),
+      res,
+      {
+        datasetType: 'sales',
+        access: {
+          scope: 'assigned',
+          brandIds: ['ALTER', 'SONOFF', 'CDATA', 'MIKROTIK'],
+        },
+      },
     )
   })
 
@@ -216,6 +236,7 @@ describe('Sales GET route access', () => {
 
     expect(res.status).toHaveBeenCalledWith(401)
     expect(mocks.loadSalesDataset).not.toHaveBeenCalled()
+    expect(mocks.applyDatasetCache).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -233,6 +254,7 @@ describe('Sales GET route access', () => {
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(mocks.loadSalesDataset).not.toHaveBeenCalled()
+    expect(mocks.applyDatasetCache).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -252,6 +274,22 @@ describe('Sales GET route access', () => {
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(mocks.loadSalesDataset).not.toHaveBeenCalled()
+    expect(mocks.applyDatasetCache).not.toHaveBeenCalled()
+  })
+
+  it('answers 304 without reading sales when the cached copy is current', async () => {
+    mocks.applyDatasetCache.mockResolvedValue(true)
+
+    const res = await readSales({
+      authUser: {
+        scope: 'assigned',
+        brandIds: ['ALTER'],
+      },
+    })
+
+    expect(mocks.applyDatasetCache).toHaveBeenCalledOnce()
+    expect(mocks.loadSalesDataset).not.toHaveBeenCalled()
+    expect(res.json).not.toHaveBeenCalled()
   })
 
   it('does not retry without restrictions if the scoped reader fails', async () => {

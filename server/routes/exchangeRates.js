@@ -1,4 +1,7 @@
 import { Router } from 'express'
+import {
+  datasetCache,
+} from '../middleware/datasetCache.js'
 
 import {
   loadExchangeRateDataset,
@@ -16,6 +19,9 @@ export function createExchangeRatesRouter(
 
   router.get(
     '/',
+    datasetCache(pool, {
+      datasetType: 'exchangeRates',
+    }),
     async (_req, res) => {
       try {
         const dataset =
