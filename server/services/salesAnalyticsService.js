@@ -52,7 +52,33 @@ const normalizeSql = (column) => `
 
 function buildProductIdentityCtes(
   brandScopeSql,
+  options = {},
 ) {
+  const salesSourceScopeSql =
+    options.salesSourceScopeSql ??
+      brandScopeSql
+
+  const fallbackOwnersCte =
+  options.fallbackOwnersCte ??
+  `
+    fallback_owners AS (
+      SELECT DISTINCT ON (
+        candidate.base_id
+      )
+        candidate.base_id,
+        candidate.brand_id,
+        candidate.resolved_model_key
+      FROM fallback_candidates AS candidate
+      LEFT JOIN product_master_names AS master
+        ON master.product_id = candidate.base_id
+      WHERE master.product_id IS NULL
+      ORDER BY
+        candidate.base_id,
+        candidate.sale_date,
+        candidate.id
+    )
+  `
+
   return `
     WITH sales_source AS (
       SELECT
@@ -70,7 +96,7 @@ function buildProductIdentityCtes(
         location,
         sales_rep
       FROM sales_facts
-      ${brandScopeSql}
+      ${salesSourceScopeSql}
     ),
     normalized_sales AS (
       SELECT
@@ -407,22 +433,7 @@ function buildProductIdentityCtes(
           reconciled.model_key
         ) IS NOT NULL
     ),
-    fallback_owners AS (
-      SELECT DISTINCT ON (
-        candidate.base_id
-      )
-        candidate.base_id,
-        candidate.brand_id,
-        candidate.resolved_model_key
-      FROM fallback_candidates AS candidate
-      LEFT JOIN product_master_names AS master
-        ON master.product_id = candidate.base_id
-      WHERE master.product_id IS NULL
-      ORDER BY
-        candidate.base_id,
-        candidate.sale_date,
-        candidate.id
-    ),
+    ${fallbackOwnersCte},
     canonical_sales AS (
       SELECT
         reconciled.id,
@@ -532,6 +543,74 @@ function buildProductIdentityCtes(
         product_id,
         location_id,
         sales_representative_id
+    )
+  `
+}
+
+function buildSalesSegmentationSourceQuery(
+  filter,
+  brandScopeFilter,
+) {
+  const periodIds =
+    normalizeSalesSegmentationList(
+      filter.periodIds,
+    )
+
+  if (
+    !periodIds ||
+    periodIds.length === 0
+  ) {
+    return {
+      sql: brandScopeFilter.sql,
+      params: [],
+    }
+  }
+
+  const parameterIndex =
+    brandScopeFilter.params.length + 1
+
+  const periodCondition =
+  `period_id = ANY($${parameterIndex}::TEXT[])`
+
+  return {
+    sql:
+      brandScopeFilter.sql.trim()
+        ? `${brandScopeFilter.sql}
+      AND ${periodCondition}`
+        : `WHERE ${periodCondition}`,
+    params: [
+      periodIds,
+    ],
+  }
+}
+
+function buildPersistedFallbackOwnersCte(
+  access,
+) {
+  const scopeCondition =
+    access?.scope === 'assigned'
+      ? `
+      WHERE
+        candidate.scope_brand_key =
+          ANY($1::TEXT[])
+      `
+      : ''
+
+  return `
+    fallback_owners AS (
+      SELECT DISTINCT ON (
+        candidate.base_id
+      )
+        candidate.base_id,
+        candidate.brand_id,
+        candidate.resolved_model_key
+      FROM public.sales_fallback_owner_candidates
+        AS candidate
+      ${scopeCondition}
+      ORDER BY
+        candidate.base_id,
+        candidate.first_sale_date,
+        candidate.first_sale_id
     )
   `
 }
@@ -713,16 +792,32 @@ export async function summarizeSalesSegmentation(
     const brandScopeFilter =
       buildBrandScopeFilter(access)
 
+    const sourceQuery =
+      buildSalesSegmentationSourceQuery(
+        filter,
+        brandScopeFilter,
+      )
+
     const ctes =
       buildProductIdentityCtes(
         brandScopeFilter.sql,
+        {
+          salesSourceScopeSql:
+            sourceQuery.sql,
+          fallbackOwnersCte:
+            buildPersistedFallbackOwnersCte(
+              access,
+            ),
+        },
       )
 
     const filterQuery =
       buildSalesSegmentationFilterQuery(
         filter,
         brandScopeFilter.sql,
-        brandScopeFilter.params.length + 1,
+        brandScopeFilter.params.length +
+          sourceQuery.params.length +
+          1,
       )
 
     const result = await client.query(
@@ -777,6 +872,7 @@ export async function summarizeSalesSegmentation(
       `,
       [
         ...brandScopeFilter.params,
+        ...sourceQuery.params,
         ...filterQuery.params,
       ],
     )
@@ -1481,16 +1577,32 @@ export async function groupSalesSegmentation(
     const brandScopeFilter =
       buildBrandScopeFilter(access)
 
+    const sourceQuery =
+      buildSalesSegmentationSourceQuery(
+        filter,
+        brandScopeFilter,
+      )
+
     const ctes =
       buildProductIdentityCtes(
         brandScopeFilter.sql,
+        {
+          salesSourceScopeSql:
+            sourceQuery.sql,
+          fallbackOwnersCte:
+            buildPersistedFallbackOwnersCte(
+              access,
+            ),
+        },
       )
 
     const filterQuery =
       buildSalesSegmentationFilterQuery(
         filter,
         brandScopeFilter.sql,
-        brandScopeFilter.params.length + 1,
+        brandScopeFilter.params.length +
+          sourceQuery.params.length +
+          1,
       )
 
     const labelQuery =
@@ -1559,6 +1671,7 @@ export async function groupSalesSegmentation(
       `,
       [
         ...brandScopeFilter.params,
+        ...sourceQuery.params,
         ...filterQuery.params,
       ],
     )
@@ -1850,16 +1963,32 @@ export async function loadSalesSegmentationDetailRows(
     const brandScopeFilter =
       buildBrandScopeFilter(access)
 
+    const sourceQuery =
+      buildSalesSegmentationSourceQuery(
+        filter,
+        brandScopeFilter,
+      )
+
     const ctes =
       buildProductIdentityCtes(
         brandScopeFilter.sql,
+        {
+          salesSourceScopeSql:
+            sourceQuery.sql,
+          fallbackOwnersCte:
+            buildPersistedFallbackOwnersCte(
+              access,
+            ),
+        },
       )
 
     const filterQuery =
       buildSalesSegmentationFilterQuery(
         filter,
         brandScopeFilter.sql,
-        brandScopeFilter.params.length + 1,
+        brandScopeFilter.params.length +
+          sourceQuery.params.length +
+          1,
       )
 
     const brandLabelQuery =
@@ -1905,6 +2034,7 @@ export async function loadSalesSegmentationDetailRows(
 
     const limitParameter =
       brandScopeFilter.params.length +
+      sourceQuery.params.length +
       filterQuery.params.length +
       1
 
@@ -2021,6 +2151,7 @@ export async function loadSalesSegmentationDetailRows(
       `,
       [
         ...brandScopeFilter.params,
+        ...sourceQuery.params,
         ...filterQuery.params,
         normalizedLimit,
       ],

@@ -259,7 +259,7 @@ describe(
           )
 
         expect(
-          periods.map((group) => group.id),
+          periods.map((group: { id: string }) => group.id),
         ).toEqual([
           '2026-01',
           '2026-02',
@@ -287,7 +287,7 @@ describe(
           )
 
         expect(
-          brands.map((group) => group.id),
+          brands.map((group: { id: string }) => group.id),
         ).toEqual([
           'HIGH',
           'LOW',
@@ -320,9 +320,15 @@ describe(
           params,
         ] = query.mock.calls[0]
 
+        const compactSql =
+          sql.replace(/\s+/g, ' ')
+
         expect(
           sql.match(/ANY\(\$1::TEXT\[\]\)/g),
-        ).toHaveLength(2)
+        ).toHaveLength(3)
+        expect(compactSql).toContain(
+          'candidate.scope_brand_key = ANY($1',
+        )
         expect(params).toEqual([
           [
             'ALTER',

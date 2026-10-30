@@ -259,6 +259,9 @@ const completed =
   )
 
 await client.query('SELECT refresh_business_aggregates(FALSE)')
+await client.query(
+  'SELECT refresh_sales_fallback_owner_candidates(FALSE)',
+)
 await client.query('COMMIT')
 
 return {

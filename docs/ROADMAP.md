@@ -202,6 +202,14 @@ Después del cierre de A-002 se construirá la primera interfaz conectada al Cor
 - Alertas.
 - Copilot.
 
+## Pendientes técnicos
+
+- SQL-002: `p_concurrently` en `refresh_sales_fallback_owner_candidates()` no hace refresh concurrente real. Medido en `pm_intelligence_test`: el refresh tarda ~5 s con 546,520 ventas, así que el refresh concurrente no es necesario por ahora. Reevaluar si el tiempo crece; si se cambia, hacerlo en una migración nueva, no editando la 035.
+
+## Pendientes de calidad de datos
+
+- STREAMAX aparece con dos nombres de marca en ventas: `MERIVA TECHNOLOGY - STREAMAX` (hasta 2025) y `STREAMAX - MERIVA` (desde 2026). Ambos resuelven al mismo `brand_id`, pero generan claves de marca (`scope_brand_key`) distintas; por eso 8 `base_id` aparecen dos veces en `sales_fallback_owner_candidates`.
+
 ## Criterio para v1.0.0
 
 - Data Center con dominios prioritarios operativos.

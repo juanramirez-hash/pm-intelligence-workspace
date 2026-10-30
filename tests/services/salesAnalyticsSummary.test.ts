@@ -173,7 +173,10 @@ describe(
           sql.replace(/\s+/g, ' ')
 
         expect(compactSql).toContain(
-          'ORDER BY candidate.base_id, candidate.sale_date, candidate.id',
+          'ORDER BY candidate.base_id, candidate.first_sale_date, candidate.first_sale_id',
+        )
+        expect(compactSql).toContain(
+          'FROM public.sales_fallback_owner_candidates AS candidate',
         )
 
         expect(compactSql).toContain(
