@@ -3,9 +3,9 @@
 ## Estado actual
 
 ```text
-Version: v0.55.0
-Sprint: PVW-001 - Purchasing Data Foundation & Import Contracts
-Estado: PVW-001 completado; foundation de Purchasing integrada y evolución consultiva pendiente
+Version: v0.57.0
+Sprint: Production Platform Foundation (rama feature/production-platform-foundation-v0.57.0)
+Estado: v0.57.0 cerrada; backend desplegado en producción en 543c926 y frontend publicado por última vez el 28 oct 2026
 ```
 
 ## Orden estratégico de ejecución
@@ -13,7 +13,8 @@ Estado: PVW-001 completado; foundation de Purchasing integrada y evolución cons
 1. Forecast Workspace — completado.
 2. Pricing Laboratory Workspace — completado.
 3. Executive Workspace preparado para Purchasing — completado con EW-001 y corregido funcionalmente con EW-001-HOTFIX1.
-4. Purchasing Visibility Workspace — foundation completada con PVW-001; evolución consultiva pendiente.
+4. Purchasing Visibility Workspace — completado con PVW-001 (foundation) y PVW-002 (workspace y analítica).
+5. Production Platform Foundation — completado en v0.57.0: plataforma PostgreSQL, autenticación, Settings, Actions, búsqueda global y SQL-002.
 
 ## Forecast Workspace
 
@@ -131,17 +132,20 @@ EW-001-HOTFIX1 convierte la pantalla ejecutiva en una antesala operativa: incorp
 
 Purchasing queda técnicamente listo para evolución consultiva con órdenes y solicitudes de compra normalizadas, Inventory, Product Master y Forecast completo. EW-001 y su hotfix no crean el Workspace de Purchasing ni incorporan decisiones automáticas.
 
-## Purchasing Visibility Workspace — FOUNDATION COMPLETADA
+## Purchasing Visibility Workspace — PVW-001 y PVW-002 COMPLETADOS
 
 | Entrega | Alcance | Estado |
 |---|---|---|
-| PVW-001 | Purchasing Data Foundation & Import Contracts | Completado |
+| PVW-001 | Purchasing Data Foundation & Import Contracts | Completado (v0.55.0) |
+| PVW-002 | Purchasing Workspace, Analytics, Inventory & Forecast Intelligence | Completado (v0.56.0) |
 
 PVW-001 incorpora contratos e importadores normalizados para órdenes de compra y solicitudes de compra, persistencia e hidratación desde Data Center, entidades y builders del Business Core, índices derivados, queries y reportes de calidad.
 
 La identidad operativa canónica utiliza `purchaseOrderNumber` —procedente de `Document Number`— para órdenes de compra y `purchaseRequestNumber` —procedente de `ID`— para solicitudes de compra. Los campos `Internal ID` se conservan únicamente para trazabilidad técnica y no funcionan como identidad primaria de negocio.
 
-El Workspace visual de Purchasing, sus analíticas consultivas y cualquier motor de decisiones permanecen fuera del alcance de PVW-001. No se define todavía una entrega PVW posterior.
+El Workspace visual de Purchasing y sus analíticas consultivas quedaron fuera del alcance de PVW-001 y llegaron con PVW-002.
+
+PVW-002 incorpora analítica de compras (totales, vínculo de solicitudes con órdenes de compra y ciclo de solicitud a orden), el Purchasing Workspace con enrutamiento manual desde Data Center, inteligencia de inventario con detalle de acciones de abasto y detección de sobrecompra contra Forecast. No se define todavía una entrega PVW posterior.
 
 ## Inventory Workspace — CERRADO
 
@@ -170,7 +174,7 @@ PW-006.1 incorpora la ruta de sustitución dentro del expediente del SKU. La inf
 
 PW-006.1.1 optimiza la composición visual al colocar la ruta de sustitución inmediatamente debajo de Riesgo comercial y Potencial de recuperación dentro del Executive Hero, conservando intacto el contrato funcional del panel.
 
-## Architecture Sprint A-002
+## Architecture Sprint A-002 — CERRADO
 
 | Commit | Alcance | Estado |
 |---|---|---|
@@ -183,29 +187,55 @@ PW-006.1.1 optimiza la composición visual al colocar la ruta de sustitución in
 | A-002.7 | Health Score Engine | Completado |
 | A-002.8 | Narrative Engine & Executive Brief | Completado |
 | A-002.9 | Architecture Hardening | Completado |
-
-## Architecture Sprint A-002 — CERRADO
+| A-002.9.1 | Architecture Test Isolation | Completado |
 
 El Core dispone de fachada pública, formatos compartidos y pruebas de límites arquitectónicos.
 
-## Sprint B-001 — Brand Workspace
+A-002.9.1 es un hardening correctivo que separa las pruebas de arquitectura basadas en Node de la compilación de la aplicación productiva.
 
-Después del cierre de A-002 se construirá la primera interfaz conectada al Core:
+## Brand Workspace — CERRADO
 
-- Resumen Ejecutivo.
-- Ventas.
-- Objetivos.
-- Health.
-- Clientes.
-- Productos.
-- Tendencias.
-- Alertas.
-- Copilot.
+| Entrega | Alcance | Estado |
+|---|---|---|
+| B-001 | Brand Intelligence Workspace | Completado |
+| v0.57.0 | Comparativo comercial, planes, YoY, YTD, proyección anual, consolidación en Brand Workspace e identidad canónica de STREAMAX | Completado |
+
+Brand Workspace es la primera interfaz conectada al Core. El botón Copilot de la barra superior todavía no tiene funcionalidad.
+
+## Production Platform Foundation — v0.57.0 CERRADO
+
+| Frente | Alcance | Estado |
+|---|---|---|
+| Data Platform | Backend Node/Express sobre PostgreSQL; 11 dominios persistidos en el servidor con importación por chunks, auditoría y cancelación | Completado |
+| Auth | Login con Google, sesiones en PostgreSQL, cierre de sesión y endurecimiento básico del servidor | Completado |
+| Settings | Usuarios, roles, asignación de marcas y autorización por rol y por marca | Completado |
+| Actions | Actions Workspace, acciones por PM y agregados de negocio en el servidor | Completado |
+| Búsqueda global | Búsqueda desde la barra superior resuelta con SQL en el servidor | Completado |
+| Forecast | Conciliación de facturación de proyectos en el servidor y ajustes de calidad | Completado |
+| UI | Navegación en sidebar, navegación móvil y tema Tecno | Completado |
+| SQL-002 | Analítica de ventas en SQL (ver sección propia) | Completado |
+
+Despliegue: backend en producción en `543c926`; frontend publicado por última vez el 28 oct 2026.
+
+## Plataforma PostgreSQL
+
+El backend vive en `server/` y persiste los datos en PostgreSQL mediante migraciones SQL numeradas que se aplican manualmente (procedimiento en `CLAUDE.md` §12). Desde la `035`, cada migración nueva lleva su rollback en `server/migrations/rollback/`.
+
+| Migraciones | Contenido |
+|---|---|
+| 001–011 | Tablas base de importaciones y de los datasets |
+| 012–026 | Staging para importación por chunks, identidades lógicas, ajustes de importación y clientes |
+| 027–030 | Usuarios, roles y asignación de marcas |
+| 031–032 | Agregados de negocio por marca, cliente y periodo, y acciones por PM |
+| 033 | Alias canónico de STREAMAX |
+| 034 | Propiedad de los agregados de negocio |
+| 035 | Caché de dueños de respaldo de productos (SQL-002) |
 
 ## Sales Analytics en servidor — SQL-002
 
 | Entrega | Alcance | Estado |
 |---|---|---|
+| SQL-002 | Segmentación de ventas en SQL: diagnóstico, summary, group-by, filtros, facetas, detalle, API y overlay en Sales Workspace | Completado |
 | SQL-002 | Persisted fallback owner cache (`543c926`) | Desplegado en producción el 30 oct 2026 |
 
 SQL-002 persiste los dueños de respaldo de productos en la vista materializada `sales_fallback_owner_candidates` (migración 035), para que la segmentación de Sales Analytics no reconstruya la identidad de producto sobre todo `sales_facts` en cada consulta. Despliegue en producción: migración 035 aplicada, backend reiniciado, validación funcional correcta e importaciones de ventas y productos correctas.
@@ -235,7 +265,3 @@ SQL-002 persiste los dueños de respaldo de productos en la vista materializada 
 - La UI representa Snapshots y resultados derivados; no interpreta el negocio.
 - Health Score no inventa benchmarks ausentes.
 - Cada cambio se entrega como commit completo, compilable y documentado.
-
-### A-002.9.1 - Architecture Test Isolation
-
-Status: completed. Corrective hardening release separating Node-based architecture tests from production application compilation.

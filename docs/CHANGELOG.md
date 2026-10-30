@@ -1,3 +1,132 @@
+# 0.57.0-SQL-002
+
+- Adds a SQL analytics diagnostics script and service to migrate Sales Workspace segmentation from the in-memory Business Data Model to PostgreSQL.
+- Adds server-side Sales segmentation summary, group-by, filters, faceted filter options and detail rows.
+- Exposes the segmentation through Sales Analytics API routes for summary, group-by, filter options and detail rows.
+- Adds a Sales Workspace overlay that loads filter options and detail rows from the SQL analytics API for the selected period and filters.
+- Persists historical fallback product owners in the materialized view `sales_fallback_owner_candidates` (migration `035`), with its rollback script in `server/migrations/rollback/`.
+- Refreshes the fallback owner cache before COMMIT in full and chunked sales imports and in product chunk imports.
+- Makes the period filter safe to apply before product reconciliation: fallback owners now come from the persisted historical cache instead of the selected period.
+- Preserves assigned brand scope in persisted owner selection through `scope_brand_key`.
+- Validates migration `035` on the test database with 546,520 sales: 960 of 960 fallback owners match the previous calculation and the cache refresh takes about 5.3 seconds.
+- Adds automated coverage for segmentation summary, group-by, filters, filter options, detail rows, the Sales Analytics routes and the persisted fallback owner cache.
+- Confirms production build, lint and 731 automated tests without errors; deployed to production on October 30, 2026.
+
+# 0.57.0-BRAND
+
+- Adds commercial comparison and commercial plans to Brand Intelligence through the brand decision engine.
+- Canonicalizes the historical STREAMAX identity so `MERIVA TECHNOLOGY - STREAMAX` resolves to `STREAMAX - MERIVA` in the business model, brand scope and business aggregates (migration `033`).
+- Preserves the canonical STREAMAX label in business aggregates.
+- Consolidates Brand Intelligence content inside Brand Workspace and restores the brand intelligence drilldown.
+- Adds year-over-year, year-to-date and annual projection comparison to Brand Intelligence.
+- Adds automated coverage for commercial comparison, commercial plans, the brand decision engine and server-side brand scope.
+
+# 0.57.0-ACTIONS
+
+- Adds server-side business aggregates by brand and period and by brand, customer and period as materialized views refreshed through `refresh_business_aggregates` (migration `031`).
+- Adds PM actions with events, owners, status, due dates and comments (migration `032`), protected by brand scope and write-access middleware.
+- Exposes action routes for actions, comments and the scorecard, and metric routes for brands, brand comparison and lost customers.
+- Uses the canonical product name when counting active products in business metrics.
+- Adds the Actions Workspace and connects Sales commercial opportunities to the action center.
+- Assigns rule-generated actions to the PM assigned to the brand.
+- Preserves business aggregate ownership so the application role can refresh them (migration `034`).
+- Adds automated coverage for action creation, updates, comments, scorecard, brand scope, write access and workspace access.
+
+# 0.57.0-SETTINGS
+
+- Adds a platform administration workspace for users and roles, with role catalog and users-and-roles tables (migrations `027` and `028`).
+- Adds brand assignments per user and removes the pricing role, moving its users to `pm` (migrations `029` and `030`).
+- Allows administrators to edit user names and delete users.
+- Exposes role scope and brand assignments to the frontend and shows the authenticated user in the sidebar.
+- Resolves live authorization from PostgreSQL.
+- Scopes Brand Workspace to assigned brands and blocks direct access to unassigned brands.
+- Enforces workspace visibility and route guards by role.
+- Enforces the authenticated brand scope in the sales route, normalizes assigned brand IDs and preserves cumulative sales history when brand access filtering applies.
+- Adds automated coverage for brand access, Brand Intelligence access, workspace access, the sales route and user deletion.
+
+# 0.57.0-SEARCH
+
+- Enables global search from the top bar.
+- Moves global search to a server-side SQL service over brands, customers and products.
+- Is deployed to production as part of branch v0.57.0; no dedicated automated tests were added.
+
+# 0.57.0-FORECAST
+
+- Moves project billing reconciliation to the server and shows it in Data Center through a dedicated repository.
+- Hydrates the project billing summary from PostgreSQL.
+- Lazy-loads project billings for the legacy Forecast path and narrows the workspace store subscription.
+- Keeps unresolved inventory as a Forecast quality warning.
+- Ignores historical warnings when computing project status in the project-aware Forecast engine.
+- Adds a top 10 project view, a collapsible quality search and collapsible methodology and source limitation panels to Forecast Workspace.
+- Updates automated coverage for Forecast inventory intelligence and the project-aware Forecast engine.
+
+# 0.57.0-UI
+
+- Enables workspace navigation on mobile.
+- Adds the Tecno top navigation with the blue and orange theme and aligns executive cards with the light blue Tecno theme.
+- Moves workspace navigation to the sidebar.
+- Changes layout and styling only; no business formulas or data contracts are modified.
+
+# 0.57.0-AUTH
+
+- Adds production Google sign-in: the server verifies the Google ID token and only allows verified emails that belong to an active user, rejecting a Google account that does not match the stored identity.
+- Stores sessions in PostgreSQL with secure, `sameSite=lax` cookies that expire after eight hours.
+- Adds reusable session middleware that returns 401 for unauthenticated API requests.
+- Adds a logout control and shows the authenticated user initials in the top bar.
+- Invalidates expired sessions in the frontend when the API answers 401.
+- Hides the Express `x-powered-by` signature and reduces the health endpoint to a database check with a minimal response.
+- Is deployed to production as part of branch v0.57.0; no dedicated automated tests were added.
+
+# 0.57.0-DATA-PLATFORM
+
+- Adds a Node and Express backend in `server/` backed by PostgreSQL, with numbered SQL migrations `001` to `026` for datasets, import audit, staging tables and logical identities.
+- Centralizes the PostgreSQL connection pool and adds a protected data status endpoint.
+- Adds an import audit service that tracks each dataset import through its lifecycle, including cancellations.
+- Adds incremental and chunked sales imports with staging tables and raises the JSON payload limit for chunk uploads.
+- Supports partial sales imports in append mode, deduplicating rows, replacing matching rows and tracking inserted rows.
+- Allows cancelling a sales chunk import, including automatic cancellation with a beacon when the user leaves the page.
+- Hydrates the sales store from PostgreSQL through a remote read service that loads the latest completed import and rehydrates consolidated sales after partial imports.
+- Persists inventory, sales targets, Product Master, purchase orders, purchase requests, projects, project billings, exchange rates, pricing and customers in PostgreSQL, with chunked inventory imports and a replace-orders mode for purchase orders.
+- Labels each migrated dataset as PostgreSQL storage in Data Center and aligns import status with the persistence lifecycle.
+- Formats dataset periods without timezone shifts and supports decimal elapsed days in purchase requests.
+- Supports the native NetSuite sales export in the spreadsheet parser and sales normalizer.
+- Removes the redundant business calendar dataset from dataset definitions and Executive readiness.
+- Adds automated coverage for customer master import, the native NetSuite sales export, the spreadsheet parser and the server-side sales read service.
+
+# 0.57.0-FIXES
+
+- Resolves the buying customer from the grouped customer name during sales normalization.
+- Compares open periods at an equivalent cutoff in Executive Workspace.
+- Shows active customers in the Sales summary and KPI card.
+- Removes a stale PulsePage backup from the published `public/` assets.
+- Adds repository guidance in `CLAUDE.md` and ignores operational data, Master Files, patches and credential files in Git.
+- Adds and updates automated coverage for sales customer identity and the Executive analysis period, navigation and attention queues.
+
+# 0.56.0-PVW-002
+
+- Adds Purchasing analytics with totals, purchase request to purchase order linkage and request-to-order cycle, exposed through `PurchasingAnalyticsQueries`.
+- Adds Purchasing Workspace with manual Data Center routing and connects Data Center purchasing datasets to the workspace repository.
+- Adds purchasing inventory intelligence with purchase order status and integrates it into the workspace with supply action detail.
+- Adds forecast overbuy intelligence and surfaces it in Purchasing Workspace.
+- Adds automated coverage for purchasing analytics, inventory intelligence, forecast overbuy intelligence and their repository queries.
+
+# 0.56.0-FIXES
+
+- Aligns Purchasing readiness in Executive Workspace and enables `.tsx` tests in Vitest.
+- Separates the Sales forecast from the run-rate projection in the workspace, executive summary and export.
+- Compares open Sales periods at an equivalent working-day cutoff.
+- Aligns equivalent-period analytics in Brand Intelligence and the Brand Workspace UI.
+- Adds automated coverage for Brand Intelligence and updates Sales executive summary, Sales export and Forecast pipeline tests.
+
+# 0.55.0-PVW-001
+
+- Adds normalized import contracts for purchase orders and purchase requests, with schemas, column aliases, normalizers, validators and Data Center plugins.
+- Persists purchasing datasets in Data Center and upgrades IndexedDB to version 9.
+- Adds Purchasing entities, builders, indexes, queries and quality reports to the Business Core.
+- Uses `purchaseOrderNumber` from `Document Number` and `purchaseRequestNumber` from `ID` as canonical business identities, keeping `Internal ID` only for technical traceability.
+- Does not add the visual Purchasing Workspace, consultative analytics or decision engines.
+- Adds automated coverage for the purchase order and purchase request import plugins.
+
 # 0.54.1-EW-001-HOTFIX1
 
 - Converts Executive Workspace from a passive dashboard into an operational navigation layer with direct access to Sales, Inventory, Forecast, Pricing, Purchasing preparation and Data Center.
