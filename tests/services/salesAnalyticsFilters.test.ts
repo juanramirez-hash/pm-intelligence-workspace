@@ -101,8 +101,11 @@ describe(
         expect(sql).toContain(
           'filtered_sales_segments AS',
         )
+        // The period is filtered once, when reading sales_facts.
+        expect(sql).not.toContain(
+          'BTRIM(canonical.period_id)',
+        )
         expect(params).toEqual([
-          ['2026-10'],
           ['2026-10'],
           ['MERIVA'],
           ['JOSE NUNEZ'],
@@ -191,7 +194,7 @@ describe(
         expect(sql).toContain(
           'ANY($3::TEXT[])',
         )
-        expect(sql).toContain(
+        expect(sql).not.toContain(
           'ANY($4::TEXT[])',
         )
         expect(params).toEqual([
@@ -200,8 +203,92 @@ describe(
             'BELDEN',
           ],
           ['2026-10'],
-          ['2026-10'],
           ['012035'],
+        ])
+      },
+    )
+
+    it(
+      'filters a period-only request once, when reading sales_facts',
+      async () => {
+        const {
+          pool,
+          query,
+        } = buildPool()
+
+        await summarizeSalesSegmentation(
+          pool,
+          {
+            scope: 'all',
+            brandIds: [],
+          },
+          {
+            periodIds: ['2026-10'],
+          },
+        )
+
+        const [
+          sql,
+          params,
+        ] = query.mock.calls[0]
+        const compactSql =
+          sql.replace(/\s+/g, ' ')
+
+        expect(compactSql).toContain(
+          'FROM sales_facts WHERE period_id = ANY($1::TEXT[])',
+        )
+        expect(sql).not.toContain(
+          'BTRIM(canonical.period_id)',
+        )
+        expect(sql).not.toContain(
+          'filtered_canonical_sales AS',
+        )
+        expect(params).toEqual([
+          ['2026-10'],
+        ])
+      },
+    )
+
+    it(
+      'keeps the other filters unchanged when no period is requested',
+      async () => {
+        const {
+          pool,
+          query,
+        } = buildPool()
+
+        await summarizeSalesSegmentation(
+          pool,
+          {
+            scope: 'all',
+            brandIds: [],
+          },
+          {
+            brandIds: [' Mériva  '],
+          },
+        )
+
+        const [
+          sql,
+          params,
+        ] = query.mock.calls[0]
+        const compactSql =
+          sql.replace(/\s+/g, ' ')
+
+        expect(compactSql).not.toContain(
+          'period_id = ANY(',
+        )
+        expect(sql).toContain(
+          'filtered_canonical_sales AS',
+        )
+        expect(sql).toContain(
+          'BTRIM(canonical.brand_id)',
+        )
+        expect(compactSql).toContain(
+          '= ANY($1::TEXT[])',
+        )
+        expect(params).toEqual([
+          ['MERIVA'],
         ])
       },
     )

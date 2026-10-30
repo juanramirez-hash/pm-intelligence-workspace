@@ -88,10 +88,10 @@ describe(
         expect(compactSql).toContain(
           'FROM public.sales_fallback_owner_candidates AS candidate',
         )
+        expect(compactSql).not.toContain(
+          'BTRIM(canonical.period_id)',
+        )
         expect(params).toEqual([
-          [
-            '2026-10',
-          ],
           [
             '2026-10',
           ],
@@ -140,16 +140,16 @@ describe(
         expect(compactSql).toContain(
           'period_id = ANY($2::TEXT[])',
         )
-        expect(compactSql).toMatch(
-          /BTRIM\(canonical\.period_id\)(?:(?!\bAND\b|ANY\().)*= ANY\(\$3::TEXT\[\]\)/,
+        expect(compactSql).not.toContain(
+          'BTRIM(canonical.period_id)',
+        )
+        expect(compactSql).not.toContain(
+          '$3',
         )
         expect(params).toEqual([
           [
             'UNVUNIVIEW',
             'BELDEN',
-          ],
-          [
-            '2026-10',
           ],
           [
             '2026-10',

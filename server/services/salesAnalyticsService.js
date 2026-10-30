@@ -563,6 +563,7 @@ function buildSalesSegmentationSourceQuery(
     return {
       sql: brandScopeFilter.sql,
       params: [],
+      periodFilteredAtSource: false,
     }
   }
 
@@ -572,6 +573,10 @@ function buildSalesSegmentationSourceQuery(
   const periodCondition =
   `period_id = ANY($${parameterIndex}::TEXT[])`
 
+  // sales_facts.period_id is written as the YYYY-MM prefix of sale_date
+  // by both sales importers, so it always equals the canonical period_id
+  // (TO_CHAR(sale_date, 'YYYY-MM')). Filtering here makes the canonical
+  // period filter redundant.
   return {
     sql:
       brandScopeFilter.sql.trim()
@@ -581,6 +586,7 @@ function buildSalesSegmentationSourceQuery(
     params: [
       periodIds,
     ],
+    periodFilteredAtSource: true,
   }
 }
 
@@ -818,6 +824,10 @@ export async function summarizeSalesSegmentation(
         brandScopeFilter.params.length +
           sourceQuery.params.length +
           1,
+        {
+          periodFilteredAtSource:
+            sourceQuery.periodFilteredAtSource,
+        },
       )
 
     const result = await client.query(
@@ -1083,6 +1093,9 @@ function buildSalesSegmentationFilterQuery(
   filter,
   brandScopeSql,
   firstParameterIndex,
+  {
+    periodFilteredAtSource = false,
+  } = {},
 ) {
   const params = []
   const conditions = []
@@ -1115,10 +1128,14 @@ function buildSalesSegmentationFilterQuery(
     `)
   }
 
-  addListFilter(
-    filter.periodIds,
-    'canonical.period_id',
-  )
+  // Repeating the period filter on canonical rows changes no result, but
+  // the planner cannot estimate it and falls back to nested loops.
+  if (!periodFilteredAtSource) {
+    addListFilter(
+      filter.periodIds,
+      'canonical.period_id',
+    )
+  }
 
   if (filter.dateFrom) {
     const parameter =
@@ -1603,6 +1620,10 @@ export async function groupSalesSegmentation(
         brandScopeFilter.params.length +
           sourceQuery.params.length +
           1,
+        {
+          periodFilteredAtSource:
+            sourceQuery.periodFilteredAtSource,
+        },
       )
 
     const labelQuery =
@@ -1989,6 +2010,10 @@ export async function loadSalesSegmentationDetailRows(
         brandScopeFilter.params.length +
           sourceQuery.params.length +
           1,
+        {
+          periodFilteredAtSource:
+            sourceQuery.periodFilteredAtSource,
+        },
       )
 
     const brandLabelQuery =
