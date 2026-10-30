@@ -202,6 +202,14 @@ Después del cierre de A-002 se construirá la primera interfaz conectada al Cor
 - Alertas.
 - Copilot.
 
+## Sales Analytics en servidor — SQL-002
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| SQL-002 | Persisted fallback owner cache (`543c926`) | Desplegado en producción el 30 oct 2026 |
+
+SQL-002 persiste los dueños de respaldo de productos en la vista materializada `sales_fallback_owner_candidates` (migración 035), para que la segmentación de Sales Analytics no reconstruya la identidad de producto sobre todo `sales_facts` en cada consulta. Despliegue en producción: migración 035 aplicada, backend reiniciado, validación funcional correcta e importaciones de ventas y productos correctas.
+
 ## Pendientes técnicos
 
 - SQL-002: `p_concurrently` en `refresh_sales_fallback_owner_candidates()` no hace refresh concurrente real. Medido en `pm_intelligence_test`: el refresh tarda ~5 s con 546,520 ventas, así que el refresh concurrente no es necesario por ahora. Reevaluar si el tiempo crece; si se cambia, hacerlo en una migración nueva, no editando la 035.
