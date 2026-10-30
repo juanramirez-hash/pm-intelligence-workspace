@@ -28,3 +28,21 @@ proyecto v1.zip
 docs/reference/
 
 server/.env
+
+# Datos operativos y exportaciones (nunca versionar)
+*.xls
+*.xlsx
+tmp/
+
+# Archivos Maestros (fuera de Git por decisión del proyecto)
+docs/PM_Intelligence_Archivo_Maestro_*
+docs/architecture/PM_Intelligence_Archivo_Maestro_*
+
+# Scripts, patches y borradores locales
+*.patch
+scratch/
+
+# Credenciales
+**/.env
+*credencial*
+*password*
