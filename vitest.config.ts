@@ -2,7 +2,13 @@ import {
   defineConfig,
 } from 'vitest/config'
 
+import {
+  appDefine,
+} from './vite.config'
+
 export default defineConfig({
+  define: appDefine,
+
   test: {
     environment: 'node',
 

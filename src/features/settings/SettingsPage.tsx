@@ -1657,7 +1657,7 @@ function SystemSettings() {
   const settings = [
     {
       label: 'Versión de aplicación',
-      value: '0.56.0',
+      value: __APP_VERSION__,
     },
     {
       label: 'Persistencia canónica',
