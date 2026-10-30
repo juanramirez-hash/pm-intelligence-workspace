@@ -33,7 +33,7 @@ Si algo de este archivo contradice el código, **el código manda**. Avisa la di
 |---|---|---|
 | Local | Windows, CMD + VS Code | Desarrollo, build, lint, tests, commit y `push` a GitHub |
 | GitHub | `juanramirez-hash/pm-intelligence-workspace` | Fuente central del código |
-| Producción | Servidor Linux vía SSH | `git pull` desde GitHub, migraciones manuales y reinicio del backend (ver §12) |
+| Producción | Servidor Linux vía SSH | `git pull`, build y publicación del frontend, migraciones manuales y reinicio del backend (ver §12) |
 
 Reglas de despliegue:
 
@@ -197,16 +197,51 @@ Mantenerlo corto: lo detallado va en `docs/`.
 
 ## 12. Migraciones y despliegue
 
-- Las migraciones se aplican **manualmente** en producción: el usuario entra por SSH y corre `psql -f`.
+Claude Code **nunca** ejecuta migraciones ni comandos en producción; solo prepara el SQL y los comandos para que el usuario los corra.
+
+### Servidor de producción
+
+| Elemento | Valor |
+|---|---|
+| Repo | `/home/nexus/apps/pm-intelligence-workspace` (usuario `nexus`) |
+| Backend | Servicio systemd `pm-intelligence-api.service` (no pm2). `WorkingDirectory`: `server/`. Escucha en `127.0.0.1:3001`. `Restart=on-failure` |
+| Frontend | Nginx, sitio `pm-intelligence`, dominio `pm.botintelligence.cloud`. Sirve `/opt/pm-intelligence-workspace/dist`; `/api/` y `/signin/google` van a `127.0.0.1:3001` |
+| `/opt/pm-intelligence-workspace` | Clon viejo de `main`: **solo se usa su `dist/`** |
+| n8n | Corre en el mismo servidor: respaldos, restauraciones y refresh de vistas se hacen **fuera de horario** |
+
+```bash
+sudo systemctl restart pm-intelligence-api               # reiniciar
+systemctl status pm-intelligence-api --no-pager          # verificar
+journalctl -u pm-intelligence-api -n 50 --no-pager       # logs
+```
+
+### Despliegue
+
+| Paso | Backend | Frontend |
+|---|---|---|
+| 1 | `git pull` | `git pull` |
+| 2 | `npm ci` en `server/` si cambió `server/package.json` | `npm ci` si cambió `package.json` |
+| 3 | Respaldo con `pg_dump` + migración (ver abajo) | `npm run build` en el repo de producción |
+| 4 | `sudo systemctl restart pm-intelligence-api` | Respaldo: `sudo cp -a /opt/pm-intelligence-workspace/dist /opt/pm-intelligence-workspace/dist.backup-<commit>` |
+| 5 | Revisar `systemctl status` y `journalctl` | Publicar: `sudo rsync -a --delete dist/ /opt/pm-intelligence-workspace/dist/` |
+| 6 | Validación funcional en la interfaz | `Ctrl+F5` y validación funcional en la interfaz |
+
+Rollback de frontend: `sudo rsync -a --delete /opt/pm-intelligence-workspace/dist.backup-<commit>/ /opt/pm-intelligence-workspace/dist/`
+
+**Nada en `public/` debe contener respaldos, notas ni datos:** Vite copia `public/` tal cual a `dist/` y todo se publica en la web.
+
+### Migraciones
+
+- Se aplican **manualmente** en producción: el usuario entra por SSH y corre `psql -f`.
 - No hay tabla de control de migraciones; el número del archivo (`NNN_`) es la referencia.
+- Cada migración nueva lleva su rollback en `server/migrations/rollback/` con el mismo número (`NNN_descripcion.rollback.sql`).
+- Toda migración nueva debe probarse primero fuera de producción.
 - Procedimiento obligatorio en producción:
   1. `git pull`
   2. Respaldo con `pg_dump` antes de cualquier migración.
   3. `psql -v ON_ERROR_STOP=1 -1 -f server/migrations/NNN_descripcion.sql`
   4. Verificar los objetos creados.
-  5. Reiniciar el backend **después** de migrar.
+  5. Reiniciar el backend **después** de migrar (`sudo systemctl restart pm-intelligence-api`).
   6. Validación funcional en la interfaz.
-- Claude Code **nunca** ejecuta migraciones ni comandos en producción; solo prepara el SQL y los comandos para que el usuario los corra.
-- Toda migración nueva debe probarse primero fuera de producción.
 
 > Algunas migraciones (017–023, 026 y 031 en adelante) traen su propio `BEGIN;` … `COMMIT;` alrededor de todo el archivo. Con `-1`, psql muestra dos `WARNING` (transacción ya iniciada / no hay transacción en curso). Son esperados: la migración sigue siendo atómica porque su propio bloque la cubre completa. Las que no lo traen dependen de `-1` para ser atómicas.
