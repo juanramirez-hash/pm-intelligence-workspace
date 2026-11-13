@@ -240,6 +240,15 @@ El backend vive en `server/` y persiste los datos en PostgreSQL mediante migraci
 
 SQL-002 persiste los dueños de respaldo de productos en la vista materializada `sales_fallback_owner_candidates` (migración 035), para que la segmentación de Sales Analytics no reconstruya la identidad de producto sobre todo `sales_facts` en cada consulta. Despliegue en producción: migración 035 aplicada, backend reiniciado, validación funcional correcta e importaciones de ventas y productos correctas.
 
+## Seguridad — SEC-001
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| SEC-001 (S2) | Importaciones del Data Center (`POST /api/data/*/import`, `/imports/*`, `targets/import` y `POST /api/data/exchange-rates`) limitadas a roles con alcance total (`scope = 'all'`) y escritura (`requireDataImportAccess`) | Implementado · pendiente de validación funcional y despliegue |
+| SEC-001 (S3) | `POST /api/data/sales/analytics/*` (summary, group-by, filter-options, detail-rows) deja de exigir escritura: los roles de solo lectura (engineering) ya pueden usar la segmentación de ventas | Implementado · pendiente de validación funcional y despliegue |
+
+SEC-001 atiende los hallazgos S2 y S3 de la auditoría. Solo backend y sin migraciones. Los PMs (`scope = 'assigned'`) conservan la creación y edición de acciones (`requireWriteAccess` en `/api/actions` sin cambios), pero ya no pueden importar ni reemplazar datos. La analítica de ventas sigue protegida por `requireAuth`, `loadAuthenticatedUser` y la validación de alcance y marcas de su propio router.
+
 ## Pendientes técnicos
 
 - SQL-002: `p_concurrently` en `refresh_sales_fallback_owner_candidates()` no hace refresh concurrente real. Medido en `pm_intelligence_test`: el refresh tarda ~5 s con 546,520 ventas, así que el refresh concurrente no es necesario por ahora. Reevaluar si el tiempo crece; si se cambia, hacerlo en una migración nueva, no editando la 035.

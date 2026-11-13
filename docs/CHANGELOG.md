@@ -1,3 +1,11 @@
+# 0.57.0-SEC-001
+
+- Restricts Data Center imports (`POST /api/data/*/import`, `/api/data/*/imports/*`, `/api/data/targets/import`) and `POST /api/data/exchange-rates` to team-wide users (`scope = 'all'`) with write access through the new `requireDataImportAccess` middleware (audit finding S2). PMs keep creating and editing actions.
+- Lets read-only roles use Sales segmentation: `POST /api/data/sales/analytics/*` (summary, group-by, filter-options, detail-rows) no longer requires write access (audit finding S3). The Sales router still applies authentication, user loading and brand scope validation.
+- Adds `isReadOnlyDataPost` to identify read-only POST routes under `/api/data`.
+- Adds automated coverage for `requireDataImportAccess` and `isReadOnlyDataPost`.
+- Backend only; no migrations. Confirms production build, lint and 768 automated tests without errors.
+
 # 0.57.0-SQL-002
 
 - Adds a SQL analytics diagnostics script and service to migrate Sales Workspace segmentation from the in-memory Business Data Model to PostgreSQL.

@@ -1,4 +1,7 @@
-import { requireWriteAccess } from './middleware/requireWriteAccess.js'
+import {
+  isReadOnlyDataPost,
+  requireDataImportAccess,
+} from './middleware/requireWriteAccess.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { loadAuthenticatedUser } from './middleware/loadAuthenticatedUser.js'
 import { createActionsRouter } from './routes/actions.js'
@@ -9,7 +12,7 @@ export function registerBusinessRoutes(app, pool) {
   const authenticatedUser =
     loadAuthenticatedUser(pool)
 
-  // Register before existing /api/data routers so read-only roles cannot import.
+  // Register before existing /api/data routers so only team-wide writers can import.
   app.use(
     '/api/data',
     (req, res, next) => {
@@ -21,6 +24,11 @@ export function registerBusinessRoutes(app, pool) {
         return next()
       }
 
+      // Sales analytics routers apply auth and brand scope themselves.
+      if (isReadOnlyDataPost(req)) {
+        return next()
+      }
+
       return requireAuth(
         req,
         res,
@@ -29,7 +37,7 @@ export function registerBusinessRoutes(app, pool) {
             req,
             res,
             () =>
-              requireWriteAccess(
+              requireDataImportAccess(
                 req,
                 res,
                 next,
