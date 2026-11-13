@@ -37,6 +37,10 @@ function buildUser(
       role === 'admin' ||
       role === 'manager' ||
       role === 'pm',
+    costAccess:
+      role === 'admin' ||
+      role === 'manager' ||
+      role === 'pm',
     brandIds: [],
   }
 }

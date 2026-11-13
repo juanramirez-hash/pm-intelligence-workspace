@@ -538,11 +538,30 @@ const [
       }
     }
 
+  // The server keeps at least one active administrator; this only
+  // confirms that an administrator means to remove their own access.
+  const confirmOwnAdminRemoval = (
+    user: SettingsUser,
+  ): boolean =>
+    Number(currentUser.id) !==
+      Number(user.id) ||
+    user.role !== 'admin' ||
+    window.confirm(
+      'Vas a quitarte permisos de administrador. ¿Continuar?',
+    )
+
   const handleRoleChange =
     async (
       user: SettingsUser,
       nextRole: SettingsUserRole,
     ) => {
+      if (
+        nextRole !== 'admin' &&
+        !confirmOwnAdminRemoval(user)
+      ) {
+        return
+      }
+
       try {
         setSavingUserId(user.id)
         setError(null)
@@ -584,6 +603,13 @@ const [
     async (
       user: SettingsUser,
     ) => {
+      if (
+        user.active &&
+        !confirmOwnAdminRemoval(user)
+      ) {
+        return
+      }
+
       try {
         setSavingUserId(user.id)
         setError(null)
@@ -1401,6 +1427,7 @@ function RolesSettings() {
     changes: {
       scope?: SettingsRoleScope
       writeAccess?: boolean
+      costAccess?: boolean
       active?: boolean
     },
   ) => {
@@ -1514,6 +1541,9 @@ function RolesSettings() {
                     Escritura
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                    Ver costos
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">
                     Estado
                   </th>
                 </tr>
@@ -1543,6 +1573,15 @@ function RolesSettings() {
                         <p className="mt-1 text-[11px] uppercase text-slate-400">
                           {role.role_key}
                         </p>
+
+                        {role.role_key ===
+                          'admin' && (
+                          <p className="mt-1 text-xs font-medium text-violet-700">
+                            El rol Administrador
+                            siempre conserva acceso
+                            total
+                          </p>
+                        )}
                       </td>
 
                       <td className="px-6 py-4">
@@ -1607,6 +1646,35 @@ function RolesSettings() {
                           {role.write_access
                             ? 'Lectura y escritura'
                             : 'Solo lectura'}
+                        </button>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          disabled={
+                            isSaving ||
+                            protectedRole
+                          }
+                          onClick={() =>
+                            void handleUpdateRole(
+                              role,
+                              {
+                                costAccess:
+                                  !role.cost_access,
+                              },
+                            )
+                          }
+                          className={[
+                            'rounded-full px-3 py-1.5 text-xs font-semibold disabled:opacity-50',
+                            role.cost_access
+                              ? 'bg-violet-50 text-violet-700'
+                              : 'bg-slate-100 text-slate-500',
+                          ].join(' ')}
+                        >
+                          {role.cost_access
+                            ? 'Ve costos'
+                            : 'Sin costos'}
                         </button>
                       </td>
 

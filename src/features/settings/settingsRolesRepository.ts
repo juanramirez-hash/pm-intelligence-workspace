@@ -10,6 +10,7 @@ export interface SettingsRole {
   description: string | null
   scope: SettingsRoleScope
   write_access: boolean
+  cost_access: boolean
   active: boolean
   system_role: boolean
   created_at: string
@@ -21,6 +22,7 @@ export interface UpdateSettingsRoleInput {
   description?: string | null
   scope?: SettingsRoleScope
   writeAccess?: boolean
+  costAccess?: boolean
   active?: boolean
 }
 

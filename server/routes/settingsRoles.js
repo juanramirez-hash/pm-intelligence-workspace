@@ -12,6 +12,13 @@ const ALLOWED_SCOPES =
 
 const ADMIN_ROLE_KEY = 'admin'
 
+// [request field, app_roles column]
+const SYSTEM_ROLE_PROTECTED_FIELDS = [
+  ['scope', 'scope'],
+  ['writeAccess', 'write_access'],
+  ['active', 'active'],
+]
+
 export function createSettingsRolesRouter(
   pool,
 ) {
@@ -279,6 +286,62 @@ export function createSettingsRolesRouter(
               error:
                 'No valid changes provided',
             })
+        }
+
+        // System roles keep scope, write access and status (same rule as the UI).
+        const protectedChanges =
+          SYSTEM_ROLE_PROTECTED_FIELDS.filter(
+            ([field]) =>
+              Object.hasOwn(
+                req.body ?? {},
+                field,
+              ),
+          )
+
+        if (protectedChanges.length > 0) {
+          const currentResult =
+            await pool.query(
+              `
+                SELECT
+                  scope,
+                  write_access,
+                  active,
+                  system_role
+                FROM app_roles
+                WHERE role_key = $1
+              `,
+              [roleKey],
+            )
+
+          const current =
+            currentResult.rows[0]
+
+          if (!current) {
+            return res
+              .status(404)
+              .json({
+                ok: false,
+                error:
+                  'Role not found',
+              })
+          }
+
+          if (
+            current.system_role === true &&
+            protectedChanges.some(
+              ([field, column]) =>
+                req.body[field] !==
+                current[column],
+            )
+          ) {
+            return res
+              .status(400)
+              .json({
+                ok: false,
+                error:
+                  'System roles keep their scope, write access and status',
+              })
+          }
         }
 
         values.push(roleKey)

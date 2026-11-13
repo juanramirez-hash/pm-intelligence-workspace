@@ -26,6 +26,7 @@ function buildUser(): AuthenticatedUser {
     roleName: 'Product Manager',
     scope: 'assigned',
     writeAccess: true,
+    costAccess: true,
     brandIds: [
       'ALTER',
       'MIKROTIK',

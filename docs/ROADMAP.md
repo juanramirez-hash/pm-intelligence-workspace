@@ -267,7 +267,8 @@ SEC-002 atiende el hallazgo S4 de la auditoría. Después del cambio, `npm audit
 | Entrega | Alcance | Estado |
 |---|---|---|
 | SEC-003A (S1) | Visibilidad de costos por rol y marca en el backend: columna `app_roles.cost_access` (migración 037), costos ocultos en pricing, inventario, productos y órdenes de compra fuera del alcance del usuario, ETag con el alcance de costos y `cost_access` editable en Settings (API) | Implementado · pendiente de validación funcional y despliegue |
-| SEC-003B | Interfaz de Settings para `cost_access` | Pendiente |
+| SEC-003B | Interfaz de Settings para `cost_access` y protección del rol admin | Ver sección SEC-003B |
+| SEC-003C | Costos en NULL en builders, engines, pantallas y exportaciones | Ver sección SEC-003C |
 
 SEC-003A atiende el hallazgo S1 de la auditoría. Decisiones de negocio:
 
@@ -287,16 +288,43 @@ Qué cambia en `GET /api/data/*`:
 
 Despliegue: aplicar la migración 037 **antes** de reiniciar el backend; sin la columna, todas las rutas autenticadas responden 500. Para revertir, primero volver al código anterior y después aplicar el rollback de la 037. Verificación en `pm_intelligence_test` con `server/scripts/sec003aVerification.sql` (solo lectura).
 
+## Seguridad — SEC-003B
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| SEC-003B | Protección del rol admin y de los administradores activos, columna "Ver costos" en Settings y alcance de costos en el frontend | Implementado · pendiente de validación funcional y despliegue |
+
+- `PATCH /api/settings/roles/:roleKey`: en los roles de sistema (`system_role`: admin y analyst) rechaza con 400 cualquier cambio de alcance, escritura o estado, igual que ya lo bloquea la interfaz. El rol admin conserva `cost_access` (SEC-003A).
+- `PATCH /api/settings/users/:id`: usa el mismo patrón transaccional del DELETE. Bloquea con `FOR UPDATE`, en orden de id, a quien hace el cambio, al usuario modificado y a todos los admins activos, y vuelve a verificar que quien hace el cambio siga siendo admin activo. Si el cambio le quita el rol admin o desactiva al último admin activo, responde 409 "Debe quedar al menos un administrador activo". Un admin puede degradarse a sí mismo si queda otro; su sesión refleja el cambio en la siguiente petición.
+- Settings > Roles: columna "Ver costos" que envía `costAccess`. En el rol admin, los controles quedan deshabilitados con la nota "El rol Administrador siempre conserva acceso total".
+- Settings > Usuarios: confirmación "Vas a quitarte permisos de administrador. ¿Continuar?" antes de que un admin cambie su propio rol o se deshabilite.
+- Frontend: `costAccess` en `AuthenticatedUser`, `resolveCostVisibility` (espejo de `resolveCostScope`) y `normalizeBrandKey` en `src/features/auth/brandAccess.ts`, con prueba de paridad contra el servidor (incluido el alias STREAMAX).
+- Sin migraciones.
+
+## Seguridad — SEC-003C
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| SEC-003C | Manejo de costos en NULL en builders, engines, pantallas y exportaciones | Pendiente |
+
+Hoy el NULL de costos se convierte en 0 en `buildBusinessInventory`, `buildBusinessPurchaseOrders`, `purchasingAnalytics` y el resumen de inventario del Data Center, así que Inventory, Forecast, Purchasing, el Data Center y las exportaciones muestran $0 para costos ocultos. Decisiones para SEC-003C:
+
+- Los valores de costo pasan a `number | null` en builders y engines. Los totales suman solo los valores presentes y cuentan los faltantes; si falta todo, el total es NULL. La UI solo lo representa.
+- Presentación: sin acceso a costos, "Sin acceso a costo". Con alcance `assigned`, los totales que mezclan marcas dicen "Valor de tus marcas" (o la etiqueta equivalente). Un NULL de una marca fuera de alcance muestra "Sin acceso a costo"; un NULL de una marca permitida muestra "Sin dato". Nunca $0.
+- Concentración de valor y `valueWeight` en riesgos de inventario: se calculan solo entre las posiciones con valor, con la suma de los valores presentes como denominador. Con alcance `assigned`, la explicación dice "sobre el valor de tus marcas". Si no hay ningún valor, no se calcula y todos quedan en +0. Con datos completos (admin) el resultado debe ser idéntico al actual, con una prueba que lo demuestre.
+- Los campos de costo de Product master (`averageCostUsd`, `totalValue`, `inventoryValueMxn`, `inventoryValueUsd`) no se muestran en ninguna pantalla ni exportación; no requieren cambios.
+
 ## Pendientes de seguridad
 
 - Indicadores derivados del monto en órdenes de compra: `value_classification`, `value_score` y `amount_classification` siguen visibles para todos los roles. Revisar si revelan el costo.
-- Roles de sistema en Settings: `PATCH /api/settings/roles/:roleKey` no protege los roles de sistema (`system_role`). Hoy se le puede quitar `write_access` o `active` al rol admin. SEC-003A solo protege `cost_access` del rol admin.
 
 ## Pendientes técnicos
 
 - SQL-002: `p_concurrently` en `refresh_sales_fallback_owner_candidates()` no hace refresh concurrente real. Medido en `pm_intelligence_test`: el refresh tarda ~5 s con 546,520 ventas, así que el refresh concurrente no es necesario por ahora. Reevaluar si el tiempo crece; si se cambia, hacerlo en una migración nueva, no editando la 035.
 
 ## Pendientes de calidad de datos
+
+- **Prioridad alta:** Purchasing suma amountForeignCurrency de distintas monedas y lo presenta como USD.
 
 - STREAMAX aparece con dos nombres de marca en ventas: `MERIVA TECHNOLOGY - STREAMAX` (hasta 2025) y `STREAMAX - MERIVA` (desde 2026). Ambos resuelven al mismo `brand_id`, pero generan claves de marca (`scope_brand_key`) distintas; por eso 8 `base_id` aparecen dos veces en `sales_fallback_owner_candidates`.
 

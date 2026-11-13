@@ -258,6 +258,9 @@ export function createSettingsUsersRouter(
   router.patch(
     '/:id',
     async (req, res) => {
+      let client
+      let inTransaction = false
+
       try {
         const userId =
           Number(req.params.id)
@@ -374,8 +377,131 @@ export function createSettingsUsersRouter(
 
         values.push(userId)
 
+        const actorId =
+          Number(req.authUser?.id)
+
+        if (
+          !Number.isSafeInteger(actorId) ||
+          actorId <= 0
+        ) {
+          return res
+            .status(401)
+            .json({
+              ok: false,
+              error:
+                'Debes iniciar sesión.',
+            })
+        }
+
+        client =
+          await pool.connect()
+        await client.query('BEGIN')
+        inTransaction = true
+
+        // Lock, in a stable order, the actor, the target and every active
+        // administrator, so two administrators cannot demote each other at
+        // the same time and leave none.
+        const lockedResult =
+          await client.query(
+            `
+              SELECT id, role, active
+              FROM app_users
+              WHERE
+                id = ANY($1::BIGINT[])
+                OR (
+                  role = 'admin'
+                  AND active = TRUE
+                )
+              ORDER BY id
+              FOR UPDATE
+            `,
+            [[actorId, userId]],
+          )
+
+        const actor =
+          lockedResult.rows.find(
+            (user) =>
+              Number(user.id) === actorId,
+          )
+        const target =
+          lockedResult.rows.find(
+            (user) =>
+              Number(user.id) === userId,
+          )
+
+        if (
+          !actor ||
+          actor.active !== true ||
+          actor.role !== 'admin'
+        ) {
+          await client.query('ROLLBACK')
+          inTransaction = false
+
+          return res
+            .status(403)
+            .json({
+              ok: false,
+              error:
+                'Tu cuenta ya no tiene permisos de administrador activo.',
+            })
+        }
+
+        if (!target) {
+          await client.query('ROLLBACK')
+          inTransaction = false
+
+          return res
+            .status(404)
+            .json({
+              ok: false,
+              error:
+                'User not found',
+            })
+        }
+
+        const removesActiveAdmin =
+          target.role === 'admin' &&
+          target.active === true &&
+          (
+            (
+              Object.hasOwn(
+                req.body,
+                'role',
+              ) &&
+              req.body.role !== 'admin'
+            ) ||
+            (
+              Object.hasOwn(
+                req.body,
+                'active',
+              ) &&
+              req.body.active === false
+            )
+          )
+
+        if (
+          removesActiveAdmin &&
+          !lockedResult.rows.some(
+            (user) =>
+              Number(user.id) !== userId &&
+              user.role === 'admin' &&
+              user.active === true,
+          )
+        ) {
+          await client.query('ROLLBACK')
+          inTransaction = false
+
+          return res
+            .status(409)
+            .json({
+              ok: false,
+              error:
+                'Debe quedar al menos un administrador activo',
+            })
+        }
+
         const result =
-          await pool.query(
+          await client.query(
             `
               UPDATE app_users
               SET
@@ -394,23 +520,25 @@ export function createSettingsUsersRouter(
             values,
           )
 
-        if (
-          result.rows.length === 0
-        ) {
-          return res
-            .status(404)
-            .json({
-              ok: false,
-              error:
-                'User not found',
-            })
-        }
+        await client.query('COMMIT')
+        inTransaction = false
 
         return res.json({
           ok: true,
           user: result.rows[0],
         })
       } catch (error) {
+        if (client && inTransaction) {
+          try {
+            await client.query('ROLLBACK')
+          } catch (rollbackError) {
+            console.error(
+              'User update rollback failed:',
+              rollbackError,
+            )
+          }
+        }
+
         console.error(
           'Settings user update failed:',
           error,
@@ -423,6 +551,8 @@ export function createSettingsUsersRouter(
             error:
               'Settings user update failed',
           })
+      } finally {
+        client?.release()
       }
     },
   )

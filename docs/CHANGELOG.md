@@ -1,3 +1,12 @@
+# 0.57.0-SEC-003B
+
+- Rejects (400) any change of scope, write access or status on system roles (admin and analyst) in `PATCH /api/settings/roles/:roleKey`, matching what the Settings UI already blocks.
+- Makes `PATCH /api/settings/users/:id` transactional like the DELETE: locks the acting user, the target user and every active administrator with `FOR UPDATE` in id order, rechecks that the acting user is still an active administrator (403), and returns 409 "Debe quedar al menos un administrador activo" when the change would demote or deactivate the last active administrator. Administrators can demote themselves while another one remains.
+- Adds the "Ver costos" column to Settings > Roles, sending `costAccess`; admin controls stay disabled with the note "El rol Administrador siempre conserva acceso total".
+- Asks "Vas a quitarte permisos de administrador. ¿Continuar?" before an administrator changes their own role or disables their own account.
+- Adds `costAccess` to `AuthenticatedUser` and `resolveCostVisibility` / `normalizeBrandKey` to the frontend brand access helpers, with a parity test against the server normalizer (including the STREAMAX alias).
+- Adds automated coverage for system role protection, active administrator protection and frontend cost visibility. No migrations.
+
 # 0.57.0-SEC-003A
 
 - Adds `app_roles.cost_access` (migration `037`, with rollback): admin, manager and pm see costs; engineering does not (audit finding S1).

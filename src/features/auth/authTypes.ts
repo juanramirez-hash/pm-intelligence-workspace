@@ -26,5 +26,7 @@ export interface AuthenticatedUser {
 
   writeAccess: boolean
 
+  costAccess: boolean
+
   brandIds: string[]
 }
