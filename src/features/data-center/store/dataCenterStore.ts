@@ -82,9 +82,6 @@ import {
 } from '../importers/customers/customerMasterBusinessModel'
 
 import {
-  runDataCenterImport,
-} from '../services/importService'
-import {
   indexedDbDataRepository,
 } from '../repositories/indexedDbDataRepository'
 
@@ -351,7 +348,7 @@ setNormalizedCustomerMaster: (
     metadata: FileMetadata,
     selectedReportType?: ReportType,
     importScope?: 'full-periods' | 'partial',
-  ) => DataCenterImportResult | null
+  ) => Promise<DataCenterImportResult | null>
 
   hydratePersistedData:
     () => Promise<void>
@@ -715,7 +712,7 @@ export const useDataCenterStore =
             rows,
         }),
 
-      executeImport: (
+      executeImport: async (
         rows,
         metadata,
         selectedReportType,
@@ -735,6 +732,13 @@ export const useDataCenterStore =
         })
 
         try {
+          // Load importers on demand so xlsx stays out of the initial bundle.
+          const {
+            runDataCenterImport,
+          } = await import(
+            '../services/importService'
+          )
+
           const result =
             runDataCenterImport(
               rows,

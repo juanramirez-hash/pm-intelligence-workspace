@@ -47,9 +47,9 @@ Reglas de despliegue:
 Stack de referencia (verificar versiones exactas en `package.json`):
 
 - React 19, React Router 7, Vite 8, TypeScript 6
-- Zustand 5, TanStack Query 5
+- Zustand 5
 - HeroUI 3, Tailwind 4
-- XLSX (importación de archivos), idb (IndexedDB)
+- XLSX (SheetJS 0.20.3 desde `cdn.sheetjs.com`, fuera del registro de npm: `npm audit` no lo revisa; importación de archivos), idb (IndexedDB)
 - Vitest (pruebas), oxlint (lint)
 
 Backend (`server/`, paquete propio con su `package.json`):

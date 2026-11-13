@@ -244,10 +244,23 @@ SQL-002 persiste los dueños de respaldo de productos en la vista materializada 
 
 | Entrega | Alcance | Estado |
 |---|---|---|
-| SEC-001 (S2) | Importaciones del Data Center (`POST /api/data/*/import`, `/imports/*`, `targets/import` y `POST /api/data/exchange-rates`) limitadas a roles con alcance total (`scope = 'all'`) y escritura (`requireDataImportAccess`) | Implementado · pendiente de validación funcional y despliegue |
-| SEC-001 (S3) | `POST /api/data/sales/analytics/*` (summary, group-by, filter-options, detail-rows) deja de exigir escritura: los roles de solo lectura (engineering) ya pueden usar la segmentación de ventas | Implementado · pendiente de validación funcional y despliegue |
+| SEC-001 (S2) | Importaciones del Data Center (`POST /api/data/*/import`, `/imports/*`, `targets/import` y `POST /api/data/exchange-rates`) limitadas a roles con alcance total (`scope = 'all'`) y escritura (`requireDataImportAccess`) | Desplegado y validado en producción el 12 nov 2026 |
+| SEC-001 (S3) | `POST /api/data/sales/analytics/*` (summary, group-by, filter-options, detail-rows) deja de exigir escritura: los roles de solo lectura (engineering) ya pueden usar la segmentación de ventas | Desplegado y validado en producción el 12 nov 2026 |
 
 SEC-001 atiende los hallazgos S2 y S3 de la auditoría. Solo backend y sin migraciones. Los PMs (`scope = 'assigned'`) conservan la creación y edición de acciones (`requireWriteAccess` en `/api/actions` sin cambios), pero ya no pueden importar ni reemplazar datos. La analítica de ventas sigue protegida por `requireAuth`, `loadAuthenticatedUser` y la validación de alcance y marcas de su propio router.
+
+## Seguridad — SEC-002
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| SEC-002 (S4) | Dependencias vulnerables: se quitan `axios` y `@tanstack/react-query` (sin uso), `npm audit fix` en raíz y `server/`, y `xlsx` 0.18.5 se sustituye por SheetJS 0.20.3 desde `cdn.sheetjs.com` | Implementado · pendiente de validación funcional y despliegue |
+
+SEC-002 atiende el hallazgo S4 de la auditoría. Después del cambio, `npm audit --omit=dev` reporta 0 vulnerabilidades en la raíz y en `server/` (proxy-addr, body-parser y qs corregidos en `server/`). Sin migraciones.
+
+- Bundle: rolldown 1.2 (vite 8.3) junta en `index` el código que se carga al arrancar, y eso metió `xlsx` en el bundle inicial. `executeImport` en el store del Data Center ahora carga `importService` bajo demanda, así que `xlsx` (492 kB) queda en su propio chunk y solo se descarga al importar o exportar. El JS al arrancar baja a 482 kB.
+
+- `xlsx` se instala desde el tarball oficial de SheetJS, no desde el registro de npm: `npm audit` y `npm outdated` ya no lo revisan, así que sus actualizaciones se siguen a mano en `cdn.sheetjs.com`.
+- Despliegue: cambian `package-lock.json` en la raíz y en `server/`, así que hace falta `npm ci` en ambos. El servidor de producción necesita acceso a `cdn.sheetjs.com` para instalar `xlsx`.
 
 ## Pendientes técnicos
 

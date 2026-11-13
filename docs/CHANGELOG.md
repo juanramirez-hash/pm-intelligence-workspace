@@ -1,3 +1,12 @@
+# 0.57.0-SEC-002
+
+- Removes unused `axios` and `@tanstack/react-query` dependencies (audit finding S4); this also drops the vulnerable `follow-redirects`.
+- Replaces `xlsx` 0.18.5 (npm, no fix available) with the official SheetJS 0.20.3 tarball from `cdn.sheetjs.com`.
+- Applies `npm audit fix` in the root (vite 8.3.8, react-router 7.18.5, vitest 4.1.12, postcss 8.5.32, nanoid 3.3.20, source-map-js 1.2.2) and in `server/` (proxy-addr 2.0.8, body-parser 2.4.0, qs 6.17.1).
+- `npm audit --omit=dev` reports 0 vulnerabilities in the root and in `server/`.
+- Loads `importService` on demand in the Data Center store (`executeImport` is now async) so `xlsx` (492 kB) stays out of the initial bundle; startup JS drops to 482 kB.
+- No migrations; deploy requires `npm ci` in the root and in `server/`. Confirms production build, lint and 768 automated tests without errors.
+
 # 0.57.0-SEC-001
 
 - Restricts Data Center imports (`POST /api/data/*/import`, `/api/data/*/imports/*`, `/api/data/targets/import`) and `POST /api/data/exchange-rates` to team-wide users (`scope = 'all'`) with write access through the new `requireDataImportAccess` middleware (audit finding S2). PMs keep creating and editing actions.
