@@ -7,6 +7,11 @@ import type {
   ProductCommercialStatus,
 } from '../../../core/business/entities/product'
 
+import {
+  addCostValue,
+  finalizeCostTotal,
+} from '../../../core/business/analytics/costValues'
+
 export type InventoryReplacementStatus =
   | 'both'
   | 'superseded_only'
@@ -36,7 +41,8 @@ export interface InventoryCatalogSummary {
   supersededWithoutDirectSubstitute: number
   supersededOnHand: number
   supersededAvailable: number
-  supersededInventoryValue: number
+  supersededInventoryValue: number | null
+  supersededProductsWithoutValue: number
 }
 
 export interface InventoryProductCatalogResolver {
@@ -268,7 +274,7 @@ export function buildInventoryCatalogSummary(
       directSubstitute: string | null
       onHand: number
       available: number
-      inventoryValue: number
+      inventoryValue: number | null
     }
   >()
 
@@ -282,12 +288,15 @@ export function buildInventoryCatalogSummary(
       directSubstitute: position.directSubstitute,
       onHand: 0,
       available: 0,
-      inventoryValue: 0,
+      inventoryValue: null,
     }
 
     current.onHand += position.onHand
     current.available += position.available
-    current.inventoryValue += position.inventoryValue
+    current.inventoryValue = addCostValue(
+      current.inventoryValue,
+      position.inventoryValue,
+    )
     products.set(key, current)
   }
 
@@ -300,7 +309,8 @@ export function buildInventoryCatalogSummary(
     supersededWithoutDirectSubstitute: 0,
     supersededOnHand: 0,
     supersededAvailable: 0,
-    supersededInventoryValue: 0,
+    supersededInventoryValue: null,
+    supersededProductsWithoutValue: 0,
   }
 
   for (const product of products.values()) {
@@ -314,7 +324,12 @@ export function buildInventoryCatalogSummary(
       summary.productsWithSuperseded += 1
       summary.supersededOnHand += product.onHand
       summary.supersededAvailable += product.available
-      summary.supersededInventoryValue += product.inventoryValue
+      summary.supersededInventoryValue = addCostValue(
+        summary.supersededInventoryValue,
+        product.inventoryValue,
+      )
+      summary.supersededProductsWithoutValue +=
+        product.inventoryValue === null ? 1 : 0
     }
 
     if (product.directSubstitute) {
@@ -329,6 +344,11 @@ export function buildInventoryCatalogSummary(
       summary.supersededWithoutDirectSubstitute += 1
     }
   }
+
+  summary.supersededInventoryValue = finalizeCostTotal(
+    summary.supersededInventoryValue,
+    summary.productsWithSuperseded,
+  )
 
   return summary
 }

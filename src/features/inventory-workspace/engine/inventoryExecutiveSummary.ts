@@ -16,6 +16,15 @@ import type {
   InventoryWorkspaceFilters,
 } from './inventoryWorkspaceModel'
 
+import type {
+  CostVisibility,
+} from '../../auth/brandAccess'
+
+import {
+  costTotalLabel,
+  formatCostTotal,
+} from '../../auth/costPresentation'
+
 export type InventoryExecutiveFindingTone =
   | 'positive'
   | 'warning'
@@ -43,6 +52,8 @@ export interface InventoryExecutiveSummaryInput {
   risks: readonly InventoryRiskSignal[]
   opportunities: readonly InventoryOpportunitySignal[]
   filters: InventoryWorkspaceFilters
+  // Defaults to every cost visible (SEC-003C).
+  costVisibility?: CostVisibility
 }
 
 const replacementFilterLabels = {
@@ -125,6 +136,20 @@ function findingTone(
   return positiveWhenFalse ? 'positive' : 'neutral'
 }
 
+// NULL when the amount cannot be shown; assigned users read "de tus marcas".
+function describeCostAmount(
+  value: number | null,
+  visibility: CostVisibility,
+): string | null {
+  if (visibility.mode === 'none' || value === null) {
+    return null
+  }
+
+  return visibility.mode === 'assigned'
+    ? `${formatCurrency(value)} de tus marcas`
+    : formatCurrency(value)
+}
+
 export function buildInventoryExecutiveSummary(
   input: InventoryExecutiveSummaryInput,
 ): InventoryExecutiveSummary {
@@ -134,6 +159,7 @@ export function buildInventoryExecutiveSummary(
     risks,
     opportunities,
     filters,
+    costVisibility = { mode: 'all' },
   } = input
   const totals = analytics.totals
   const catalog = buildInventoryCatalogSummary(positions)
@@ -151,9 +177,22 @@ export function buildInventoryExecutiveSummary(
   )
   const snapshotLabel = analytics.snapshotDate ?? 'corte actual sin fecha'
 
+  const inventoryValueText = describeCostAmount(
+    totals.inventoryValue,
+    costVisibility,
+  )
+  const supersededValueText = describeCostAmount(
+    catalog.supersededInventoryValue,
+    costVisibility,
+  )
+
   const overviewParts = [
-    `El ${snapshotLabel} concentra ${formatCurrency(totals.inventoryValue)}`,
-    `en ${formatNumber(totals.positions)} posiciones,`,
+    inventoryValueText === null
+      ? `El ${snapshotLabel} registra`
+      : `El ${snapshotLabel} concentra ${inventoryValueText}`,
+    inventoryValueText === null
+      ? `${formatNumber(totals.positions)} posiciones,`
+      : `en ${formatNumber(totals.positions)} posiciones,`,
     `${formatNumber(totals.products)} productos y`,
     `${formatNumber(totals.locations)} ubicaciones.`,
     `La disponibilidad representa ${formatPercentage(totals.availableRate)}`,
@@ -162,7 +201,9 @@ export function buildInventoryExecutiveSummary(
 
   if (catalog.productsWithSuperseded > 0) {
     overviewParts.push(
-      `${catalog.productsWithSuperseded} productos con inventario están marcados como Superseded y concentran ${formatCurrency(catalog.supersededInventoryValue)}.`,
+      supersededValueText === null
+        ? `${catalog.productsWithSuperseded} productos con inventario están marcados como Superseded.`
+        : `${catalog.productsWithSuperseded} productos con inventario están marcados como Superseded y concentran ${supersededValueText}.`,
     )
   }
 
@@ -235,8 +276,16 @@ export function buildInventoryExecutiveSummary(
         tone: findingTone(totals.unresolvedProducts > 0, true),
       },
       {
-        label: 'Inventario Superseded',
-        value: formatCurrency(catalog.supersededInventoryValue),
+        label: costTotalLabel(
+          'Inventario Superseded',
+          'Inventario Superseded de tus marcas',
+          costVisibility,
+        ),
+        value: formatCostTotal(
+          catalog.supersededInventoryValue,
+          costVisibility,
+          formatCurrency,
+        ),
         detail: `${catalog.productsWithSuperseded} productos · ${formatNumber(catalog.supersededOnHand)} unidades físicas · ${formatNumber(catalog.supersededAvailable)} disponibles.`,
         tone: catalog.productsWithSuperseded > 0 ? 'warning' : 'positive',
       },

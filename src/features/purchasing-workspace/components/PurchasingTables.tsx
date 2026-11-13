@@ -10,6 +10,18 @@ import type {
   PurchasingAnalyticsGroup,
 } from '../../../core/business/analytics/purchasing'
 
+import type {
+  CostVisibility,
+} from '../../auth/brandAccess'
+
+import {
+  MISSING_COST_LABEL,
+  NO_COST_ACCESS_LABEL,
+  canSeeBrandCost,
+  formatCostTotal,
+  formatCostValue,
+} from '../../auth/costPresentation'
+
 function formatCurrency(
   value: number,
 ): string {
@@ -44,6 +56,37 @@ function formatDate(
   return value.slice(0, 10)
 }
 
+// An order can mix brands: lines outside the user's brands have no amount.
+function formatOrderAmount(
+  order: BusinessPurchaseOrder,
+  costVisibility: CostVisibility,
+): string {
+  if (order.amountForeignCurrency === null) {
+    return [...order.brandIds].some(
+      (brandId) =>
+        canSeeBrandCost(
+          costVisibility,
+          brandId,
+        ),
+    )
+      ? MISSING_COST_LABEL
+      : NO_COST_ACCESS_LABEL
+  }
+
+  const amount =
+    formatCurrency(
+      order.amountForeignCurrency,
+    )
+
+  if (order.linesWithoutAmount === 0) {
+    return amount
+  }
+
+  return costVisibility.mode === 'assigned'
+    ? `${amount} · Parcial (tus marcas)`
+    : `${amount} · Parcial`
+}
+
 interface PurchasingRankingTableProps {
   groups:
     readonly PurchasingAnalyticsGroup[]
@@ -52,11 +95,19 @@ interface PurchasingRankingTableProps {
       group:
         PurchasingAnalyticsGroup,
     ) => void
+  costVisibility:
+    CostVisibility
+  // Brand rows show "Sin dato" or "Sin acceso a costo" by brand; other
+  // rows can mix brands.
+  groupsAreBrands:
+    boolean
 }
 
 export function PurchasingRankingTable({
   groups,
   onSelect,
+  costVisibility,
+  groupsAreBrands,
 }: PurchasingRankingTableProps) {
   if (groups.length === 0) {
     return (
@@ -98,7 +149,18 @@ export function PurchasingRankingTable({
               <td className="px-3 py-3 text-right text-slate-700">{group.purchaseOrders}</td>
               <td className="px-3 py-3 text-right text-slate-700">{group.purchaseRequests}</td>
               <td className="px-3 py-3 text-right text-slate-700">{formatNumber(group.orderedQuantity)}</td>
-              <td className="px-3 py-3 text-right font-semibold text-slate-900">{formatCurrency(group.orderedAmountForeignCurrency)}</td>
+              <td className="px-3 py-3 text-right font-semibold text-slate-900">{groupsAreBrands
+                ? formatCostValue(
+                    group.orderedAmountForeignCurrency,
+                    costVisibility,
+                    group.key,
+                    formatCurrency,
+                  )
+                : formatCostTotal(
+                    group.orderedAmountForeignCurrency,
+                    costVisibility,
+                    formatCurrency,
+                  )}</td>
               <td className="px-3 py-3 text-right text-rose-600">{group.overduePurchaseOrders}</td>
             </tr>
           ))}
@@ -111,10 +173,13 @@ export function PurchasingRankingTable({
 interface PurchaseOrderTableProps {
   orders:
     readonly BusinessPurchaseOrder[]
+  costVisibility:
+    CostVisibility
 }
 
 export function PurchaseOrderTable({
   orders,
+  costVisibility,
 }: PurchaseOrderTableProps) {
   if (orders.length === 0) {
     return (
@@ -149,7 +214,7 @@ export function PurchaseOrderTable({
               <td className="px-3 py-3 text-slate-600">{formatDate(order.purchaseOrderDate)}</td>
               <td className="px-3 py-3 text-slate-600">{formatDate(order.expectedReceiptDate)}</td>
               <td className="px-3 py-3 text-right text-slate-700">{formatNumber(order.quantity)}</td>
-              <td className="px-3 py-3 text-right font-semibold text-slate-900">{formatCurrency(order.amountForeignCurrency)}</td>
+              <td className="px-3 py-3 text-right font-semibold text-slate-900">{formatOrderAmount(order, costVisibility)}</td>
             </tr>
           ))}
         </tbody>

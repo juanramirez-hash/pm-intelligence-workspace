@@ -68,6 +68,7 @@ const analytics: InventoryAnalyticsReport = {
     inTransit: 3,
     onOrder: 4,
     inventoryValue: 1000,
+    positionsWithoutValue: 0,
     availableRate: 0.8,
     committedRate: 0.2,
     inboundUnits: 7,
@@ -86,6 +87,7 @@ const analytics: InventoryAnalyticsReport = {
       inTransit: 3,
       onOrder: 4,
       inventoryValue: 1000,
+      positionsWithoutValue: 0,
       valueShare: 1,
       availableRate: 0.8,
     },
@@ -97,6 +99,7 @@ const analytics: InventoryAnalyticsReport = {
       positions: 1,
       products: 1,
       inventoryValue: 1000,
+      positionsWithoutValue: 0,
       valueShare: 1,
     },
   ],
@@ -177,5 +180,38 @@ describe('IW-006 Inventory executive export', () => {
       8,
       1000,
     ])
+  })
+
+  it('incluye la nota de alcance de costos cuando se limita (SEC-003C)', () => {
+    const filters = DEFAULT_INVENTORY_WORKSPACE_FILTERS
+    const costVisibility = { mode: 'none' } as const
+    const summary = buildInventoryExecutiveSummary({
+      analytics,
+      positions: [position],
+      risks,
+      opportunities,
+      filters,
+      costVisibility,
+    })
+
+    const payload = buildInventoryExecutiveExport(
+      {
+        analytics,
+        positions: [position],
+        risks,
+        opportunities,
+        filters,
+        summary,
+        costNote:
+          'Este usuario no tiene acceso a costos; las columnas de valor aparecen vacías.',
+      },
+      new Date('2026-07-31T12:00:00.000Z'),
+    )
+
+    expect(payload.sheets[0].rows).toContainEqual([
+      'Alcance de costos',
+      'Este usuario no tiene acceso a costos; las columnas de valor aparecen vacías.',
+    ])
+    expect(summary.overview).not.toContain('$')
   })
 })

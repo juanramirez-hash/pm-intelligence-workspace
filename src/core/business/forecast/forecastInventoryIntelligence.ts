@@ -37,6 +37,12 @@ import type {
   ForecastReplacementContext,
 } from './forecastInventoryContracts'
 
+import {
+  addCostValue,
+  compareCostDescending,
+  finalizeCostTotal,
+} from '../analytics/costValues'
+
 const METHODOLOGY_VERSION = 'forecast-inventory-v1' as const
 
 interface InventoryAggregate {
@@ -49,7 +55,7 @@ interface InventoryAggregate {
   inTransit: number
   onOrder: number
   inbound: number
-  inventoryValue: number
+  inventoryValue: number | null
 }
 
 const EMPTY_INVENTORY: InventoryAggregate = {
@@ -146,8 +152,12 @@ function aggregatePositions(
       onOrder: result.onOrder + position.onOrder,
       inbound:
         result.inbound + position.inTransit + position.onOrder,
-      inventoryValue:
-        result.inventoryValue + position.inventoryValue,
+      // The first position starts the value: products without positions
+      // keep 0, positions without value keep NULL (SEC-003C).
+      inventoryValue: addCostValue(
+        result.positions === 0 ? null : result.inventoryValue,
+        position.inventoryValue,
+      ),
     }),
     { ...EMPTY_INVENTORY },
   )
@@ -759,7 +769,10 @@ function buildInventoryProfile(
     inTransit: roundValue(aggregate.inTransit),
     onOrder: roundValue(aggregate.onOrder),
     inbound: roundValue(aggregate.inbound),
-    inventoryValue: roundValue(aggregate.inventoryValue),
+    inventoryValue:
+      aggregate.inventoryValue === null
+        ? null
+        : roundValue(aggregate.inventoryValue),
     availableAfterRemainingDemand:
       remaining === null
         ? null
@@ -1032,8 +1045,10 @@ export class ForecastInventoryIntelligenceEngine {
       .sort(
         (left, right) =>
           right.score - left.score ||
-          right.inventory.inventoryValue -
-            left.inventory.inventoryValue ||
+          compareCostDescending(
+            left.inventory.inventoryValue,
+            right.inventory.inventoryValue,
+          ) ||
           left.productName.localeCompare(right.productName),
       )
 
@@ -1047,14 +1062,18 @@ export class ForecastInventoryIntelligenceEngine {
       null
     const dataCutoff = productProjections[0]?.dataCutoff ??
       this.model.periodEnd
-    const affectedInventoryValue = items
+    const riskItems = items
       .filter((item) => item.signals.some(
         (signal) => signal.category === 'risk',
       ))
-      .reduce(
-        (total, item) => total + item.inventory.inventoryValue,
-        0,
-      )
+    const affectedInventoryValue = finalizeCostTotal(
+      riskItems.reduce<number | null>(
+        (total, item) =>
+          addCostValue(total, item.inventory.inventoryValue),
+        null,
+      ),
+      riskItems.length,
+    )
 
     return {
       generatedAt: new Date().toISOString(),
@@ -1102,9 +1121,10 @@ export class ForecastInventoryIntelligenceEngine {
           items,
           'replacement-recovery',
         ),
-        affectedInventoryValue: roundValue(
-          affectedInventoryValue,
-        ),
+        affectedInventoryValue:
+          affectedInventoryValue === null
+            ? null
+            : roundValue(affectedInventoryValue),
       },
       quality,
       items,

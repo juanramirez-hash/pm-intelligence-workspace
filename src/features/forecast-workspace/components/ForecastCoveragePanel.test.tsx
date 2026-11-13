@@ -27,6 +27,7 @@ describe('FW-005 ForecastCoveragePanel', () => {
           availableUnits: 100,
           inboundUnits: 25,
           inventoryValue: 200_000,
+          productsWithoutValue: 0,
           expectedDemandUnits: 80,
           remainingDemandUnits: 40,
           projectedAvailableAfterDemand: 60,
@@ -34,6 +35,7 @@ describe('FW-005 ForecastCoveragePanel', () => {
           supersededInventoryProducts: 1,
           replacementRecoveries: 1,
           affectedInventoryValue: 50_000,
+          affectedProductsWithoutValue: 0,
           coverage: {
             unavailable: 0,
             noDemand: 2,

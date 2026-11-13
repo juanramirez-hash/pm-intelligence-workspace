@@ -1,3 +1,12 @@
+# 0.57.0-SEC-003C
+
+- Keeps hidden or missing costs as NULL from the builders to the screens: inventory position and snapshot values, purchase order amounts, inventory analytics, inventory risks and opportunities, the inventory catalog summary, purchasing analytics, forecast inventory intelligence, the Forecast Workspace summary and the Data Center inventory summary.
+- Totals add only the present values, count the missing ones and are NULL only when every value is missing; with complete data every result is unchanged (no-regression test against a baseline generated with the previous code).
+- Computes inventory value concentration and its score weight only over positions with value; positions without value add +0, and the concentration risk is skipped when no value is present.
+- Shows "Sin acceso a costo" for costs outside the user's scope, "Sin dato" for missing costs of visible brands and "Valor de tus marcas" / "Monto de tus marcas" for mixed-brand totals of assigned users in Inventory, Forecast, Purchasing and the Data Center; a NULL cost is never shown as $0.
+- Adds the cost scope note to the Inventory and Forecast Excel exports and leaves hidden values empty.
+- Reloads the page when an administrator removes their own administrator role or disables their own account in Settings.
+
 # 0.57.0-SEC-003B
 
 - Rejects (400) any change of scope, write access or status on system roles (admin and analyst) in `PATCH /api/settings/roles/:roleKey`, matching what the Settings UI already blocks.

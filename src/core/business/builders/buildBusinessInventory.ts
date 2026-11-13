@@ -14,6 +14,11 @@ import type {
   BusinessInventorySnapshot,
 } from '../entities/inventorySnapshot'
 
+import {
+  addCostValue,
+  toCostValue,
+} from '../analytics/costValues'
+
 export interface BusinessInventoryBuildResult {
   positions: Map<string, BusinessInventoryPosition>
   snapshots: Map<string, BusinessInventorySnapshot>
@@ -67,7 +72,7 @@ function createSnapshot(
     committed: 0,
     inTransit: 0,
     onOrder: 0,
-    inventoryValue: 0,
+    inventoryValue: null,
   }
 }
 
@@ -121,7 +126,7 @@ export function buildBusinessInventory(
         inTransit: 0,
         onOrder: 0,
         unitCost: row.unitCost,
-        inventoryValue: 0,
+        inventoryValue: null,
         currency: normalizeIdentifier(row.currency),
         sourceRows: 0,
       }
@@ -134,7 +139,10 @@ export function buildBusinessInventory(
     position.committed += finite(row.committed)
     position.inTransit += finite(row.inTransit)
     position.onOrder += finite(row.onOrder)
-    position.inventoryValue += finite(row.inventoryValue)
+    position.inventoryValue = addCostValue(
+      position.inventoryValue,
+      toCostValue(row.inventoryValue),
+    )
     position.sourceRows += 1
 
     if (position.unitCost === null && row.unitCost !== null) {
@@ -158,7 +166,10 @@ export function buildBusinessInventory(
     snapshot.committed += position.committed
     snapshot.inTransit += position.inTransit
     snapshot.onOrder += position.onOrder
-    snapshot.inventoryValue += position.inventoryValue
+    snapshot.inventoryValue = addCostValue(
+      snapshot.inventoryValue,
+      position.inventoryValue,
+    )
 
     if (position.productId) {
       snapshot.products.add(position.productId)

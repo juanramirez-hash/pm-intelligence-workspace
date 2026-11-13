@@ -11,6 +11,12 @@ import {
   isClosedPurchaseOrderStatus,
 } from './purchaseOrderStatus'
 
+import {
+  addCostValue,
+  compareCostDescending,
+  finalizeCostTotal,
+} from '../costValues'
+
 export type PurchasingAgingBucket =
   | 'current'
   | '1_7_days'
@@ -39,7 +45,8 @@ export interface PurchasingAnalyticsTotals {
   purchaseRequestsWithPurchaseOrder: number
 
   orderedQuantity: number
-  orderedAmountForeignCurrency: number
+  orderedAmountForeignCurrency: number | null
+  linesWithoutAmount: number
   requestedQuantity: number
 
   suppliers: number
@@ -60,7 +67,8 @@ export interface PurchasingAnalyticsGroup {
   purchaseRequests: number
 
   orderedQuantity: number
-  orderedAmountForeignCurrency: number
+  orderedAmountForeignCurrency: number | null
+  linesWithoutAmount: number
   requestedQuantity: number
 
   overduePurchaseOrders: number
@@ -71,13 +79,15 @@ export interface PurchasingStatusSummary {
   status: string
   purchaseOrders: number
   purchaseRequests: number
-  orderedAmountForeignCurrency: number
+  orderedAmountForeignCurrency: number | null
+  linesWithoutAmount: number
 }
 
 export interface PurchasingAgingSummary {
   bucket: PurchasingAgingBucket
   purchaseOrders: number
-  orderedAmountForeignCurrency: number
+  orderedAmountForeignCurrency: number | null
+  linesWithoutAmount: number
 }
 
 export interface PurchasingLinkageSummary {
@@ -124,7 +134,8 @@ interface MutableGroup {
   purchaseRequestIds: Set<string>
 
   orderedQuantity: number
-  orderedAmountForeignCurrency: number
+  orderedAmountForeignCurrency: number | null
+  linesWithoutAmount: number
   requestedQuantity: number
 
   overduePurchaseOrderIds: Set<string>
@@ -134,12 +145,14 @@ interface MutableGroup {
 interface MutableStatusSummary {
   purchaseOrderIds: Set<string>
   purchaseRequestIds: Set<string>
-  orderedAmountForeignCurrency: number
+  orderedAmountForeignCurrency: number | null
+  linesWithoutAmount: number
 }
 
 interface MutableAgingSummary {
   purchaseOrderIds: Set<string>
-  orderedAmountForeignCurrency: number
+  orderedAmountForeignCurrency: number | null
+  linesWithoutAmount: number
 }
 
 const AGING_BUCKET_ORDER: readonly PurchasingAgingBucket[] = [
@@ -338,7 +351,8 @@ function getOrCreateGroup(
       new Set<string>(),
 
     orderedQuantity: 0,
-    orderedAmountForeignCurrency: 0,
+    orderedAmountForeignCurrency: null,
+    linesWithoutAmount: 0,
     requestedQuantity: 0,
 
     overduePurchaseOrderIds:
@@ -412,8 +426,16 @@ function registerLineInGroup(
   group.orderedQuantity +=
     line.quantity ?? 0
 
-  group.orderedAmountForeignCurrency +=
-    line.amountForeignCurrency ?? 0
+  group.orderedAmountForeignCurrency =
+    addCostValue(
+      group.orderedAmountForeignCurrency,
+      line.amountForeignCurrency,
+    )
+
+  group.linesWithoutAmount +=
+    line.amountForeignCurrency === null
+      ? 1
+      : 0
 }
 
 function registerRequestInGroup(
@@ -476,7 +498,12 @@ function finalizeGroups(
         orderedQuantity:
           group.orderedQuantity,
         orderedAmountForeignCurrency:
-          group.orderedAmountForeignCurrency,
+          finalizeCostTotal(
+            group.orderedAmountForeignCurrency,
+            group.purchaseOrderLineIds.size,
+          ),
+        linesWithoutAmount:
+          group.linesWithoutAmount,
         requestedQuantity:
           group.requestedQuantity,
 
@@ -488,10 +515,10 @@ function finalizeGroups(
     )
     .sort(
       (left, right) =>
-        right
-          .orderedAmountForeignCurrency -
-          left
-            .orderedAmountForeignCurrency ||
+        compareCostDescending(
+          left.orderedAmountForeignCurrency,
+          right.orderedAmountForeignCurrency,
+        ) ||
         right.purchaseOrders -
           left.purchaseOrders ||
         left.label.localeCompare(
@@ -773,7 +800,8 @@ export function buildPurchasingAnalytics(
         purchaseRequestIds:
           new Set<string>(),
         orderedAmountForeignCurrency:
-          0,
+          null,
+        linesWithoutAmount: 0,
       }
 
     statusSummary
@@ -781,8 +809,16 @@ export function buildPurchasingAnalytics(
       .add(order.id)
 
     statusSummary
-      .orderedAmountForeignCurrency +=
-      order.amountForeignCurrency
+      .orderedAmountForeignCurrency =
+      addCostValue(
+        statusSummary
+          .orderedAmountForeignCurrency,
+        order.amountForeignCurrency,
+      )
+
+    statusSummary
+      .linesWithoutAmount +=
+      order.linesWithoutAmount
 
     statusGroups.set(
       statusKey,
@@ -802,7 +838,8 @@ export function buildPurchasingAnalytics(
         purchaseOrderIds:
           new Set<string>(),
         orderedAmountForeignCurrency:
-          0,
+          null,
+        linesWithoutAmount: 0,
       }
 
     agingSummary
@@ -810,8 +847,16 @@ export function buildPurchasingAnalytics(
       .add(order.id)
 
     agingSummary
-      .orderedAmountForeignCurrency +=
-      order.amountForeignCurrency
+      .orderedAmountForeignCurrency =
+      addCostValue(
+        agingSummary
+          .orderedAmountForeignCurrency,
+        order.amountForeignCurrency,
+      )
+
+    agingSummary
+      .linesWithoutAmount +=
+      order.linesWithoutAmount
 
     agingGroups.set(
       agingBucket,
@@ -820,14 +865,23 @@ export function buildPurchasingAnalytics(
   }
 
   let orderedQuantity = 0
-  let orderedAmountForeignCurrency = 0
+  let orderedAmountForeignCurrency: number | null = null
+  let linesWithoutAmount = 0
 
   for (const line of input.lines) {
     orderedQuantity +=
       line.quantity ?? 0
 
-    orderedAmountForeignCurrency +=
-      line.amountForeignCurrency ?? 0
+    orderedAmountForeignCurrency =
+      addCostValue(
+        orderedAmountForeignCurrency,
+        line.amountForeignCurrency,
+      )
+
+    linesWithoutAmount +=
+      line.amountForeignCurrency === null
+        ? 1
+        : 0
 
     const order =
       ordersByNumber.get(
@@ -1024,7 +1078,8 @@ export function buildPurchasingAnalytics(
         purchaseRequestIds:
           new Set<string>(),
         orderedAmountForeignCurrency:
-          0,
+          null,
+        linesWithoutAmount: 0,
       }
 
     statusSummary
@@ -1058,7 +1113,12 @@ export function buildPurchasingAnalytics(
       linkedToPurchaseOrder,
 
     orderedQuantity,
-    orderedAmountForeignCurrency,
+    orderedAmountForeignCurrency:
+      finalizeCostTotal(
+        orderedAmountForeignCurrency,
+        input.lines.length,
+      ),
+    linesWithoutAmount,
     requestedQuantity,
 
     suppliers:
@@ -1121,8 +1181,17 @@ export function buildPurchasingAnalytics(
               .size,
 
           orderedAmountForeignCurrency:
+            finalizeCostTotal(
+              summary
+                .orderedAmountForeignCurrency,
+              summary
+                .purchaseOrderIds
+                .size,
+            ),
+
+          linesWithoutAmount:
             summary
-              .orderedAmountForeignCurrency,
+              .linesWithoutAmount,
         }),
       )
       .sort(
@@ -1152,7 +1221,18 @@ export function buildPurchasingAnalytics(
 
           orderedAmountForeignCurrency:
             summary
-              ?.orderedAmountForeignCurrency ??
+              ? finalizeCostTotal(
+                  summary
+                    .orderedAmountForeignCurrency,
+                  summary
+                    .purchaseOrderIds
+                    .size,
+                )
+              : 0,
+
+          linesWithoutAmount:
+            summary
+              ?.linesWithoutAmount ??
             0,
         }
       },

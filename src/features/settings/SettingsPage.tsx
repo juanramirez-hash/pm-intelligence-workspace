@@ -550,6 +550,24 @@ const [
       'Vas a quitarte permisos de administrador. ¿Continuar?',
     )
 
+  // The session user is loaded once by AppShell: reload so the interface
+  // reflects an administrator who removed their own access.
+  const reloadIfOwnAdminRemoved = (
+    updated: SettingsUser,
+  ): void => {
+    if (
+      currentUser.role === 'admin' &&
+      Number(currentUser.id) ===
+        Number(updated.id) &&
+      (
+        updated.role !== 'admin' ||
+        !updated.active
+      )
+    ) {
+      window.location.reload()
+    }
+  }
+
   const handleRoleChange =
     async (
       user: SettingsUser,
@@ -588,6 +606,8 @@ const [
         setSuccessMessage(
           `Rol actualizado para ${updated.email}.`,
         )
+
+        reloadIfOwnAdminRemoved(updated)
       } catch (updateError) {
         setError(
           updateError instanceof Error
@@ -638,6 +658,8 @@ const [
             ? `Acceso habilitado para ${updated.email}.`
             : `Acceso deshabilitado para ${updated.email}.`,
         )
+
+        reloadIfOwnAdminRemoved(updated)
       } catch (updateError) {
         setError(
           updateError instanceof Error

@@ -42,6 +42,7 @@ function purchaseOrder(
     department: null,
 
     amountForeignCurrency: 1000,
+    linesWithoutAmount: 0,
     quantity: 10,
     lineCount: 1,
     duplicateSourceLines: 0,

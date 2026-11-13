@@ -55,6 +55,16 @@ import {
 } from '../components/PurchasingTables'
 
 import {
+  costTotalLabel,
+  describeMissingCosts,
+  formatCostTotal,
+} from '../../auth/costPresentation'
+
+import {
+  useCostVisibility,
+} from '../../auth/useCostVisibility'
+
+import {
   PurchasingInventorySummary,
 } from '../components/PurchasingInventorySummary'
 
@@ -122,6 +132,9 @@ const agingLabels:
 export function PurchasingWorkspacePage() {
   const workspace =
     usePurchasingWorkspace()
+
+  const costVisibility =
+    useCostVisibility()
 
   const [
     dimension,
@@ -261,11 +274,26 @@ export function PurchasingWorkspacePage() {
         >
           <KpiCard
             icon={BadgeDollarSign}
-            subtitle={`${totals.purchaseOrders} órdenes · ${totals.purchaseOrderLines} líneas`}
-            title="Monto ordenado"
+            subtitle={[
+              `${totals.purchaseOrders} órdenes · ${totals.purchaseOrderLines} líneas`,
+              costVisibility.mode === 'none'
+                ? null
+                : describeMissingCosts(
+                    totals.linesWithoutAmount,
+                    'línea',
+                    'líneas',
+                  ),
+            ].filter(Boolean).join(' · ')}
+            title={costTotalLabel(
+              'Monto ordenado',
+              'Monto de tus marcas',
+              costVisibility,
+            )}
             tone="blue"
-            value={formatCurrency(
+            value={formatCostTotal(
               totals.orderedAmountForeignCurrency,
+              costVisibility,
+              formatCurrency,
             )}
           />
 
@@ -561,6 +589,10 @@ export function PurchasingWorkspacePage() {
             tone="blue"
           >
             <PurchasingRankingTable
+              costVisibility={costVisibility}
+              groupsAreBrands={
+                dimension === 'brand'
+              }
               groups={
                 dimensionGroups.slice(
                   0,
@@ -654,8 +686,10 @@ export function PurchasingWorkspacePage() {
 
                       <p className="text-sm font-semibold text-slate-900">
                         {
-                          formatCurrency(
+                          formatCostTotal(
                             summary.orderedAmountForeignCurrency,
+                            costVisibility,
+                            formatCurrency,
                           )
                         }
                       </p>
@@ -698,6 +732,7 @@ export function PurchasingWorkspacePage() {
             tone="emerald"
           >
             <PurchaseOrderTable
+              costVisibility={costVisibility}
               orders={
                 filteredOrders.slice(
                   0,

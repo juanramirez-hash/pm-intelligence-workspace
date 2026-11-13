@@ -14,9 +14,18 @@ import {
   formatForecastInteger,
 } from '../utils/forecastWorkspaceFormatters'
 
+import type {
+  CostVisibility,
+} from '../../auth/brandAccess'
+
+import {
+  formatCostValue,
+} from '../../auth/costPresentation'
+
 export interface ForecastPriorityListProps {
   items: readonly ForecastWorkspacePriorityItem[]
   kind: 'risk' | 'opportunity'
+  costVisibility?: CostVisibility
 }
 
 const priorityStyles: Record<string, string> = {
@@ -36,6 +45,7 @@ const priorityLabels: Record<string, string> = {
 export function ForecastPriorityList({
   items,
   kind,
+  costVisibility = { mode: 'all' },
 }: ForecastPriorityListProps) {
   if (items.length === 0) {
     return (
@@ -131,7 +141,12 @@ export function ForecastPriorityList({
             <div className="rounded-xl border border-slate-100 p-2.5">
               <p className="text-slate-500">Valor de inventario</p>
               <p className="mt-1 font-semibold text-slate-900">
-                {formatForecastCurrency(item.inventoryValue, true)}
+                {formatCostValue(
+                  item.inventoryValue,
+                  costVisibility,
+                  item.brandId,
+                  (value) => formatForecastCurrency(value, true),
+                )}
               </p>
             </div>
           </div>

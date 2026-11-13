@@ -305,14 +305,23 @@ Despliegue: aplicar la migración 037 **antes** de reiniciar el backend; sin la 
 
 | Entrega | Alcance | Estado |
 |---|---|---|
-| SEC-003C | Manejo de costos en NULL en builders, engines, pantallas y exportaciones | Pendiente |
+| SEC-003C | Manejo de costos en NULL en builders, engines, pantallas y exportaciones | Implementado · pendiente de validación funcional y despliegue |
 
-Hoy el NULL de costos se convierte en 0 en `buildBusinessInventory`, `buildBusinessPurchaseOrders`, `purchasingAnalytics` y el resumen de inventario del Data Center, así que Inventory, Forecast, Purchasing, el Data Center y las exportaciones muestran $0 para costos ocultos. Decisiones para SEC-003C:
+Antes de SEC-003C el NULL de costos se convertía en 0 en `buildBusinessInventory`, `buildBusinessPurchaseOrders`, `purchasingAnalytics` y el resumen de inventario del Data Center, así que Inventory, Forecast, Purchasing, el Data Center y las exportaciones mostraban $0 para costos ocultos. Decisiones de SEC-003C:
 
 - Los valores de costo pasan a `number | null` en builders y engines. Los totales suman solo los valores presentes y cuentan los faltantes; si falta todo, el total es NULL. La UI solo lo representa.
 - Presentación: sin acceso a costos, "Sin acceso a costo". Con alcance `assigned`, los totales que mezclan marcas dicen "Valor de tus marcas" (o la etiqueta equivalente). Un NULL de una marca fuera de alcance muestra "Sin acceso a costo"; un NULL de una marca permitida muestra "Sin dato". Nunca $0.
 - Concentración de valor y `valueWeight` en riesgos de inventario: se calculan solo entre las posiciones con valor, con la suma de los valores presentes como denominador. Con alcance `assigned`, la explicación dice "sobre el valor de tus marcas". Si no hay ningún valor, no se calcula y todos quedan en +0. Con datos completos (admin) el resultado debe ser idéntico al actual, con una prueba que lo demuestre.
 - Los campos de costo de Product master (`averageCostUsd`, `totalValue`, `inventoryValueMxn`, `inventoryValueUsd`) no se muestran en ninguna pantalla ni exportación; no requieren cambios.
+
+Implementación:
+
+- Reglas de suma en `src/core/business/analytics/costValues.ts`: los totales suman solo los valores presentes, cuentan los faltantes (`positionsWithoutValue`, `productsWithoutValue`, `linesWithoutAmount`, `rowsWithoutValue`) y quedan en NULL solo si falta todo; un conjunto vacío sigue en 0. Los NULL van al final de los rankings por valor.
+- Presentación en `src/features/auth/costPresentation.ts` y `useCostVisibility`: "Sin acceso a costo", "Sin dato", etiquetas "de tus marcas" y las notas de alcance de las exportaciones de Inventory y Forecast.
+- Una PO con líneas de varias marcas muestra el monto de las líneas visibles como "Parcial (tus marcas)".
+- Settings > Usuarios recarga la página cuando un admin se quita el rol o se deshabilita, para que la interfaz refleje el cambio de inmediato.
+- No regresión: `tests/services/sec003cNoRegression.test.ts` compara, con datos completos, inventario (totales, grupos, estados, participaciones), riesgos y oportunidades, catálogo, compras, forecast (Valor de inventario, Valor afectado y rankings) y el resumen del Data Center contra una línea base generada con el código anterior a SEC-003C.
+- Executive Workspace, las colas de atención y Pulse no leen estos valores; no cambian.
 
 ## Pendientes de seguridad
 

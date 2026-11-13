@@ -15,6 +15,17 @@ import type {
   InventoryRiskSignal,
 } from '../../../core/business/analytics/inventory'
 
+import type {
+  CostVisibility,
+} from '../../auth/brandAccess'
+
+import {
+  ASSIGNED_VALUE_CONCENTRATION_NOTE,
+  formatCostShare,
+  formatCostTotal,
+  formatCostValue,
+} from '../../auth/costPresentation'
+
 function formatCurrency(value: number): string {
   return value.toLocaleString('es-MX', {
     style: 'currency',
@@ -83,9 +94,15 @@ const priorityStyles = {
 export function InventoryRankingTable({
   groups,
   onSelect,
+  costVisibility,
+  groupsAreBrands,
 }: {
   groups: readonly InventoryAnalyticsGroup[]
   onSelect: (group: InventoryAnalyticsGroup) => void
+  costVisibility: CostVisibility
+  // Brand rows show "Sin dato" or "Sin acceso a costo" by brand; other
+  // rows can mix brands.
+  groupsAreBrands: boolean
 }) {
   return (
     <div className="overflow-x-auto">
@@ -123,10 +140,25 @@ export function InventoryRankingTable({
                 {formatNumber(group.inTransit + group.onOrder)}
               </td>
               <td className="px-3 py-4 text-right font-semibold text-slate-900">
-                {formatCurrency(group.inventoryValue)}
+                {groupsAreBrands
+                  ? formatCostValue(
+                      group.inventoryValue,
+                      costVisibility,
+                      group.key,
+                      formatCurrency,
+                    )
+                  : formatCostTotal(
+                      group.inventoryValue,
+                      costVisibility,
+                      formatCurrency,
+                    )}
               </td>
               <td className="px-3 py-4 text-right text-slate-700">
-                {(group.valueShare * 100).toFixed(1)}%
+                {formatCostShare(
+                  group.valueShare,
+                  costVisibility,
+                  (share) => `${(share * 100).toFixed(1)}%`,
+                )}
               </td>
             </tr>
           ))}
@@ -138,8 +170,10 @@ export function InventoryRankingTable({
 
 export function InventoryRiskList({
   risks,
+  costVisibility,
 }: {
   risks: readonly InventoryRiskSignal[]
+  costVisibility: CostVisibility
 }) {
   if (risks.length === 0) {
     return <EmptyState label="No hay riesgos con los filtros actuales." />
@@ -162,6 +196,9 @@ export function InventoryRiskList({
                 <p className="mt-1 text-sm text-slate-600">{risk.title}</p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                   {risk.rationale}
+                  {risk.type === 'value_concentration' &&
+                    costVisibility.mode === 'assigned' &&
+                    ` ${ASSIGNED_VALUE_CONCENTRATION_NOTE}`}
                 </p>
                 <p className="mt-2 text-xs font-medium text-slate-400">
                   {risk.brandId ?? 'Sin marca'} · {risk.locationId ?? 'Sin ubicación'}
@@ -234,8 +271,10 @@ export function InventoryOpportunityList({
 
 export function InventoryPositionTable({
   positions,
+  costVisibility,
 }: {
   positions: readonly InventoryWorkspacePosition[]
+  costVisibility: CostVisibility
 }) {
   return (
     <div className="overflow-x-auto">
@@ -303,7 +342,12 @@ export function InventoryPositionTable({
                 {formatNumber(position.inTransit + position.onOrder)}
               </td>
               <td className="px-3 py-4 text-right font-semibold text-slate-900">
-                {formatCurrency(position.inventoryValue)}
+                {formatCostValue(
+                  position.inventoryValue,
+                  costVisibility,
+                  position.brandId,
+                  formatCurrency,
+                )}
               </td>
             </tr>
           ))}

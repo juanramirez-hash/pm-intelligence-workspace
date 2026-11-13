@@ -39,6 +39,8 @@ export interface ForecastExecutiveExportPayload {
 export interface ForecastExecutiveExportInput {
   workspace: ForecastWorkspaceModel
   summary: ForecastExecutiveSummary
+  // Shown in the summary sheet when costs are limited (SEC-003C).
+  costNote?: string | null
 }
 
 const scenarioLabels: Record<ForecastScenarioId, string> = {
@@ -134,6 +136,9 @@ function summaryRows(
     ['Corte de inventario', workspace.period.snapshotDate ?? 'Sin corte'],
     ['Generado', generatedAt.toISOString()],
     ['Filtros', summary.filterContext],
+    ...(input.costNote
+      ? [['Alcance de costos', input.costNote]]
+      : []),
     [],
     ['Resumen ejecutivo'],
     [summary.overview],

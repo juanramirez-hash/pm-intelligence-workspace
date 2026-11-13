@@ -36,6 +36,7 @@ const analytics: InventoryAnalyticsReport = {
     inTransit: 3,
     onOrder: 4,
     inventoryValue: 1000,
+    positionsWithoutValue: 0,
     availableRate: 0.8,
     committedRate: 0.2,
     inboundUnits: 7,

@@ -34,7 +34,9 @@ export interface InventoryDatasetSummary {
   totalCommitted: number
   totalInTransit: number
   totalOnOrder: number
-  totalInventoryValue: number
+  // NULL when no row has value (no cost access, SEC-003C).
+  totalInventoryValue: number | null
+  rowsWithoutValue: number
 
   negativeStockRows: number
   duplicatePositions: number

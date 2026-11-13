@@ -1,6 +1,12 @@
 import type {
   BusinessInventoryPosition,
 } from '../../entities/inventoryPosition'
+import {
+  addCostValue,
+  compareCostDescending,
+  costShare,
+  finalizeCostTotal,
+} from '../costValues'
 
 export type InventoryStockStatus =
   | 'available'
@@ -21,7 +27,8 @@ export interface InventoryAnalyticsTotals {
   committed: number
   inTransit: number
   onOrder: number
-  inventoryValue: number
+  inventoryValue: number | null
+  positionsWithoutValue: number
 
   availableRate: number
   committedRate: number
@@ -40,9 +47,10 @@ export interface InventoryAnalyticsGroup {
   committed: number
   inTransit: number
   onOrder: number
-  inventoryValue: number
+  inventoryValue: number | null
+  positionsWithoutValue: number
 
-  valueShare: number
+  valueShare: number | null
   availableRate: number
 }
 
@@ -50,8 +58,9 @@ export interface InventoryStockStatusSummary {
   status: InventoryStockStatus
   positions: number
   products: number
-  inventoryValue: number
-  valueShare: number
+  inventoryValue: number | null
+  positionsWithoutValue: number
+  valueShare: number | null
 }
 
 export interface InventoryAnalyticsReport {
@@ -75,13 +84,15 @@ interface MutableGroup {
   committed: number
   inTransit: number
   onOrder: number
-  inventoryValue: number
+  inventoryValue: number | null
+  positionsWithoutValue: number
 }
 
 interface MutableStatus {
   positions: number
   products: Set<string>
-  inventoryValue: number
+  inventoryValue: number | null
+  positionsWithoutValue: number
 }
 
 function safeRatio(numerator: number, denominator: number): number {
@@ -141,7 +152,8 @@ function registerGroup(
       committed: 0,
       inTransit: 0,
       onOrder: 0,
-      inventoryValue: 0,
+      inventoryValue: null,
+      positionsWithoutValue: 0,
     }
 
     groups.set(key, group)
@@ -155,12 +167,17 @@ function registerGroup(
   group.committed += position.committed
   group.inTransit += position.inTransit
   group.onOrder += position.onOrder
-  group.inventoryValue += position.inventoryValue
+  group.inventoryValue = addCostValue(
+    group.inventoryValue,
+    position.inventoryValue,
+  )
+  group.positionsWithoutValue +=
+    position.inventoryValue === null ? 1 : 0
 }
 
 function finalizeGroups(
   groups: Map<string, MutableGroup>,
-  totalInventoryValue: number,
+  totalInventoryValue: number | null,
 ): InventoryAnalyticsGroup[] {
   return [...groups.values()]
     .map((group) => ({
@@ -175,7 +192,8 @@ function finalizeGroups(
       inTransit: group.inTransit,
       onOrder: group.onOrder,
       inventoryValue: group.inventoryValue,
-      valueShare: safeRatio(
+      positionsWithoutValue: group.positionsWithoutValue,
+      valueShare: costShare(
         group.inventoryValue,
         totalInventoryValue,
       ),
@@ -183,7 +201,10 @@ function finalizeGroups(
     }))
     .sort(
       (left, right) =>
-        right.inventoryValue - left.inventoryValue ||
+        compareCostDescending(
+          left.inventoryValue,
+          right.inventoryValue,
+        ) ||
         right.onHand - left.onHand ||
         left.label.localeCompare(right.label),
     )
@@ -211,7 +232,8 @@ export function buildInventoryAnalytics(
     committed: 0,
     inTransit: 0,
     onOrder: 0,
-    inventoryValue: 0,
+    inventoryValue: null,
+    positionsWithoutValue: 0,
     availableRate: 0,
     committedRate: 0,
     inboundUnits: 0,
@@ -239,7 +261,12 @@ export function buildInventoryAnalytics(
     totals.committed += position.committed
     totals.inTransit += position.inTransit
     totals.onOrder += position.onOrder
-    totals.inventoryValue += position.inventoryValue
+    totals.inventoryValue = addCostValue(
+      totals.inventoryValue,
+      position.inventoryValue,
+    )
+    totals.positionsWithoutValue +=
+      position.inventoryValue === null ? 1 : 0
 
     registerGroup(brandGroups, brandId, brandId, position)
     registerGroup(
@@ -259,12 +286,18 @@ export function buildInventoryAnalytics(
     const currentStatus = statuses.get(status) ?? {
       positions: 0,
       products: new Set<string>(),
-      inventoryValue: 0,
+      inventoryValue: null,
+      positionsWithoutValue: 0,
     }
 
     currentStatus.positions += 1
     currentStatus.products.add(identity)
-    currentStatus.inventoryValue += position.inventoryValue
+    currentStatus.inventoryValue = addCostValue(
+      currentStatus.inventoryValue,
+      position.inventoryValue,
+    )
+    currentStatus.positionsWithoutValue +=
+      position.inventoryValue === null ? 1 : 0
     statuses.set(status, currentStatus)
   }
 
@@ -274,6 +307,10 @@ export function buildInventoryAnalytics(
   totals.availableRate = safeRatio(totals.available, totals.onHand)
   totals.committedRate = safeRatio(totals.committed, totals.onHand)
   totals.inboundUnits = totals.inTransit + totals.onOrder
+  totals.inventoryValue = finalizeCostTotal(
+    totals.inventoryValue,
+    totals.positions,
+  )
 
   const stockStatus = [...statuses.entries()]
     .map(([status, summary]) => ({
@@ -281,14 +318,18 @@ export function buildInventoryAnalytics(
       positions: summary.positions,
       products: summary.products.size,
       inventoryValue: summary.inventoryValue,
-      valueShare: safeRatio(
+      positionsWithoutValue: summary.positionsWithoutValue,
+      valueShare: costShare(
         summary.inventoryValue,
         totals.inventoryValue,
       ),
     }))
     .sort(
       (left, right) =>
-        right.inventoryValue - left.inventoryValue ||
+        compareCostDescending(
+          left.inventoryValue,
+          right.inventoryValue,
+        ) ||
         right.positions - left.positions ||
         left.status.localeCompare(right.status),
     )

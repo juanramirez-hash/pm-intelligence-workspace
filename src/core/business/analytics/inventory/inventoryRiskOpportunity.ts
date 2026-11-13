@@ -1,6 +1,12 @@
 import type {
   BusinessInventoryPosition,
 } from '../../entities/inventoryPosition'
+import {
+  addCostValue,
+  compareCostDescending,
+  costShare,
+  finalizeCostTotal,
+} from '../costValues'
 
 export type InventoryRiskType =
   | 'negative_stock'
@@ -27,8 +33,10 @@ export interface InventoryRiskEvidence {
   available: number
   committed: number
   inbound: number
-  inventoryValue: number
-  valueShare: number
+  inventoryValue: number | null
+  // Share of the inventory value present in the cut (only positions with
+  // value). NULL when this position has no value.
+  valueShare: number | null
 }
 
 export interface InventoryRiskSignal {
@@ -51,7 +59,7 @@ export interface InventoryOpportunityEvidence {
   surplusUnits: number
   suggestedUnits: number
   inboundUnits: number
-  inventoryValue: number
+  inventoryValue: number | null
 }
 
 export interface InventoryOpportunitySignal {
@@ -78,7 +86,7 @@ export interface InventoryRiskOpportunitySummary {
   transferCandidates: number
   purchaseReviews: number
   affectedProducts: number
-  affectedInventoryValue: number
+  affectedInventoryValue: number | null
 }
 
 export interface InventoryRiskOpportunityReport {
@@ -100,10 +108,6 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)))
 }
 
-function ratio(numerator: number, denominator: number): number {
-  return denominator > 0 ? numerator / denominator : 0
-}
-
 function priorityFromScore(score: number): InventoryActionPriority {
   if (score >= 85) return 'critical'
   if (score >= 65) return 'high'
@@ -121,7 +125,7 @@ function signalId(parts: Array<string | null>): string {
 
 function riskEvidence(
   position: BusinessInventoryPosition,
-  totalValue: number,
+  totalValue: number | null,
 ): InventoryRiskEvidence {
   return {
     onHand: position.onHand,
@@ -129,21 +133,22 @@ function riskEvidence(
     committed: position.committed,
     inbound: position.inTransit + position.onOrder,
     inventoryValue: position.inventoryValue,
-    valueShare: ratio(position.inventoryValue, totalValue),
+    valueShare: costShare(position.inventoryValue, totalValue),
   }
 }
 
 function addPositionRisk(
   risks: InventoryRiskSignal[],
   position: BusinessInventoryPosition,
-  totalValue: number,
+  totalValue: number | null,
   type: InventoryRiskType,
   baseScore: number,
   title: string,
   rationale: string,
 ): void {
   const evidence = riskEvidence(position, totalValue)
-  const valueWeight = Math.min(15, evidence.valueShare * 100)
+  // Positions without value add +0 (SEC-003C).
+  const valueWeight = Math.min(15, (evidence.valueShare ?? 0) * 100)
   const score = clampScore(baseScore + valueWeight)
 
   risks.push({
@@ -392,9 +397,11 @@ export function buildInventoryRiskOpportunityReport(
   const selected = positions.filter(
     (position) => position.snapshotDate === snapshotDate,
   )
-  const totalValue = selected.reduce(
-    (total, position) => total + position.inventoryValue,
-    0,
+  // Only positions with value count: with assigned brands this is the
+  // value of the user's brands; with no value at all it stays NULL.
+  const totalValue = selected.reduce<number | null>(
+    (total, position) => addCostValue(total, position.inventoryValue),
+    null,
   )
   const risks: InventoryRiskSignal[] = []
 
@@ -461,7 +468,7 @@ export function buildInventoryRiskOpportunityReport(
       )
     }
 
-    if (ratio(position.inventoryValue, totalValue) >= 0.2) {
+    if ((costShare(position.inventoryValue, totalValue) ?? 0) >= 0.2) {
       addPositionRisk(
         risks,
         position,
@@ -483,24 +490,38 @@ export function buildInventoryRiskOpportunityReport(
   risks.sort(
     (left, right) =>
       right.score - left.score ||
-      right.evidence.inventoryValue - left.evidence.inventoryValue ||
+      compareCostDescending(
+        left.evidence.inventoryValue,
+        right.evidence.inventoryValue,
+      ) ||
       left.id.localeCompare(right.id),
   )
 
   opportunities.sort(
     (left, right) =>
       right.score - left.score ||
-      right.evidence.inventoryValue - left.evidence.inventoryValue ||
+      compareCostDescending(
+        left.evidence.inventoryValue,
+        right.evidence.inventoryValue,
+      ) ||
       left.id.localeCompare(right.id),
   )
 
   const affectedProducts = new Set<string>()
-  let affectedInventoryValue = 0
+  let affectedInventoryValue: number | null = null
 
   for (const risk of risks) {
     affectedProducts.add(risk.productId ?? risk.productName)
-    affectedInventoryValue += risk.evidence.inventoryValue
+    affectedInventoryValue = addCostValue(
+      affectedInventoryValue,
+      risk.evidence.inventoryValue,
+    )
   }
+
+  affectedInventoryValue = finalizeCostTotal(
+    affectedInventoryValue,
+    risks.length,
+  )
 
   return {
     generatedAt: new Date().toISOString(),

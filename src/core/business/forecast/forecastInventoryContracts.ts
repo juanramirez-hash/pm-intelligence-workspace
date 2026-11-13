@@ -67,7 +67,7 @@ export interface ForecastInventoryProfile {
   inTransit: number
   onOrder: number
   inbound: number
-  inventoryValue: number
+  inventoryValue: number | null
   availableAfterRemainingDemand: number | null
   supplyAfterRemainingDemand: number | null
 }
@@ -152,7 +152,7 @@ export interface ForecastInventoryIntelligenceSummary {
   supersededInventoryProducts: number
   inboundRecoveries: number
   replacementRecoveries: number
-  affectedInventoryValue: number
+  affectedInventoryValue: number | null
 }
 
 export interface ForecastInventoryQualityProfile {

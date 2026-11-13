@@ -242,6 +242,7 @@ function workspaceFixture(): ForecastWorkspaceModel {
       availableUnits: 10,
       inboundUnits: 5,
       inventoryValue: 1_500,
+      productsWithoutValue: 0,
       expectedDemandUnits: 12,
       remainingDemandUnits: 4,
       projectedAvailableAfterDemand: 6,
@@ -249,6 +250,7 @@ function workspaceFixture(): ForecastWorkspaceModel {
       supersededInventoryProducts: 1,
       replacementRecoveries: 1,
       affectedInventoryValue: 500,
+      affectedProductsWithoutValue: 0,
       coverage: {
         unavailable: 0,
         noDemand: 1,
@@ -465,6 +467,24 @@ describe('FW-010 Forecast Executive Export', () => {
     expect(methodologyRows).toContainEqual([
       'Purchasing',
       'Fuente futura opcional; no bloquea Forecast',
+    ])
+  })
+
+  it('incluye la nota de alcance de costos cuando se limita (SEC-003C)', () => {
+    const workspace = workspaceFixture()
+    const payload = buildForecastExecutiveExport(
+      {
+        workspace,
+        summary: buildForecastExecutiveSummary(workspace),
+        costNote:
+          'Valores de costo calculados solo sobre las marcas asignadas al usuario.',
+      },
+      new Date('2026-07-31T18:00:00.000Z'),
+    )
+
+    expect(payload.sheets[0].rows).toContainEqual([
+      'Alcance de costos',
+      'Valores de costo calculados solo sobre las marcas asignadas al usuario.',
     ])
   })
 })

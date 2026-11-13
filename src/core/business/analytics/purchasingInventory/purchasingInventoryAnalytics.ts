@@ -2,6 +2,10 @@ import type {
   BusinessInventoryPosition,
 } from '../../entities/inventoryPosition'
 
+import {
+  addCostValue,
+} from '../costValues'
+
 import type {
   BusinessPurchaseOrderLine,
 } from '../../entities/purchaseOrder'
@@ -34,7 +38,7 @@ export interface PurchasingInventoryItemInventory {
   inTransit: number
   onOrder: number
   inboundUnits: number
-  inventoryValue: number
+  inventoryValue: number | null
 }
 
 export interface PurchasingInventoryItemPurchasing {
@@ -116,7 +120,7 @@ interface MutablePurchasingInventoryItem {
   committed: number
   inTransit: number
   onOrder: number
-  inventoryValue: number
+  inventoryValue: number | null
 
   purchaseOrderLineIds: Set<string>
   openPurchaseOrderLineIds: Set<string>
@@ -395,8 +399,14 @@ function registerInventoryPosition(
   item.onOrder +=
     position.onOrder
 
-  item.inventoryValue +=
-    position.inventoryValue
+  // The first position starts the value; items without positions keep 0.
+  item.inventoryValue =
+    addCostValue(
+      item.inventoryPositionIds.size === 1
+        ? null
+        : item.inventoryValue,
+      position.inventoryValue,
+    )
 }
 
 function registerPurchaseOrderLine(

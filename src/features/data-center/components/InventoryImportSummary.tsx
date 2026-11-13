@@ -10,6 +10,11 @@ import {
 import { AtlasCard } from '../../../atlas/components/AtlasCard'
 import { SectionHeader } from '../../../atlas/layout/SectionHeader'
 import { useDataCenterStore } from '../store/dataCenterStore'
+import {
+  costTotalLabel,
+  formatCostTotal,
+} from '../../auth/costPresentation'
+import { useCostVisibility } from '../../auth/useCostVisibility'
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('es-MX', {
@@ -35,6 +40,7 @@ export function InventoryImportSummary() {
   const summary = useDataCenterStore(
     (state) => state.inventorySummary,
   )
+  const costVisibility = useCostVisibility()
 
   if (
     activeReportType !== 'inventory' ||
@@ -64,8 +70,16 @@ export function InventoryImportSummary() {
       icon: Building2,
     },
     {
-      label: 'Valor',
-      value: formatMoney(summary.totalInventoryValue),
+      label: costTotalLabel(
+        'Valor',
+        'Valor de tus marcas',
+        costVisibility,
+      ),
+      value: formatCostTotal(
+        summary.totalInventoryValue,
+        costVisibility,
+        formatMoney,
+      ),
       detail: `En tránsito: ${formatNumber(summary.totalInTransit)}`,
       icon: WalletCards,
     },

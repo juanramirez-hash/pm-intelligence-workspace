@@ -71,6 +71,18 @@ import {
 } from '../export'
 
 import {
+  costExportNote,
+  costTotalLabel,
+  describeMissingCosts,
+  formatCostShare,
+  formatCostTotal,
+} from '../../auth/costPresentation'
+
+import {
+  useCostVisibility,
+} from '../../auth/useCostVisibility'
+
+import {
   InventoryOpportunityList,
   InventoryPositionTable,
   InventoryRankingTable,
@@ -116,6 +128,7 @@ export function InventoryWorkspacePage() {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const costVisibility = useCostVisibility()
 
   const analytics = workspace.analytics
   const riskOpportunity = workspace.riskOpportunity
@@ -168,6 +181,7 @@ export function InventoryWorkspacePage() {
       risks: filteredRisks,
       opportunities: filteredOpportunities,
       filters,
+      costVisibility,
     }),
     [
       filteredAnalytics,
@@ -175,6 +189,7 @@ export function InventoryWorkspacePage() {
       filteredRisks,
       filteredOpportunities,
       filters,
+      costVisibility,
     ],
   )
 
@@ -204,6 +219,7 @@ export function InventoryWorkspacePage() {
         opportunities: filteredOpportunities,
         filters,
         summary: executiveSummary,
+        costNote: costExportNote(costVisibility),
       })
 
       await downloadInventoryExecutiveExport(payload)
@@ -304,10 +320,27 @@ export function InventoryWorkspacePage() {
         <WorkspaceGrid className="mt-5" columns={4}>
           <KpiCard
             icon={CircleDollarSign}
-            subtitle={`${totals.products} productos en ${totals.locations} ubicaciones`}
-            title="Valor de inventario"
+            subtitle={[
+              `${totals.products} productos en ${totals.locations} ubicaciones`,
+              costVisibility.mode === 'none'
+                ? null
+                : describeMissingCosts(
+                    totals.positionsWithoutValue,
+                    'posición',
+                    'posiciones',
+                  ),
+            ].filter(Boolean).join(' · ')}
+            title={costTotalLabel(
+              'Valor de inventario',
+              'Valor de tus marcas',
+              costVisibility,
+            )}
             tone="blue"
-            value={formatCurrency(totals.inventoryValue)}
+            value={formatCostTotal(
+              totals.inventoryValue,
+              costVisibility,
+              formatCurrency,
+            )}
           />
           <KpiCard
             icon={Boxes}
@@ -463,7 +496,9 @@ export function InventoryWorkspacePage() {
             tone="blue"
           >
             <InventoryRankingTable
+              costVisibility={costVisibility}
               groups={dimensionGroups.slice(0, 25)}
+              groupsAreBrands={dimension === 'brand'}
               onSelect={(group) => {
                 setSelectedLabel(group.label)
                 setFilters((current) => {
@@ -515,10 +550,18 @@ export function InventoryWorkspacePage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-slate-900">
-                        {formatCurrency(status.inventoryValue)}
+                        {formatCostTotal(
+                          status.inventoryValue,
+                          costVisibility,
+                          formatCurrency,
+                        )}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {(status.valueShare * 100).toFixed(1)}%
+                        {formatCostShare(
+                          status.valueShare,
+                          costVisibility,
+                          (share) => `${(share * 100).toFixed(1)}%`,
+                        )}
                       </p>
                     </div>
                   </div>
@@ -535,7 +578,10 @@ export function InventoryWorkspacePage() {
             title="Riesgos de inventario"
             tone="rose"
           >
-            <InventoryRiskList risks={filteredRisks.slice(0, 20)} />
+            <InventoryRiskList
+              costVisibility={costVisibility}
+              risks={filteredRisks.slice(0, 20)}
+            />
           </WorkspaceSection>
 
           <WorkspaceSection
@@ -557,7 +603,10 @@ export function InventoryWorkspacePage() {
           title="Drill-down de posiciones"
           tone="violet"
         >
-          <InventoryPositionTable positions={filteredPositions.slice(0, 200)} />
+          <InventoryPositionTable
+            costVisibility={costVisibility}
+            positions={filteredPositions.slice(0, 200)}
+          />
           {filteredPositions.length > 200 && (
             <p className="mt-4 text-center text-xs text-slate-400">
               Se muestran las primeras 200 posiciones. Refina los filtros para revisar un subconjunto.

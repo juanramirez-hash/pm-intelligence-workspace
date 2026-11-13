@@ -17,6 +17,11 @@ import type {
   InventoryExecutiveSummary,
 } from '../engine/inventoryExecutiveSummary'
 
+import {
+  addCostValue,
+  compareCostDescending,
+} from '../../../core/business/analytics/costValues'
+
 import type {
   InventoryWorkspaceFilters,
 } from '../engine/inventoryWorkspaceModel'
@@ -46,6 +51,8 @@ export interface InventoryExecutiveExportInput {
   opportunities: readonly InventoryOpportunitySignal[]
   filters: InventoryWorkspaceFilters
   summary: InventoryExecutiveSummary
+  // Shown in the summary sheet when costs are limited (SEC-003C).
+  costNote?: string | null
 }
 
 const stockStatusLabels: Record<InventoryStockStatus, string> = {
@@ -118,6 +125,9 @@ function summaryRows(
     ['Corte', analytics.snapshotDate ?? 'Sin fecha de corte'],
     ['Generado', generatedAt.toISOString()],
     ['Contexto', summary.filterContext],
+    ...(input.costNote
+      ? [['Alcance de costos', input.costNote]]
+      : []),
     [],
     ['Resumen ejecutivo'],
     [summary.overview],
@@ -279,7 +289,7 @@ interface SubstitutionProductRow {
   locations: Set<string>
   onHand: number
   available: number
-  inventoryValue: number
+  inventoryValue: number | null
 }
 
 function substitutionRows(
@@ -309,20 +319,26 @@ function substitutionRows(
       locations: new Set<string>(),
       onHand: 0,
       available: 0,
-      inventoryValue: 0,
+      inventoryValue: null,
     }
 
     current.positions += 1
     current.locations.add(position.locationId)
     current.onHand += position.onHand
     current.available += position.available
-    current.inventoryValue += position.inventoryValue
+    current.inventoryValue = addCostValue(
+      current.inventoryValue,
+      position.inventoryValue,
+    )
     products.set(key, current)
   }
 
   const rows = [...products.values()].sort(
     (left, right) =>
-      right.inventoryValue - left.inventoryValue ||
+      compareCostDescending(
+        left.inventoryValue,
+        right.inventoryValue,
+      ) ||
       left.productName.localeCompare(right.productName),
   )
 

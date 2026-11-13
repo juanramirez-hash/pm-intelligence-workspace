@@ -20,6 +20,14 @@ import {
   useDataCenterStore,
 } from '../store/dataCenterStore'
 
+import {
+  NO_COST_ACCESS_LABEL,
+} from '../../auth/costPresentation'
+
+import {
+  useCostVisibility,
+} from '../../auth/useCostVisibility'
+
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('es-MX').format(value)
 }
@@ -37,6 +45,8 @@ export function PricingImportSummary() {
     (state) => state.pricingSummary,
   )
 
+  const costVisibility = useCostVisibility()
+
   if (
     activeReportType !== 'pricing' ||
     importStatus !== 'completed' ||
@@ -45,9 +55,27 @@ export function PricingImportSummary() {
     return null
   }
 
+  // Pricing rows are costs: the API only returns the user's cost scope.
+  if (costVisibility.mode === 'none') {
+    return (
+      <AtlasCard className="p-6">
+        <SectionHeader
+          title="Resumen de Pricing"
+          description="Costos y precios normalizados por moneda, listos para Business Core y Pricing Laboratory."
+        />
+
+        <p className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700">
+          {NO_COST_ACCESS_LABEL}
+        </p>
+      </AtlasCard>
+    )
+  }
+
   const cards = [
     {
-      label: 'Precios generados',
+      label: costVisibility.mode === 'assigned'
+        ? 'Precios de tus marcas'
+        : 'Precios generados',
       value: formatNumber(summary.generatedPriceFacts),
       detail: `${formatNumber(summary.sourceRows)} filas fuente`,
       icon: BadgeDollarSign,

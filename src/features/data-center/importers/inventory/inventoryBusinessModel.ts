@@ -3,6 +3,12 @@ import type {
   NormalizedInventoryRow,
 } from './inventoryTypes'
 
+import {
+  addCostValue,
+  finalizeCostTotal,
+  toCostValue,
+} from '../../../../core/business/analytics/costValues'
+
 export interface InventoryBusinessModel {
   positions: NormalizedInventoryRow[]
   summary: InventoryDatasetSummary
@@ -37,7 +43,8 @@ export function buildInventoryBusinessModel(
   let totalCommitted = 0
   let totalInTransit = 0
   let totalOnOrder = 0
-  let totalInventoryValue = 0
+  let totalInventoryValue: number | null = null
+  let rowsWithoutValue = 0
   let negativeStockRows = 0
 
   for (const position of positions) {
@@ -60,7 +67,12 @@ export function buildInventoryBusinessModel(
     totalCommitted += finite(position.committed)
     totalInTransit += finite(position.inTransit)
     totalOnOrder += finite(position.onOrder)
-    totalInventoryValue += finite(position.inventoryValue)
+    totalInventoryValue = addCostValue(
+      totalInventoryValue,
+      toCostValue(position.inventoryValue),
+    )
+    rowsWithoutValue +=
+      toCostValue(position.inventoryValue) === null ? 1 : 0
 
     if (position.onHand < 0) {
       negativeStockRows += 1
@@ -68,6 +80,11 @@ export function buildInventoryBusinessModel(
   }
 
   dates.sort()
+
+  const inventoryValue = finalizeCostTotal(
+    totalInventoryValue,
+    positions.length,
+  )
 
   return {
     positions,
@@ -82,7 +99,11 @@ export function buildInventoryBusinessModel(
       totalCommitted,
       totalInTransit,
       totalOnOrder,
-      totalInventoryValue: roundCurrency(totalInventoryValue),
+      totalInventoryValue:
+        inventoryValue === null
+          ? null
+          : roundCurrency(inventoryValue),
+      rowsWithoutValue,
       negativeStockRows,
       duplicatePositions: [...positionCounts.values()].filter(
         (count) => count > 1,

@@ -22,7 +22,7 @@ export interface BusinessInventoryPosition {
   onOrder: number
 
   unitCost: number | null
-  inventoryValue: number
+  inventoryValue: number | null
   currency: string | null
 
   sourceRows: number

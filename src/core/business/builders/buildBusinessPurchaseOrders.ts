@@ -7,6 +7,11 @@ import type {
   BusinessPurchaseOrderLine,
 } from '../entities/purchaseOrder'
 
+import {
+  addCostValue,
+  finalizeCostTotal,
+} from '../analytics/costValues'
+
 export interface BusinessPurchaseOrdersResult {
   orders: Map<string, BusinessPurchaseOrder>
   lines: Map<string, BusinessPurchaseOrderLine>
@@ -294,16 +299,26 @@ export function buildBusinessPurchaseOrders(
           header.department,
 
         amountForeignCurrency:
-          orderLines.reduce(
-            (total, line) =>
-              total +
-              (
-                line
-                  .amountForeignCurrency ??
-                0
-              ),
-            0,
+          finalizeCostTotal(
+            orderLines.reduce<number | null>(
+              (total, line) =>
+                addCostValue(
+                  total,
+                  line
+                    .amountForeignCurrency,
+                ),
+              null,
+            ),
+            orderLines.length,
           ),
+
+        linesWithoutAmount:
+          orderLines.filter(
+            (line) =>
+              line
+                .amountForeignCurrency ===
+              null,
+          ).length,
 
         quantity:
           orderLines.reduce(

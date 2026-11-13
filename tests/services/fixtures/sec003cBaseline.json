@@ -1,0 +1,730 @@
+{
+  "inventoryAnalytics": {
+    "snapshotDate": "2026-03-13",
+    "totals": {
+      "positions": 8,
+      "products": 6,
+      "locations": 2,
+      "unresolvedProducts": 0,
+      "onHand": 88,
+      "available": 85,
+      "committed": 5,
+      "inTransit": 10,
+      "onOrder": 3,
+      "inventoryValue": 17500,
+      "availableRate": 0.9659090909090909,
+      "committedRate": 0.056818181818181816,
+      "inboundUnits": 13
+    },
+    "byBrand": [
+      {
+        "key": "HIKVISION",
+        "label": "HIKVISION",
+        "positions": 3,
+        "products": 2,
+        "locations": 2,
+        "onHand": 48,
+        "available": 48,
+        "committed": 5,
+        "inTransit": 0,
+        "onOrder": 0,
+        "inventoryValue": 13500,
+        "valueShare": 0.7714285714285715,
+        "availableRate": 1
+      },
+      {
+        "key": "UNV",
+        "label": "UNV",
+        "positions": 5,
+        "products": 4,
+        "locations": 2,
+        "onHand": 40,
+        "available": 37,
+        "committed": 0,
+        "inTransit": 10,
+        "onOrder": 3,
+        "inventoryValue": 4000,
+        "valueShare": 0.22857142857142856,
+        "availableRate": 0.925
+      }
+    ],
+    "byLocation": [
+      {
+        "key": "MTY",
+        "label": "MTY",
+        "positions": 3,
+        "products": 3,
+        "locations": 1,
+        "onHand": 63,
+        "available": 60,
+        "committed": 0,
+        "inTransit": 0,
+        "onOrder": 0,
+        "inventoryValue": 14300,
+        "valueShare": 0.8171428571428572,
+        "availableRate": 0.9523809523809523
+      },
+      {
+        "key": "CDMX",
+        "label": "CDMX",
+        "positions": 5,
+        "products": 5,
+        "locations": 1,
+        "onHand": 25,
+        "available": 25,
+        "committed": 5,
+        "inTransit": 10,
+        "onOrder": 3,
+        "inventoryValue": 3200,
+        "valueShare": 0.18285714285714286,
+        "availableRate": 1
+      }
+    ],
+    "byProduct": [
+      {
+        "key": "H-1",
+        "label": "H-1",
+        "positions": 2,
+        "products": 1,
+        "locations": 2,
+        "onHand": 42,
+        "available": 42,
+        "committed": 5,
+        "inTransit": 0,
+        "onOrder": 0,
+        "inventoryValue": 12600,
+        "valueShare": 0.72,
+        "availableRate": 1
+      },
+      {
+        "key": "P-IDLE",
+        "label": "P-IDLE",
+        "positions": 1,
+        "products": 1,
+        "locations": 1,
+        "onHand": 20,
+        "available": 20,
+        "committed": 0,
+        "inTransit": 0,
+        "onOrder": 0,
+        "inventoryValue": 2000,
+        "valueShare": 0.11428571428571428,
+        "availableRate": 1
+      },
+      {
+        "key": "H-2",
+        "label": "H-2",
+        "positions": 1,
+        "products": 1,
+        "locations": 1,
+        "onHand": 6,
+        "available": 6,
+        "committed": 0,
+        "inTransit": 0,
+        "onOrder": 0,
+        "inventoryValue": 900,
+        "valueShare": 0.05142857142857143,
+        "availableRate": 1
+      },
+      {
+        "key": "P-1",
+        "label": "P-1",
+        "positions": 2,
+        "products": 1,
+        "locations": 2,
+        "onHand": 8,
+        "available": 5,
+        "committed": 0,
+        "inTransit": 10,
+        "onOrder": 0,
+        "inventoryValue": 800,
+        "valueShare": 0.045714285714285714,
+        "availableRate": 0.625
+      },
+      {
+        "key": "P-NEW",
+        "label": "P-NEW",
+        "positions": 1,
+        "products": 1,
+        "locations": 1,
+        "onHand": 8,
+        "available": 8,
+        "committed": 0,
+        "inTransit": 0,
+        "onOrder": 0,
+        "inventoryValue": 800,
+        "valueShare": 0.045714285714285714,
+        "availableRate": 1
+      },
+      {
+        "key": "P-OLD",
+        "label": "P-OLD",
+        "positions": 1,
+        "products": 1,
+        "locations": 1,
+        "onHand": 4,
+        "available": 4,
+        "committed": 0,
+        "inTransit": 0,
+        "onOrder": 3,
+        "inventoryValue": 400,
+        "valueShare": 0.022857142857142857,
+        "availableRate": 1
+      }
+    ],
+    "stockStatus": [
+      {
+        "status": "available",
+        "positions": 6,
+        "products": 6,
+        "inventoryValue": 16600,
+        "valueShare": 0.9485714285714286
+      },
+      {
+        "status": "overcommitted",
+        "positions": 1,
+        "products": 1,
+        "inventoryValue": 600,
+        "valueShare": 0.03428571428571429
+      },
+      {
+        "status": "no_available_stock",
+        "positions": 1,
+        "products": 1,
+        "inventoryValue": 300,
+        "valueShare": 0.017142857142857144
+      }
+    ]
+  },
+  "inventoryRiskOpportunity": {
+    "snapshotDate": "2026-03-13",
+    "summary": {
+      "risks": 3,
+      "criticalRisks": 0,
+      "highRisks": 3,
+      "opportunities": 2,
+      "transferCandidates": 1,
+      "purchaseReviews": 0,
+      "affectedProducts": 2,
+      "affectedInventoryValue": 12900
+    },
+    "risks": [
+      {
+        "id": "overcommitted::2026-03-13::H-1::CDMX",
+        "type": "overcommitted",
+        "priority": "high",
+        "score": 83,
+        "snapshotDate": "2026-03-13",
+        "productId": "H-1",
+        "productName": "H-1",
+        "brandId": "HIKVISION",
+        "locationId": "CDMX",
+        "title": "Inventario sobrecomprometido",
+        "rationale": "Las unidades comprometidas superan la existencia física.",
+        "evidence": {
+          "onHand": 2,
+          "available": 2,
+          "committed": 5,
+          "inbound": 0,
+          "inventoryValue": 600,
+          "valueShare": 0.03428571428571429
+        }
+      },
+      {
+        "id": "no_available_stock::2026-03-13::P-1::MTY",
+        "type": "no_available_stock",
+        "priority": "high",
+        "score": 70,
+        "snapshotDate": "2026-03-13",
+        "productId": "P-1",
+        "productName": "P-1",
+        "brandId": "UNV",
+        "locationId": "MTY",
+        "title": "Existencia física sin disponibilidad",
+        "rationale": "La sucursal tiene unidades en mano, pero el ERP reporta cero unidades disponibles para una nueva venta. Normalmente están comprometidas, reservadas o bloqueadas.",
+        "evidence": {
+          "onHand": 3,
+          "available": 0,
+          "committed": 0,
+          "inbound": 0,
+          "inventoryValue": 300,
+          "valueShare": 0.017142857142857144
+        }
+      },
+      {
+        "id": "value_concentration::2026-03-13::H-1::MTY",
+        "type": "value_concentration",
+        "priority": "high",
+        "score": 65,
+        "snapshotDate": "2026-03-13",
+        "productId": "H-1",
+        "productName": "H-1",
+        "brandId": "HIKVISION",
+        "locationId": "MTY",
+        "title": "Concentración de valor",
+        "rationale": "Una sola posición concentra al menos 20% del valor del inventario del corte.",
+        "evidence": {
+          "onHand": 40,
+          "available": 40,
+          "committed": 0,
+          "inbound": 0,
+          "inventoryValue": 12000,
+          "valueShare": 0.6857142857142857
+        }
+      }
+    ],
+    "opportunities": [
+      {
+        "id": "commitment_release::2026-03-13::H-1::CDMX",
+        "type": "commitment_release",
+        "priority": "high",
+        "score": 74,
+        "snapshotDate": "2026-03-13",
+        "productId": "H-1",
+        "productName": "H-1",
+        "brandId": "HIKVISION",
+        "sourceLocationId": null,
+        "targetLocationId": "CDMX",
+        "title": "Revisar compromisos de inventario",
+        "rationale": "Las unidades comprometidas exceden la existencia física registrada.",
+        "evidence": {
+          "shortageUnits": 3,
+          "surplusUnits": 0,
+          "suggestedUnits": 0,
+          "inboundUnits": 0,
+          "inventoryValue": 600
+        }
+      },
+      {
+        "id": "transfer_candidate::2026-03-13::P-1::CDMX::MTY",
+        "type": "transfer_candidate",
+        "priority": "medium",
+        "score": 62,
+        "snapshotDate": "2026-03-13",
+        "productId": "P-1",
+        "productName": "P-1",
+        "brandId": "UNV",
+        "sourceLocationId": "CDMX",
+        "targetLocationId": "MTY",
+        "title": "Transferencia interna sugerida",
+        "rationale": "Otra ubicación tiene disponibilidad y la ubicación destino no tiene stock utilizable ni entradas pendientes.",
+        "evidence": {
+          "shortageUnits": 1,
+          "surplusUnits": 4,
+          "suggestedUnits": 1,
+          "inboundUnits": 0,
+          "inventoryValue": 300
+        }
+      }
+    ]
+  },
+  "inventoryCatalogSummary": {
+    "classifiedProducts": 6,
+    "unclassifiedProducts": 0,
+    "productsWithSuperseded": 1,
+    "productsWithDirectSubstitute": 1,
+    "productsWithBoth": 1,
+    "supersededWithoutDirectSubstitute": 0,
+    "supersededOnHand": 4,
+    "supersededAvailable": 4,
+    "supersededInventoryValue": 400
+  },
+  "purchasingAnalytics": {
+    "referenceDate": "2026-03-31",
+    "totals": {
+      "purchaseOrders": 3,
+      "purchaseOrderLines": 5,
+      "purchaseRequests": 0,
+      "openPurchaseOrders": 3,
+      "overduePurchaseOrders": 1,
+      "purchaseOrdersDueNext7Days": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0,
+      "purchaseRequestsWithPurchaseOrder": 0,
+      "orderedQuantity": 50,
+      "orderedAmountForeignCurrency": 3950,
+      "requestedQuantity": 0,
+      "suppliers": 2,
+      "buyers": 0,
+      "brands": 2,
+      "items": 4,
+      "linkedRequestRate": 0,
+      "overdueOrderRate": 0.3333333333333333
+    },
+    "linkage": {
+      "purchaseRequests": 0,
+      "linkedToPurchaseOrder": 0,
+      "withoutPurchaseOrder": 0,
+      "linkedPurchaseOrderExists": 0,
+      "orphanPurchaseOrderReferences": 0,
+      "linkedToSalesOrder": 0,
+      "linkedToProject": 0
+    },
+    "cycle": {
+      "comparableRequests": 0,
+      "averageDaysRequestToPurchaseOrder": null,
+      "medianDaysRequestToPurchaseOrder": null,
+      "minDaysRequestToPurchaseOrder": null,
+      "maxDaysRequestToPurchaseOrder": null
+    },
+    "bySupplier": [
+      {
+        "key": "SUP-2",
+        "label": "Proveedor Dos",
+        "purchaseOrders": 1,
+        "purchaseOrderLines": 1,
+        "purchaseRequests": 0,
+        "orderedQuantity": 10,
+        "orderedAmountForeignCurrency": 2000,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 1,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      },
+      {
+        "key": "SUP-1",
+        "label": "Proveedor Uno",
+        "purchaseOrders": 2,
+        "purchaseOrderLines": 4,
+        "purchaseRequests": 0,
+        "orderedQuantity": 40,
+        "orderedAmountForeignCurrency": 1950,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 0,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      }
+    ],
+    "byBuyer": [],
+    "byBrand": [
+      {
+        "key": "HIKVISION",
+        "label": "HIKVISION",
+        "purchaseOrders": 2,
+        "purchaseOrderLines": 2,
+        "purchaseRequests": 0,
+        "orderedQuantity": 20,
+        "orderedAmountForeignCurrency": 2500,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 0,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      },
+      {
+        "key": "UNV",
+        "label": "UNV",
+        "purchaseOrders": 2,
+        "purchaseOrderLines": 3,
+        "purchaseRequests": 0,
+        "orderedQuantity": 30,
+        "orderedAmountForeignCurrency": 1450,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 0,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      }
+    ],
+    "byItem": [
+      {
+        "key": "H-1",
+        "label": "H-1",
+        "purchaseOrders": 2,
+        "purchaseOrderLines": 2,
+        "purchaseRequests": 0,
+        "orderedQuantity": 20,
+        "orderedAmountForeignCurrency": 2500,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 0,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      },
+      {
+        "key": "P-1",
+        "label": "P-1",
+        "purchaseOrders": 1,
+        "purchaseOrderLines": 1,
+        "purchaseRequests": 0,
+        "orderedQuantity": 10,
+        "orderedAmountForeignCurrency": 1000,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 0,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      },
+      {
+        "key": "P-NEW",
+        "label": "P-NEW",
+        "purchaseOrders": 1,
+        "purchaseOrderLines": 1,
+        "purchaseRequests": 0,
+        "orderedQuantity": 10,
+        "orderedAmountForeignCurrency": 300,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 0,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      },
+      {
+        "key": "P-IDLE",
+        "label": "P-IDLE",
+        "purchaseOrders": 1,
+        "purchaseOrderLines": 1,
+        "purchaseRequests": 0,
+        "orderedQuantity": 10,
+        "orderedAmountForeignCurrency": 150,
+        "requestedQuantity": 0,
+        "overduePurchaseOrders": 0,
+        "purchaseRequestsWithoutPurchaseOrder": 0
+      }
+    ],
+    "byStatus": [
+      {
+        "status": "PENDING RECEIPT",
+        "purchaseOrders": 2,
+        "purchaseRequests": 0,
+        "orderedAmountForeignCurrency": 3500
+      },
+      {
+        "status": "FULLY BILLED",
+        "purchaseOrders": 1,
+        "purchaseRequests": 0,
+        "orderedAmountForeignCurrency": 450
+      }
+    ],
+    "aging": [
+      {
+        "bucket": "current",
+        "purchaseOrders": 2,
+        "orderedAmountForeignCurrency": 1950
+      },
+      {
+        "bucket": "1_7_days",
+        "purchaseOrders": 0,
+        "orderedAmountForeignCurrency": 0
+      },
+      {
+        "bucket": "8_15_days",
+        "purchaseOrders": 0,
+        "orderedAmountForeignCurrency": 0
+      },
+      {
+        "bucket": "16_30_days",
+        "purchaseOrders": 0,
+        "orderedAmountForeignCurrency": 0
+      },
+      {
+        "bucket": "31_plus_days",
+        "purchaseOrders": 1,
+        "orderedAmountForeignCurrency": 2000
+      },
+      {
+        "bucket": "undated",
+        "purchaseOrders": 0,
+        "orderedAmountForeignCurrency": 0
+      }
+    ]
+  },
+  "forecast": {
+    "inventory": {
+      "reportStatus": "ready",
+      "productsAnalyzed": 6,
+      "filteredProducts": 6,
+      "productsWithProjectedDemand": 4,
+      "productsWithoutProjectedDemand": 2,
+      "criticalItems": 1,
+      "highPriorityItems": 3,
+      "availableUnits": 85,
+      "inboundUnits": 13,
+      "inventoryValue": 17500,
+      "expectedDemandUnits": 59.44,
+      "remainingDemandUnits": 15.44,
+      "projectedAvailableAfterDemand": 73.56,
+      "projectedSupplyAfterDemand": 83.56,
+      "supersededInventoryProducts": 1,
+      "replacementRecoveries": 1,
+      "affectedInventoryValue": 4000,
+      "coverage": {
+        "unavailable": 0,
+        "noDemand": 2,
+        "stockout": 0,
+        "shortage": 1,
+        "low": 1,
+        "balanced": 2,
+        "excess": 0
+      }
+    },
+    "riskRanking": [
+      {
+        "id": "risk::P-OLD",
+        "category": "risk",
+        "signalType": "current-period-shortage",
+        "priority": "critical",
+        "score": 90,
+        "title": "Cobertura insuficiente para el cierre",
+        "rationale": "La disponibilidad actual no cubre la demanda esperada restante del periodo.",
+        "recommendedAction": "Cubrir la brecha esperada del periodo y revisar entradas o sustitutos.",
+        "productId": "P-OLD",
+        "productName": "P-OLD",
+        "model": "P-OLD",
+        "brandId": "UNV",
+        "confidenceLevel": "low",
+        "expectedDemandUnits": 10,
+        "remainingDemandUnits": 8,
+        "availableUnits": 4,
+        "inboundUnits": 3,
+        "availableCoverageMonths": 0.4,
+        "supplyCoverageMonths": 0.7,
+        "inventoryValue": 400,
+        "isSuperseded": true,
+        "navigation": {
+          "entityType": "product",
+          "entityId": "P-OLD",
+          "label": "P-OLD",
+          "href": "/products/P-OLD"
+        },
+        "replacementNavigation": {
+          "entityType": "product",
+          "entityId": "P-NEW",
+          "label": "P-NEW",
+          "href": "/products/P-NEW"
+        }
+      },
+      {
+        "id": "risk::P-1",
+        "category": "risk",
+        "signalType": "low-coverage",
+        "priority": "high",
+        "score": 77,
+        "title": "Cobertura baja",
+        "rationale": "La disponibilidad representa menos de un mes de demanda esperada.",
+        "recommendedAction": "Revisar reposición antes de que la cobertura caiga por debajo de la demanda esperada.",
+        "productId": "P-1",
+        "productName": "P-1",
+        "model": "P-1",
+        "brandId": "UNV",
+        "confidenceLevel": "low",
+        "expectedDemandUnits": 12.13,
+        "remainingDemandUnits": 2.13,
+        "availableUnits": 5,
+        "inboundUnits": 10,
+        "availableCoverageMonths": 0.4122,
+        "supplyCoverageMonths": 1.2366,
+        "inventoryValue": 800,
+        "isSuperseded": false,
+        "navigation": {
+          "entityType": "product",
+          "entityId": "P-1",
+          "label": "P-1",
+          "href": "/products/P-1"
+        },
+        "replacementNavigation": null
+      },
+      {
+        "id": "risk::P-IDLE",
+        "category": "risk",
+        "signalType": "no-projected-demand",
+        "priority": "high",
+        "score": 72,
+        "title": "Inventario sin demanda proyectada",
+        "rationale": "El producto tiene inventario o entradas, pero Forecast Baseline no dispone de una demanda mensual proyectada.",
+        "recommendedAction": "Revisar continuidad, promoción, sustitución o depuración del inventario sin forecast.",
+        "productId": "P-IDLE",
+        "productName": "P-IDLE",
+        "model": "P-IDLE",
+        "brandId": "UNV",
+        "confidenceLevel": null,
+        "expectedDemandUnits": null,
+        "remainingDemandUnits": null,
+        "availableUnits": 20,
+        "inboundUnits": 0,
+        "availableCoverageMonths": null,
+        "supplyCoverageMonths": null,
+        "inventoryValue": 2000,
+        "isSuperseded": false,
+        "navigation": {
+          "entityType": "product",
+          "entityId": "P-IDLE",
+          "label": "P-IDLE",
+          "href": "/products/P-IDLE"
+        },
+        "replacementNavigation": null
+      },
+      {
+        "id": "risk::P-NEW",
+        "category": "risk",
+        "signalType": "no-projected-demand",
+        "priority": "high",
+        "score": 72,
+        "title": "Inventario sin demanda proyectada",
+        "rationale": "El producto tiene inventario o entradas, pero Forecast Baseline no dispone de una demanda mensual proyectada.",
+        "recommendedAction": "Revisar continuidad, promoción, sustitución o depuración del inventario sin forecast.",
+        "productId": "P-NEW",
+        "productName": "P-NEW",
+        "model": "P-NEW",
+        "brandId": "UNV",
+        "confidenceLevel": null,
+        "expectedDemandUnits": null,
+        "remainingDemandUnits": null,
+        "availableUnits": 8,
+        "inboundUnits": 0,
+        "availableCoverageMonths": null,
+        "supplyCoverageMonths": null,
+        "inventoryValue": 800,
+        "isSuperseded": false,
+        "navigation": {
+          "entityType": "product",
+          "entityId": "P-NEW",
+          "label": "P-NEW",
+          "href": "/products/P-NEW"
+        },
+        "replacementNavigation": null
+      }
+    ],
+    "opportunityRanking": [
+      {
+        "id": "opportunity::P-OLD",
+        "category": "opportunity",
+        "signalType": "replacement-recovery",
+        "priority": "high",
+        "score": 70,
+        "title": "Sustituto con inventario disponible",
+        "rationale": "La ruta de sustitución resuelta tiene unidades disponibles que pueden apoyar la continuidad comercial.",
+        "recommendedAction": "Cubrir la brecha esperada del periodo y revisar entradas o sustitutos.",
+        "productId": "P-OLD",
+        "productName": "P-OLD",
+        "model": "P-OLD",
+        "brandId": "UNV",
+        "confidenceLevel": "low",
+        "expectedDemandUnits": 10,
+        "remainingDemandUnits": 8,
+        "availableUnits": 4,
+        "inboundUnits": 3,
+        "availableCoverageMonths": 0.4,
+        "supplyCoverageMonths": 0.7,
+        "inventoryValue": 400,
+        "isSuperseded": true,
+        "navigation": {
+          "entityType": "product",
+          "entityId": "P-OLD",
+          "label": "P-OLD",
+          "href": "/products/P-OLD"
+        },
+        "replacementNavigation": {
+          "entityType": "product",
+          "entityId": "P-NEW",
+          "label": "P-NEW",
+          "href": "/products/P-NEW"
+        }
+      }
+    ]
+  },
+  "dataCenterInventorySummary": {
+    "periodStart": "2026-02-27",
+    "periodEnd": "2026-03-13",
+    "totalPositions": 10,
+    "uniqueProducts": 6,
+    "uniqueLocations": 2,
+    "totalOnHand": 105,
+    "totalAvailable": 102,
+    "totalCommitted": 5,
+    "totalInTransit": 10,
+    "totalOnOrder": 3,
+    "totalInventoryValue": 21200,
+    "negativeStockRows": 0,
+    "duplicatePositions": 0,
+    "processedRows": 10,
+    "ignoredRows": 0
+  }
+}

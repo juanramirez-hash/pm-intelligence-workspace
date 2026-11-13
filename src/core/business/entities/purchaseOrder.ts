@@ -80,7 +80,9 @@ export interface BusinessPurchaseOrder {
   purchasingExecutive: string | null
   department: string | null
 
-  amountForeignCurrency: number
+  // Sum of the lines with amount; NULL when no line has amount (SEC-003C).
+  amountForeignCurrency: number | null
+  linesWithoutAmount: number
   quantity: number
   lineCount: number
   duplicateSourceLines: number

@@ -116,6 +116,7 @@ function createEmptySummary(
     totalInTransit: 0,
     totalOnOrder: 0,
     totalInventoryValue: 0,
+    rowsWithoutValue: 0,
     negativeStockRows: 0,
     duplicatePositions: 0,
     processedRows: 0,

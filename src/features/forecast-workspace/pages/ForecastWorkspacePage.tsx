@@ -92,6 +92,17 @@ import {
   formatForecastPercentage,
 } from '../utils/forecastWorkspaceFormatters'
 
+import {
+  costExportNote,
+  costTotalLabel,
+  describeMissingCosts,
+  formatCostTotal,
+} from '../../auth/costPresentation'
+
+import {
+  useCostVisibility,
+} from '../../auth/useCostVisibility'
+
 function confidenceLabel(
   level: 'low' | 'medium' | 'high' | null,
 ): string {
@@ -207,6 +218,7 @@ function hasActiveFilters(
 }
 
 export function ForecastWorkspacePage() {
+  const costVisibility = useCostVisibility()
   const [scenarioId, setScenarioId] =
     useState<ForecastScenarioId>('expected')
   const [filters, setFilters] =
@@ -277,6 +289,7 @@ export function ForecastWorkspacePage() {
       const payload = buildForecastExecutiveExport({
         workspace,
         summary: executiveSummary,
+        costNote: costExportNote(costVisibility),
       })
 
       await downloadForecastExecutiveExport(payload)
@@ -742,14 +755,48 @@ export function ForecastWorkspacePage() {
                     detail: 'Disponible más In Transit y On Order.',
                   },
                   {
-                    label: 'Valor de inventario',
-                    value: formatForecastCurrency(workspace.inventory.inventoryValue, true),
-                    detail: 'Valor de los productos incluidos por filtros.',
+                    label: costTotalLabel(
+                      'Valor de inventario',
+                      'Valor de tus marcas',
+                      costVisibility,
+                    ),
+                    value: formatCostTotal(
+                      workspace.inventory.inventoryValue,
+                      costVisibility,
+                      (value) => formatForecastCurrency(value, true),
+                    ),
+                    detail: [
+                      'Valor de los productos incluidos por filtros.',
+                      costVisibility.mode === 'none'
+                        ? null
+                        : describeMissingCosts(
+                            workspace.inventory.productsWithoutValue,
+                            'producto',
+                            'productos',
+                          ),
+                    ].filter(Boolean).join(' '),
                   },
                   {
-                    label: 'Valor afectado',
-                    value: formatForecastCurrency(workspace.inventory.affectedInventoryValue, true),
-                    detail: 'Inventario con alguna prioridad activa.',
+                    label: costTotalLabel(
+                      'Valor afectado',
+                      'Valor afectado de tus marcas',
+                      costVisibility,
+                    ),
+                    value: formatCostTotal(
+                      workspace.inventory.affectedInventoryValue,
+                      costVisibility,
+                      (value) => formatForecastCurrency(value, true),
+                    ),
+                    detail: [
+                      'Inventario con alguna prioridad activa.',
+                      costVisibility.mode === 'none'
+                        ? null
+                        : describeMissingCosts(
+                            workspace.inventory.affectedProductsWithoutValue,
+                            'producto',
+                            'productos',
+                          ),
+                    ].filter(Boolean).join(' '),
                   },
                   {
                     label: 'Superseded con inventario',
@@ -801,6 +848,7 @@ export function ForecastWorkspacePage() {
               tone="critical"
             >
               <ForecastPriorityList
+                costVisibility={costVisibility}
                 items={visibleRiskRanking}
                 kind="risk"
               />
@@ -814,6 +862,7 @@ export function ForecastWorkspacePage() {
               tone="positive"
             >
               <ForecastPriorityList
+                costVisibility={costVisibility}
                 items={visibleOpportunityRanking}
                 kind="opportunity"
               />

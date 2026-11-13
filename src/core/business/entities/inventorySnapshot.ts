@@ -12,5 +12,5 @@ export interface BusinessInventorySnapshot {
   committed: number
   inTransit: number
   onOrder: number
-  inventoryValue: number
+  inventoryValue: number | null
 }

@@ -126,14 +126,16 @@ export interface ForecastWorkspaceInventorySummary {
   highPriorityItems: number
   availableUnits: number
   inboundUnits: number
-  inventoryValue: number
+  inventoryValue: number | null
+  productsWithoutValue: number
   expectedDemandUnits: number
   remainingDemandUnits: number
   projectedAvailableAfterDemand: number
   projectedSupplyAfterDemand: number
   supersededInventoryProducts: number
   replacementRecoveries: number
-  affectedInventoryValue: number
+  affectedInventoryValue: number | null
+  affectedProductsWithoutValue: number
   coverage: ForecastWorkspaceCoverageBreakdown
 }
 
@@ -191,7 +193,7 @@ export interface ForecastWorkspacePriorityItem {
   inboundUnits: number
   availableCoverageMonths: number | null
   supplyCoverageMonths: number | null
-  inventoryValue: number
+  inventoryValue: number | null
   isSuperseded: boolean
   navigation: ForecastWorkspaceNavigationTarget
   replacementNavigation: ForecastWorkspaceNavigationTarget | null

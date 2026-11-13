@@ -21,6 +21,12 @@ import {
   DEFAULT_FORECAST_WORKSPACE_REQUEST,
 } from '../types/forecastWorkspaceTypes'
 
+import {
+  addCostValue,
+  compareCostDescending,
+  finalizeCostTotal,
+} from '../../../core/business/analytics/costValues'
+
 import type {
   ForecastWorkspaceBrandRow,
   ForecastWorkspaceCoverageBreakdown,
@@ -70,6 +76,14 @@ function roundValue(
 ): number {
   const factor = 10 ** decimals
   return Math.round((value + Number.EPSILON) * factor) / factor
+}
+
+function roundCostValue(
+  value: number | null,
+): number | null {
+  return value === null
+    ? null
+    : roundValue(value)
 }
 
 function normalizeIdentifier(
@@ -428,7 +442,12 @@ function buildInventorySummary(
       result.highPriorityItems += item.priority === 'high' ? 1 : 0
       result.availableUnits += item.inventory.available
       result.inboundUnits += item.inventory.inbound
-      result.inventoryValue += item.inventory.inventoryValue
+      result.inventoryValue = addCostValue(
+        result.inventoryValue,
+        item.inventory.inventoryValue,
+      )
+      result.productsWithoutValue +=
+        item.inventory.inventoryValue === null ? 1 : 0
       result.expectedDemandUnits += expectedDemand ?? 0
       result.remainingDemandUnits += remainingDemand ?? 0
       result.projectedAvailableAfterDemand += Math.max(
@@ -451,9 +470,15 @@ function buildInventorySummary(
       )
         ? 1
         : 0
-      result.affectedInventoryValue += item.priority !== 'none'
-        ? item.inventory.inventoryValue
-        : 0
+      if (item.priority !== 'none') {
+        result.affectedProducts += 1
+        result.affectedInventoryValue = addCostValue(
+          result.affectedInventoryValue,
+          item.inventory.inventoryValue,
+        )
+        result.affectedProductsWithoutValue +=
+          item.inventory.inventoryValue === null ? 1 : 0
+      }
 
       return result
     },
@@ -464,14 +489,17 @@ function buildInventorySummary(
       highPriorityItems: 0,
       availableUnits: 0,
       inboundUnits: 0,
-      inventoryValue: 0,
+      inventoryValue: null as number | null,
+      productsWithoutValue: 0,
       expectedDemandUnits: 0,
       remainingDemandUnits: 0,
       projectedAvailableAfterDemand: 0,
       projectedSupplyAfterDemand: 0,
       supersededInventoryProducts: 0,
       replacementRecoveries: 0,
-      affectedInventoryValue: 0,
+      affectedProducts: 0,
+      affectedInventoryValue: null as number | null,
+      affectedProductsWithoutValue: 0,
     },
   )
 
@@ -487,7 +515,13 @@ function buildInventorySummary(
     highPriorityItems: summary.highPriorityItems,
     availableUnits: roundValue(summary.availableUnits),
     inboundUnits: roundValue(summary.inboundUnits),
-    inventoryValue: roundValue(summary.inventoryValue),
+    inventoryValue: roundCostValue(
+      finalizeCostTotal(
+        summary.inventoryValue,
+        filteredItems.length,
+      ),
+    ),
+    productsWithoutValue: summary.productsWithoutValue,
     expectedDemandUnits: roundValue(summary.expectedDemandUnits),
     remainingDemandUnits: roundValue(summary.remainingDemandUnits),
     projectedAvailableAfterDemand: roundValue(
@@ -499,9 +533,14 @@ function buildInventorySummary(
     supersededInventoryProducts:
       summary.supersededInventoryProducts,
     replacementRecoveries: summary.replacementRecoveries,
-    affectedInventoryValue: roundValue(
-      summary.affectedInventoryValue,
+    affectedInventoryValue: roundCostValue(
+      finalizeCostTotal(
+        summary.affectedInventoryValue,
+        summary.affectedProducts,
+      ),
     ),
+    affectedProductsWithoutValue:
+      summary.affectedProductsWithoutValue,
     coverage,
   }
 }
@@ -755,7 +794,10 @@ function buildRanking(
     .sort(
       (left, right) =>
         right.score - left.score ||
-        right.inventoryValue - left.inventoryValue ||
+        compareCostDescending(
+          left.inventoryValue,
+          right.inventoryValue,
+        ) ||
         left.productName.localeCompare(right.productName),
     )
     .slice(0, normalizeLimit(limit))
@@ -948,6 +990,7 @@ export function buildForecastWorkspace(
         availableUnits: 0,
         inboundUnits: 0,
         inventoryValue: 0,
+        productsWithoutValue: 0,
         expectedDemandUnits: 0,
         remainingDemandUnits: 0,
         projectedAvailableAfterDemand: 0,
@@ -955,6 +998,7 @@ export function buildForecastWorkspace(
         supersededInventoryProducts: 0,
         replacementRecoveries: 0,
         affectedInventoryValue: 0,
+        affectedProductsWithoutValue: 0,
         coverage: emptyCoverageBreakdown(),
       },
       brands: [],
