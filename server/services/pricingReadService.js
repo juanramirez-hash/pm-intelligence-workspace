@@ -1,3 +1,7 @@
+import {
+  buildCostVisibilityCondition,
+} from '../middleware/requireBrandScope.js'
+
 function numberOrNull(
   value,
 ) {
@@ -75,9 +79,19 @@ function timestampOrNull(
     : parsed.toISOString()
 }
 
+// Pricing rows are cost records: only rows inside the cost scope are returned.
 export async function loadPricingDataset(
   pool,
+  costScope,
 ) {
+  const pricingParams = []
+  const costVisible =
+    buildCostVisibilityCondition(
+      costScope,
+      'brand_id',
+      pricingParams,
+    )
+
   const [
     pricingResult,
     importResult,
@@ -103,11 +117,13 @@ export async function loadPricingDataset(
           quantity_pricing_schedule,
           usd_channel_skipped_for_currency_mismatch
         FROM pricing_records
+        WHERE ${costVisible}
         ORDER BY
           source_row_number,
           source_channel,
           id
       `,
+      pricingParams,
     ),
 
     pool.query(

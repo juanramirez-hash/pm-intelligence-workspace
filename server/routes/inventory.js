@@ -2,6 +2,9 @@ import { Router } from 'express'
 import {
   datasetCache,
 } from '../middleware/datasetCache.js'
+import {
+  resolveCostScope,
+} from '../middleware/requireBrandScope.js'
 
 import {
   importInventoryDataset,
@@ -27,12 +30,16 @@ export function createInventoryRouter(
     '/',
     datasetCache(pool, {
       datasetType: 'inventory',
+      costScoped: true,
     }),
-    async (_req, res) => {
+    async (req, res) => {
       try {
         const dataset =
           await loadInventoryDataset(
             pool,
+            resolveCostScope(
+              req.authUser,
+            ),
           )
 
         return res.json({

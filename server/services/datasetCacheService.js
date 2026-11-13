@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 
 // Bump when the JSON shape returned by any GET /api/data/<dataset> changes,
 // so browsers holding the previous shape download the new one.
-export const DATASET_RESPONSE_FORMAT_VERSION = 1
+export const DATASET_RESPONSE_FORMAT_VERSION = 2
 
 /**
  * Reads the cheap state that identifies a dataset response:
@@ -102,6 +102,30 @@ function describeAccess(
 }
 
 /**
+ * @param {{ mode: string, brandKeys?: string[] } | undefined} costScope
+ */
+function describeCostScope(
+  costScope,
+) {
+  if (!costScope) {
+    return 'costs-unscoped'
+  }
+
+  if (costScope.mode !== 'assigned') {
+    return `costs-${costScope.mode}`
+  }
+
+  const brandKeys =
+    [
+      ...new Set(
+        costScope.brandKeys ?? [],
+      ),
+    ].sort()
+
+  return `costs-assigned:${brandKeys.join('|')}`
+}
+
+/**
  * Builds a weak ETag. Weak on purpose: nginx gzip and Cloudflare
  * compression drop or weaken strong ETags. The parts are hashed so
  * assigned brands are not exposed in headers.
@@ -110,12 +134,14 @@ function describeAccess(
  *   datasetType: string,
  *   state: Awaited<ReturnType<typeof loadDatasetCacheState>>,
  *   access?: { scope: string, brandIds: string[] },
+ *   costScope?: { mode: string, brandKeys?: string[] },
  * }} options
  */
 export function buildDatasetEtag({
   datasetType,
   state,
   access,
+  costScope,
 }) {
   const digest =
     createHash('sha256')
@@ -128,6 +154,7 @@ export function buildDatasetEtag({
           state.maxCompletedAt,
           state.dataVersion,
           describeAccess(access),
+          describeCostScope(costScope),
         ]),
       )
       .digest('base64url')

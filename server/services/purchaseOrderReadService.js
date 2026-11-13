@@ -1,3 +1,7 @@
+import {
+  buildCostVisibilityCondition,
+} from '../middleware/requireBrandScope.js'
+
 function numberOrNull(
   value,
 ) {
@@ -42,7 +46,16 @@ function dateOnlyOrNull(
 
 export async function loadPurchaseOrderDataset(
   pool,
+  costScope,
 ) {
+  const purchaseOrdersParams = []
+  const costVisible =
+    buildCostVisibilityCondition(
+      costScope,
+      'brand',
+      purchaseOrdersParams,
+    )
+
   const [
     purchaseOrdersResult,
     importResult,
@@ -72,7 +85,7 @@ export async function loadPurchaseOrderDataset(
           brand,
           line_memo,
           quantity,
-          amount_foreign_currency,
+          CASE WHEN ${costVisible} THEN amount_foreign_currency END AS amount_foreign_currency,
           weight,
           supplier_lead_time_days,
           supplier_express_lead_time_days,
@@ -95,6 +108,7 @@ export async function loadPurchaseOrderDataset(
           purchase_order_number,
           line_key
       `,
+      purchaseOrdersParams,
     ),
 
     pool.query(

@@ -133,4 +133,17 @@ describe('PL-002 Pricing source integration', () => {
     expect(result.summary.productCoverageRate).toBeNull()
     expect(result.summary.pricesWithoutProduct).toBe(0)
   })
+
+  it('hidrata un dataset de pricing sin filas visibles (SEC-003A)', () => {
+    for (const productMaster of [[], [productMasterRow('P-1')]]) {
+      const result = buildPricingBusinessModel(
+        [],
+        0,
+        productMaster,
+      )
+
+      expect(result.inputs).toEqual([])
+      expect(result.summary.ignoredRows).toBe(0)
+    }
+  })
 })

@@ -1,3 +1,7 @@
+import {
+  buildCostVisibilityCondition,
+} from '../middleware/requireBrandScope.js'
+
 function numberOrNull(
   value,
 ) {
@@ -37,7 +41,16 @@ function stringOrNull(
 
 export async function loadProductDataset(
   pool,
+  costScope,
 ) {
+  const productsParams = []
+  const costVisible =
+    buildCostVisibilityCondition(
+      costScope,
+      'brand',
+      productsParams,
+    )
+
   const [
     productsResult,
     importResult,
@@ -63,11 +76,11 @@ export async function loadProductDataset(
           subcategory2,
           source_created_at,
           source_updated_at,
-          average_cost_usd,
-          total_value,
+          CASE WHEN ${costVisible} THEN average_cost_usd END AS average_cost_usd,
+          CASE WHEN ${costVisible} THEN total_value END AS total_value,
           currency,
-          inventory_value_mxn,
-          inventory_value_usd,
+          CASE WHEN ${costVisible} THEN inventory_value_mxn END AS inventory_value_mxn,
+          CASE WHEN ${costVisible} THEN inventory_value_usd END AS inventory_value_usd,
           last_purchase_date,
           last_sale_date,
           units_sold_last_90_days,
@@ -93,6 +106,7 @@ export async function loadProductDataset(
           name,
           id
       `,
+      productsParams,
     ),
 
     pool.query(

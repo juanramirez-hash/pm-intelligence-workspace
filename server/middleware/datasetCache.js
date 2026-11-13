@@ -3,6 +3,9 @@ import {
   loadDatasetCacheState,
   matchesIfNoneMatch,
 } from '../services/datasetCacheService.js'
+import {
+  resolveCostScope,
+} from './requireBrandScope.js'
 
 /**
  * Revalidates a GET /api/data/<dataset> response before the dataset
@@ -20,6 +23,7 @@ import {
  * @param {{
  *   datasetType: string,
  *   access?: { scope: string, brandIds: string[] },
+ *   costScope?: { mode: string, brandKeys?: string[] },
  * }} options
  */
 export async function applyDatasetCache(
@@ -29,6 +33,7 @@ export async function applyDatasetCache(
   {
     datasetType,
     access,
+    costScope,
   },
 ) {
   let etag
@@ -45,6 +50,7 @@ export async function applyDatasetCache(
         datasetType,
         state,
         access,
+        costScope,
       })
   } catch (error) {
     console.error(
@@ -87,15 +93,18 @@ export async function applyDatasetCache(
 }
 
 /**
- * Middleware form for datasets that do not depend on the user scope.
+ * Middleware form for datasets that do not depend on the brand scope.
+ * With costScoped, the tag also carries the user's cost scope (SEC-003A),
+ * because the response hides costs outside that scope.
  *
  * @param {{ query: Function }} pool
- * @param {{ datasetType: string }} options
+ * @param {{ datasetType: string, costScoped?: boolean }} options
  */
 export function datasetCache(
   pool,
   {
     datasetType,
+    costScoped = false,
   },
 ) {
   return async function datasetCacheMiddleware(
@@ -110,6 +119,12 @@ export function datasetCache(
         res,
         {
           datasetType,
+          costScope:
+            costScoped
+              ? resolveCostScope(
+                  req.authUser,
+                )
+              : undefined,
         },
       )
 

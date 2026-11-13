@@ -166,7 +166,7 @@ describe('dataset ETag', () => {
   })
 
   it('includes the response format version', () => {
-    expect(DATASET_RESPONSE_FORMAT_VERSION).toBe(1)
+    expect(DATASET_RESPONSE_FORMAT_VERSION).toBe(2)
   })
 })
 

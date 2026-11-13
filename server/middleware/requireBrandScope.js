@@ -91,6 +91,63 @@ export function requireBrandScope(req, res, next) {
 }
 
 /**
+ * Resuelve qué costos puede ver el usuario autenticado (SEC-003A).
+ *
+ * { mode: 'none' }                      // sin costos
+ * { mode: 'all' }                       // todos los costos
+ * { mode: 'assigned', brandKeys: [...] } // solo costos de sus marcas
+ */
+export function resolveCostScope(authUser) {
+  if (authUser?.costAccess !== true) {
+    return { mode: 'none' }
+  }
+
+  if (SCOPES_WITH_FULL_ACCESS.has(authUser.scope)) {
+    return { mode: 'all' }
+  }
+
+  if (SCOPES_WITH_ASSIGNED_ACCESS.has(authUser.scope)) {
+    return {
+      mode: 'assigned',
+      brandKeys: normalizeBrandKeys(authUser.brandIds),
+    }
+  }
+
+  return { mode: 'none' }
+}
+
+/**
+ * Condición SQL que indica si los costos de una fila son visibles para el
+ * alcance de costos. Agrega a params lo que necesite. Cualquier alcance
+ * desconocido niega los costos.
+ *
+ * @param {{ mode: string, brandKeys?: string[] } | undefined} costScope
+ * @param {string} brandColumn columna con la marca tal como viene en la tabla
+ * @param {unknown[]} params
+ */
+export function buildCostVisibilityCondition(
+  costScope,
+  brandColumn,
+  params,
+) {
+  if (costScope?.mode === 'all') {
+    return 'TRUE'
+  }
+
+  if (
+    costScope?.mode === 'assigned' &&
+    Array.isArray(costScope.brandKeys) &&
+    costScope.brandKeys.length > 0
+  ) {
+    params.push(costScope.brandKeys)
+
+    return `brand_key(${brandColumn}) = ANY($${params.length}::TEXT[])`
+  }
+
+  return 'FALSE'
+}
+
+/**
  * Valida que una marca solicitada esté dentro del alcance del usuario.
  * Devuelve la clave normalizada o null si no está permitida.
  */

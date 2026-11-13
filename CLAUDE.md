@@ -85,7 +85,7 @@ Capa de servidor (en curso en la rama v0.57.0, "production platform foundation")
 - `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, dataStatus, settingsUsers, settingsRoles).
 - `server/services/`: importación por chunks con tablas staging, agregados de negocio (`refresh_business_aggregates`), analítica de ventas en SQL, búsqueda global y conciliación de facturación de proyectos.
 - `server/middleware/`: `requireAuth`, `requireAdmin`, `requireBrandScope`, `requireWriteAccess` (usuarios, roles y asignación de marcas por PM).
-- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `036`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
+- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `037`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
 
 Reglas de arquitectura:
 
@@ -251,7 +251,7 @@ Rollback de frontend: `sudo rsync -a --delete /opt/pm-intelligence-workspace/dis
 
 ### Caché HTTP de `/api/data/*` (desde la migración 036)
 
-- Los `GET /api/data/<dataset>` responden con `Cache-Control: private, no-cache` y un ETag débil calculado **antes** de consultar los datos, a partir de: imports completados del dataset en `data_imports`, alcance y marcas del usuario (solo ventas), versión de formato de respuesta (`DATASET_RESPONSE_FORMAT_VERSION` en `server/services/datasetCacheService.js`) y la versión manual de datos (`public.data_cache_version`). Si coincide con `If-None-Match`, el servidor responde 304 sin consultar las tablas.
+- Los `GET /api/data/<dataset>` responden con `Cache-Control: private, no-cache` y un ETag débil calculado **antes** de consultar los datos, a partir de: imports completados del dataset en `data_imports`, alcance y marcas del usuario (ventas), alcance de costos del usuario (pricing, inventory, products y purchases; desde SEC-003A), versión de formato de respuesta (`DATASET_RESPONSE_FORMAT_VERSION` en `server/services/datasetCacheService.js`) y la versión manual de datos (`public.data_cache_version`). Si coincide con `If-None-Match`, el servidor responde 304 sin consultar las tablas.
 - Si no puede leer ese estado (por ejemplo, falta la 036), responde como antes, con `no-store`.
 - **Toda migración que modifique datos** (INSERT, UPDATE o DELETE sobre tablas de datos) debe subir la versión de datos al final, antes de su `COMMIT`:
 

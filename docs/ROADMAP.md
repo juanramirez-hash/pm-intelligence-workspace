@@ -262,6 +262,36 @@ SEC-002 atiende el hallazgo S4 de la auditoría. Después del cambio, `npm audit
 - `xlsx` se instala desde el tarball oficial de SheetJS, no desde el registro de npm: `npm audit` y `npm outdated` ya no lo revisan, así que sus actualizaciones se siguen a mano en `cdn.sheetjs.com`.
 - Despliegue: cambian `package-lock.json` en la raíz y en `server/`, así que hace falta `npm ci` en ambos. El servidor de producción necesita acceso a `cdn.sheetjs.com` para instalar `xlsx`.
 
+## Seguridad — SEC-003A
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| SEC-003A (S1) | Visibilidad de costos por rol y marca en el backend: columna `app_roles.cost_access` (migración 037), costos ocultos en pricing, inventario, productos y órdenes de compra fuera del alcance del usuario, ETag con el alcance de costos y `cost_access` editable en Settings (API) | Implementado · pendiente de validación funcional y despliegue |
+| SEC-003B | Interfaz de Settings para `cost_access` | Pendiente |
+
+SEC-003A atiende el hallazgo S1 de la auditoría. Decisiones de negocio:
+
+- admin, manager y pm ven costos; engineering no ve ningún costo.
+- Con alcance `all` se ven todos los costos; con alcance `assigned`, solo los de las marcas asignadas (`brand_key()` de la marca de la fila contra las marcas del usuario).
+- **Clientes, proyectos y facturación de proyectos no cambian: siguen completos para todos los roles.**
+- Engineering sí ve utilidad bruta y margen en ventas de sus marcas asignadas; esto permite deducir el costo promedio vendido de esas marcas. Aceptado por la gerencia el 13 nov 2026.
+
+Qué cambia en `GET /api/data/*`:
+
+- `pricing`: solo filas de marcas dentro del alcance de costos. Sin acceso a costos, el dataset llega con cero filas y la misma forma.
+- `inventory`: `unit_cost` e `inventory_value` en NULL fuera del alcance.
+- `products`: `average_cost_usd`, `total_value`, `inventory_value_mxn` e `inventory_value_usd` en NULL fuera del alcance.
+- `purchases`: `amount_foreign_currency` en NULL fuera del alcance.
+- Las demás columnas y filas no cambian. El ETag de estos cuatro datasets incluye el alcance de costos y `DATASET_RESPONSE_FORMAT_VERSION` sube a 2.
+- `PATCH /api/settings/roles/:roleKey` acepta `costAccess` (boolean). El rol admin no puede quedarse sin `cost_access`.
+
+Despliegue: aplicar la migración 037 **antes** de reiniciar el backend; sin la columna, todas las rutas autenticadas responden 500. Para revertir, primero volver al código anterior y después aplicar el rollback de la 037. Verificación en `pm_intelligence_test` con `server/scripts/sec003aVerification.sql` (solo lectura).
+
+## Pendientes de seguridad
+
+- Indicadores derivados del monto en órdenes de compra: `value_classification`, `value_score` y `amount_classification` siguen visibles para todos los roles. Revisar si revelan el costo.
+- Roles de sistema en Settings: `PATCH /api/settings/roles/:roleKey` no protege los roles de sistema (`system_role`). Hoy se le puede quitar `write_access` o `active` al rol admin. SEC-003A solo protege `cost_access` del rol admin.
+
 ## Pendientes técnicos
 
 - SQL-002: `p_concurrently` en `refresh_sales_fallback_owner_candidates()` no hace refresh concurrente real. Medido en `pm_intelligence_test`: el refresh tarda ~5 s con 546,520 ventas, así que el refresh concurrente no es necesario por ahora. Reevaluar si el tiempo crece; si se cambia, hacerlo en una migración nueva, no editando la 035.

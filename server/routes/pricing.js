@@ -2,6 +2,9 @@ import { Router } from 'express'
 import {
   datasetCache,
 } from '../middleware/datasetCache.js'
+import {
+  resolveCostScope,
+} from '../middleware/requireBrandScope.js'
 
 import {
   appendPricingChunk,
@@ -24,12 +27,16 @@ export function createPricingRouter(
     '/',
     datasetCache(pool, {
       datasetType: 'pricing',
+      costScoped: true,
     }),
-    async (_req, res) => {
+    async (req, res) => {
       try {
         const dataset =
           await loadPricingDataset(
             pool,
+            resolveCostScope(
+              req.authUser,
+            ),
           )
 
         return res.json({

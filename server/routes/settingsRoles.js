@@ -10,6 +10,8 @@ const ALLOWED_SCOPES =
     'legacy',
   ])
 
+const ADMIN_ROLE_KEY = 'admin'
+
 export function createSettingsRolesRouter(
   pool,
 ) {
@@ -28,6 +30,7 @@ export function createSettingsRolesRouter(
                 description,
                 scope,
                 write_access,
+                cost_access,
                 active,
                 system_role,
                 created_at,
@@ -202,6 +205,48 @@ export function createSettingsRolesRouter(
         if (
           Object.hasOwn(
             req.body ?? {},
+            'costAccess',
+          )
+        ) {
+          const costAccess =
+            req.body.costAccess
+
+          if (
+            typeof costAccess !==
+            'boolean'
+          ) {
+            return res
+              .status(400)
+              .json({
+                ok: false,
+                error:
+                  'Cost access must be boolean',
+              })
+          }
+
+          // Admin must always see costs (SEC-003A).
+          if (
+            roleKey === ADMIN_ROLE_KEY &&
+            costAccess !== true
+          ) {
+            return res
+              .status(400)
+              .json({
+                ok: false,
+                error:
+                  'Admin role must keep cost access',
+              })
+          }
+
+          values.push(costAccess)
+          updates.push(
+            `cost_access = $${values.length}`,
+          )
+        }
+
+        if (
+          Object.hasOwn(
+            req.body ?? {},
             'active',
           )
         ) {
@@ -253,6 +298,7 @@ export function createSettingsRolesRouter(
                 description,
                 scope,
                 write_access,
+                cost_access,
                 active,
                 system_role,
                 created_at,

@@ -38,6 +38,7 @@ export function loadAuthenticatedUser(
               r.role_name,
               r.scope,
               r.write_access,
+              r.cost_access,
               r.active AS role_active,
               COALESCE(
                 ARRAY_AGG(
@@ -65,6 +66,7 @@ export function loadAuthenticatedUser(
               r.role_name,
               r.scope,
               r.write_access,
+              r.cost_access,
               r.active
           `,
           [userId],
@@ -98,6 +100,8 @@ export function loadAuthenticatedUser(
         scope: user.scope,
         writeAccess:
           user.write_access,
+        costAccess:
+          user.cost_access === true,
         brandIds:
           user.brand_ids,
       }

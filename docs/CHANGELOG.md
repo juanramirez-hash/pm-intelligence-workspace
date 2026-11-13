@@ -1,3 +1,14 @@
+# 0.57.0-SEC-003A
+
+- Adds `app_roles.cost_access` (migration `037`, with rollback): admin, manager and pm see costs; engineering does not (audit finding S1).
+- Exposes `req.authUser.costAccess` and adds `resolveCostScope` (`none`, `all` or `assigned` brands) plus a shared SQL cost visibility condition based on `brand_key()`.
+- Hides costs outside the user's cost scope in `GET /api/data/*`: pricing rows (an empty dataset with the same shape when there is no cost access), inventory `unit_cost` and `inventory_value`, product `average_cost_usd`, `total_value`, `inventory_value_mxn` and `inventory_value_usd`, and purchase order `amount_foreign_currency`. Other columns and rows do not change.
+- Customers, projects and project billings stay complete for every role (business decision).
+- Adds the cost scope to the ETag of pricing, inventory, products and purchases, and bumps `DATASET_RESPONSE_FORMAT_VERSION` to 2.
+- Settings roles API returns `cost_access` and accepts `costAccess` in PATCH; the admin role cannot lose cost access. The Settings UI ships in SEC-003B.
+- Adds automated coverage for the cost scope, the cost-scoped datasets and ETags, the inventory route, the roles API and empty pricing hydration, plus read-only verification queries in `server/scripts/sec003aVerification.sql`.
+- Deploy: apply migration `037` before restarting the backend.
+
 # 0.57.0-SEC-002
 
 - Removes unused `axios` and `@tanstack/react-query` dependencies (audit finding S4); this also drops the vulnerable `follow-redirects`.

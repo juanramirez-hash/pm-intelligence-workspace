@@ -1,6 +1,19 @@
+import {
+  buildCostVisibilityCondition,
+} from '../middleware/requireBrandScope.js'
+
 export async function loadInventoryDataset(
   pool,
+  costScope,
 ) {
+  const rowsParams = []
+  const costVisible =
+    buildCostVisibilityCondition(
+      costScope,
+      'brand',
+      rowsParams,
+    )
+
   const client =
     await pool.connect()
 
@@ -20,8 +33,8 @@ export async function loadInventoryDataset(
             committed,
             in_transit,
             on_order,
-            unit_cost,
-            inventory_value,
+            CASE WHEN ${costVisible} THEN unit_cost END AS unit_cost,
+            CASE WHEN ${costVisible} THEN inventory_value END AS inventory_value,
             currency
           FROM inventory_snapshots
           ORDER BY
@@ -30,6 +43,7 @@ export async function loadInventoryDataset(
             location,
             id
         `,
+        rowsParams,
       )
 
     const importResult =
