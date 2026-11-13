@@ -323,6 +323,18 @@ Implementación:
 - No regresión: `tests/services/sec003cNoRegression.test.ts` compara, con datos completos, inventario (totales, grupos, estados, participaciones), riesgos y oportunidades, catálogo, compras, forecast (Valor de inventario, Valor afectado y rankings) y el resumen del Data Center contra una línea base generada con el código anterior a SEC-003C.
 - Executive Workspace, las colas de atención y Pulse no leen estos valores; no cambian.
 
+## Operación — OPS-001
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| OPS-001 | El backend no arranca sin las migraciones de las que depende, y script de migración con respaldo verificado | Implementado · pendiente de validación funcional y despliegue |
+
+Incidente del 13 nov 2026: la 037 no se aplicó en producción (el `pg_dump` salió en 0 bytes y la migración falló por "must be owner of table app_roles"), el backend se reinició con el código nuevo y `/api/auth/me` respondió 500.
+
+- `server/db/schemaCheck.js`: antes de `app.listen`, el backend verifica en `information_schema` la lista `REQUIRED_SCHEMA` (hoy, la tabla `data_cache_version` de la 036 y `app_roles.cost_access` de la 037). Si falta algo, escribe "Falta la migración NNN: …" por cada faltante y termina con código 1, sin reintentar. Si PostgreSQL no responde, reintenta cada 5 segundos hasta 24 veces ("Esperando a PostgreSQL… intento n/24") y, si se agotan, termina con "No se pudo verificar el esquema: …". Cada migración futura que agregue una tabla o columna que el código lea se agrega a esa lista.
+- `server/scripts/apply-migration.sh` (se ejecuta con `bash server/scripts/apply-migration.sh server/migrations/NNN_….sql`): respaldo con `pg_dump` como `postgres` en `~/respaldos/pm_intelligence_db_pre_<NNN>_<fecha>.dump` con `umask 077`; se detiene si pesa menos de 1 MB; aplica con `sudo -u postgres psql -d pm_intelligence_db -v ON_ERROR_STOP=1 -1`; se detiene con un mensaje claro si `psql` falla; lista los requisitos de `REQUIRED_SCHEMA` que sigan faltando, con la misma consulta del backend, e indica reiniciar el servicio sin hacerlo por su cuenta.
+- CLAUDE.md §12: `app_users`, `app_roles` y `app_user_brand_assignments` son de `postgres`, no de `pm_intelligence`; las migraciones se aplican con el script.
+
 ## Pendientes de seguridad
 
 - Indicadores derivados del monto en órdenes de compra: `value_classification`, `value_score` y `amount_classification` siguen visibles para todos los roles. Revisar si revelan el costo.

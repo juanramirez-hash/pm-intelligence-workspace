@@ -5,6 +5,7 @@ import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import { OAuth2Client } from 'google-auth-library'
 import { pool } from './db/pool.js'
+import { assertSchemaOrExit } from './db/schemaCheck.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { requireAdmin } from './middleware/requireAdmin.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
@@ -502,6 +503,9 @@ app.use(
   requireAdmin,
   createSettingsRolesRouter(pool),
 )
+
+// Do not serve requests without the migrations the code depends on (OPS-001).
+await assertSchemaOrExit(pool)
 
 app.listen(
   port,

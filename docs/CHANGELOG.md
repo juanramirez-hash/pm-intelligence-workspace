@@ -1,3 +1,10 @@
+# 0.57.0-OPS-001
+
+- Checks the database schema before the backend listens (`server/db/schemaCheck.js`): every table and column in `REQUIRED_SCHEMA` (today `data_cache_version` from migration `036` and `app_roles.cost_access` from `037`) must exist. A missing one logs "Falta la migración NNN: …" and exits with code 1 without retrying, so `systemctl status` shows the failure instead of every request answering 500.
+- Retries every 5 seconds, up to 24 times, while PostgreSQL is not reachable, so the backend does not fail when it starts before PostgreSQL after a server reboot.
+- Adds `server/scripts/apply-migration.sh`: verified `pg_dump` backup as `postgres` (stops below 1 MB), applies the migration as `postgres` in one transaction, stops on any `psql` error, lists the schema requirements still missing and does not restart the service.
+- Documents in CLAUDE.md that `app_users`, `app_roles` and `app_user_brand_assignments` belong to `postgres`, the migration script and the 13 Nov 2026 incident (migration `037` not applied, empty backup, `/api/auth/me` answering 500).
+
 # 0.57.0-SEC-003C
 
 - Keeps hidden or missing costs as NULL from the builders to the screens: inventory position and snapshot values, purchase order amounts, inventory analytics, inventory risks and opportunities, the inventory catalog summary, purchasing analytics, forecast inventory intelligence, the Forecast Workspace summary and the Data Center inventory summary.

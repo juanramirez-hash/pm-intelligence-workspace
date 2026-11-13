@@ -234,15 +234,17 @@ Rollback de frontend: `sudo rsync -a --delete /opt/pm-intelligence-workspace/dis
 
 ### Migraciones
 
-- Se aplican **manualmente** en producción: el usuario entra por SSH y corre `psql -f`.
-- La aplicación y las migraciones usan el **mismo usuario de PostgreSQL** (`pm_intelligence`), que es dueño de los objetos que crean las migraciones. Los `GRANT` a ese usuario no restringen nada: las restricciones de escritura son de código.
+- Se aplican **manualmente** en producción: el usuario entra por SSH y corre `bash server/scripts/apply-migration.sh server/migrations/NNN_descripcion.sql` (respaldo verificado con `pg_dump` + migración como `postgres`; no reinicia el backend).
+- La aplicación usa el usuario de PostgreSQL `pm_intelligence`, pero **no es dueño de todos los objetos**: `app_users`, `app_roles` y `app_user_brand_assignments` son de `postgres`. Por eso las migraciones se aplican como `postgres` con el script. Las restricciones de escritura son de código.
+- Lección (13 nov 2026): la 037 falló por "must be owner of table app_roles" y el `pg_dump` salió en 0 bytes; el backend se reinició con código nuevo y `/api/auth/me` respondió 500. Desde OPS-001 el script se detiene ante un respaldo de menos de 1 MB o un error de `psql`, y el backend no arranca si falta una migración.
+- Toda migración que agregue una tabla o columna que el código lea se agrega a `REQUIRED_SCHEMA` en `server/db/schemaCheck.js`: al arrancar, el backend verifica esa lista y termina con código 1 (visible en `systemctl status` y `journalctl`) si falta algo.
 - No hay tabla de control de migraciones; el número del archivo (`NNN_`) es la referencia.
 - Cada migración nueva lleva su rollback en `server/migrations/rollback/` con el mismo número (`NNN_descripcion.rollback.sql`).
 - Toda migración nueva debe probarse primero fuera de producción.
 - Procedimiento obligatorio en producción:
   1. `git pull`
-  2. Respaldo con `pg_dump` antes de cualquier migración.
-  3. `psql -v ON_ERROR_STOP=1 -1 -f server/migrations/NNN_descripcion.sql`
+  2. `bash server/scripts/apply-migration.sh server/migrations/NNN_descripcion.sql`: respalda en `~/respaldos/pm_intelligence_db_pre_<NNN>_<fecha>.dump`, se detiene si el respaldo pesa menos de 1 MB, aplica con `sudo -u postgres psql -d pm_intelligence_db -v ON_ERROR_STOP=1 -1` y lista los requisitos de esquema que sigan faltando.
+  3. Si el script falla, **no** reiniciar el backend.
   4. Verificar los objetos creados.
   5. Reiniciar el backend **después** de migrar (`sudo systemctl restart pm-intelligence-api`).
   6. Validación funcional en la interfaz.
@@ -252,7 +254,7 @@ Rollback de frontend: `sudo rsync -a --delete /opt/pm-intelligence-workspace/dis
 ### Caché HTTP de `/api/data/*` (desde la migración 036)
 
 - Los `GET /api/data/<dataset>` responden con `Cache-Control: private, no-cache` y un ETag débil calculado **antes** de consultar los datos, a partir de: imports completados del dataset en `data_imports`, alcance y marcas del usuario (ventas), alcance de costos del usuario (pricing, inventory, products y purchases; desde SEC-003A), versión de formato de respuesta (`DATASET_RESPONSE_FORMAT_VERSION` en `server/services/datasetCacheService.js`) y la versión manual de datos (`public.data_cache_version`). Si coincide con `If-None-Match`, el servidor responde 304 sin consultar las tablas.
-- Si no puede leer ese estado (por ejemplo, falta la 036), responde como antes, con `no-store`.
+- Si no puede leer ese estado, responde como antes, con `no-store`. Desde OPS-001 el backend no arranca sin la 036.
 - **Toda migración que modifique datos** (INSERT, UPDATE o DELETE sobre tablas de datos) debe subir la versión de datos al final, antes de su `COMMIT`:
 
   ```sql
