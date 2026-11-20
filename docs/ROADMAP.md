@@ -349,6 +349,17 @@ Hallazgos atendidos:
 
 Los contadores de límite viven en memoria: se reinician con el backend y suponen un solo proceso. El límite de cuerpo de nginx (`client_max_body_size`) es independiente y se revisa en producción. Sin migraciones.
 
+## Data Center — DC-001
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| DC-001 | Sección "Fuentes de NetSuite" al inicio del Data Center para la carga semanal manual | Implementado · pendiente de validación funcional y despliegue |
+
+- Una fila por importador con el reporte de NetSuite, el botón "Abrir en NetSuite", la última carga, el corte de datos y el estado ("Al día", "Atrasado", "Sin datos" o "Fuente sin configurar"), con color y texto.
+- Fuentes configuradas en `src/features/data-center/config/netsuiteSources.ts`: ventas (reporte "TS - Detalle de ventas PM"), inventario (reporte "TS - Reporte de inventario por sucursal"), proyectos (búsqueda guardada "TS - Mis Proyectos PMs") y facturación de proyectos (búsqueda guardada "TS - Facturas por proyecto por item"), cada una con `staleAfterDays: 7`. Los demás importadores aparecen como "Fuente sin configurar" hasta confirmar su reporte.
+- Última carga: fecha del último import completado de cada dataset en el store. Corte: fecha máxima de venta (`salesSummary.periodEnd`) y fecha de snapshot de inventario (`inventorySummary.periodEnd`). El estado se mide desde el corte o, sin corte, desde la última carga, comparando la fecha local del navegador (AAAA-MM-DD, sin horas).
+- Solo frontend, sin cambios de permisos: se ve donde ya se ve el Data Center. La carga sigue siendo manual (exportar de NetSuite y arrastrar al Data Center).
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

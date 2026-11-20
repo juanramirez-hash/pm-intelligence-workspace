@@ -1,3 +1,9 @@
+# 0.57.0-DC-001
+
+- Adds the "Fuentes de NetSuite" section at the top of the Data Center: one row per importer with the NetSuite report, an "Abrir en NetSuite" link, the last completed import, the data cutoff (latest sale date and inventory snapshot date) and a status ("Al día", "Atrasado", "Sin datos" or "Fuente sin configurar") shown with color and text.
+- Configures the NetSuite sources in one place (`src/features/data-center/config/netsuiteSources.ts`) for sales, inventory, projects and project billings, each stale after 7 days; the other importers show "Fuente sin configurar".
+- Computes the status with local calendar dates (browser time zone, no hours), with tests for the Mexico City evening case, stale and empty sources and unconfigured importers. Frontend only; no permission changes.
+
 # 0.57.0-SEC-004
 
 - Regenerates the session on `/signin/google` before saving the user, to prevent session fixation (audit finding S5).

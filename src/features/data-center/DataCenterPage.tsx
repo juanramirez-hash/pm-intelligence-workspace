@@ -65,6 +65,10 @@ import {
 } from './components/ExchangeRateEditor'
 
 import {
+  NetsuiteSourcesPanel,
+} from './components/NetsuiteSourcesPanel'
+
+import {
   ProjectBillingReconciliationPanel,
 } from './components/ProjectBillingReconciliationPanel'
 
@@ -290,6 +294,8 @@ export function DataCenterPage() {
         title="Data Center"
         description="Administra, carga y valida las fuentes de información de PM Intelligence."
       />
+
+      <NetsuiteSourcesPanel />
 
       <DataCatalog />
 
