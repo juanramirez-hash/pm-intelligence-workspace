@@ -172,6 +172,12 @@ export function DataCenterImportPanel({
         state.importErrors,
     )
 
+  const importWarnings =
+    useDataCenterStore(
+      (state) =>
+        state.importWarnings,
+    )
+
   const activeReportType =
     useDataCenterStore(
       (state) =>
@@ -416,6 +422,34 @@ export function DataCenterImportPanel({
                     </p>
                   ),
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {importWarnings.length > 0 && (
+        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle
+              className="mt-0.5 shrink-0 text-amber-600"
+              size={21}
+            />
+
+            <div className="min-w-0">
+              <p className="font-semibold text-amber-800">
+                Advertencias de la importación
+              </p>
+
+              <div className="mt-2 space-y-1">
+                {importWarnings.map((warning) => (
+                  <p
+                    className="text-sm text-amber-800"
+                    key={warning}
+                  >
+                    {warning}
+                  </p>
+                ))}
               </div>
             </div>
           </div>

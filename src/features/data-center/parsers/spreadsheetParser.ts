@@ -172,6 +172,151 @@ function detectNetSuiteSalesHeaderRow(
   return null
 }
 
+function headerText(value: unknown): string {
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
+    .replace(/ /g, ' ')
+    .trim()
+}
+
+interface NetSuiteInventoryHeader {
+  dataStartRow: number
+  headers: string[]
+}
+
+/**
+ * NetSuite "TS - Reporte de inventario por sucursal" exports a preamble,
+ * a header row with Item and Marca whose branches are merged cells over
+ * their metric columns, and a second row with the metrics (DC-002). The
+ * combined header is "<BRANCH> <METRIC>"; columns without a branch keep
+ * their own title.
+ *
+ * A header on the first row without merged cells (files already
+ * normalized by hand) keeps the previous row-1 behaviour.
+ */
+function detectNetSuiteInventoryHeader(
+  worksheet: XLSX.WorkSheet,
+): NetSuiteInventoryHeader | null {
+  const worksheetReference =
+    worksheet['!ref']
+
+  if (!worksheetReference) {
+    return null
+  }
+
+  const worksheetRange =
+    XLSX.utils.decode_range(
+      worksheetReference,
+    )
+
+  const probeRows =
+    XLSX.utils.sheet_to_json<unknown[]>(
+      worksheet,
+      {
+        header: 1,
+        defval: null,
+        raw: true,
+        blankrows: true,
+        range: {
+          s: worksheetRange.s,
+          e: {
+            r: Math.min(
+              worksheetRange.e.r,
+              worksheetRange.s.r + 24,
+            ),
+            c: worksheetRange.e.c,
+          },
+        },
+      },
+    )
+
+  const headerOffset = probeRows.findIndex((row) => {
+    const values = new Set(
+      (row ?? []).map(normalizeHeaderCandidate),
+    )
+
+    return values.has('item') && values.has('marca')
+  })
+
+  if (headerOffset < 0) {
+    return null
+  }
+
+  const headerRow =
+    worksheetRange.s.r + headerOffset
+
+  const groupMerges = (worksheet['!merges'] ?? []).filter(
+    (merge) =>
+      merge.s.r === headerRow &&
+      merge.e.r === headerRow &&
+      merge.e.c > merge.s.c,
+  )
+
+  if (
+    headerRow === worksheetRange.s.r &&
+    groupMerges.length === 0
+  ) {
+    return null
+  }
+
+  const titles = probeRows[headerOffset] ?? []
+  const metrics = probeRows[headerOffset + 1] ?? []
+  const columnCount =
+    worksheetRange.e.c - worksheetRange.s.c + 1
+
+  const mergedGroups = new Map<number, string>()
+
+  for (const merge of groupMerges) {
+    const group = headerText(
+      titles[merge.s.c - worksheetRange.s.c],
+    )
+
+    for (
+      let column = merge.s.c;
+      column <= merge.e.c;
+      column += 1
+    ) {
+      mergedGroups.set(column - worksheetRange.s.c, group)
+    }
+  }
+
+  let lastGroup = ''
+  let hasMetricRow = false
+
+  const headers = Array.from(
+    { length: columnCount },
+    (_, index) => {
+      const title = headerText(titles[index])
+      const metric = headerText(metrics[index])
+
+      if (title) {
+        lastGroup = title
+      }
+
+      // Without merge information, the last non-empty title is the group.
+      const group =
+        mergedGroups.get(index) ?? (metric ? lastGroup : '')
+
+      if (metric && group) {
+        hasMetricRow = true
+
+        return `${group} ${metric}`
+      }
+
+      return title || `__EMPTY_${index}`
+    },
+  )
+
+  return {
+    dataStartRow:
+      headerRow + (hasMetricRow ? 2 : 1),
+    headers,
+  }
+}
+
 export async function parseSpreadsheetFile(
   file: File,
 ): Promise<ParsedSpreadsheet> {
@@ -212,6 +357,45 @@ export function parseSpreadsheetSheet(
     detectNetSuiteSalesHeaderRow(
       worksheet,
     )
+
+  const netSuiteInventoryHeader =
+    netSuiteSalesHeaderRow === null
+      ? detectNetSuiteInventoryHeader(
+          worksheet,
+        )
+      : null
+
+  if (
+    netSuiteInventoryHeader &&
+    worksheet['!ref']
+  ) {
+    const inventoryRange =
+      XLSX.utils.decode_range(
+        worksheet['!ref'],
+      )
+
+    inventoryRange.s.r =
+      netSuiteInventoryHeader.dataStartRow
+
+    const inventoryRows =
+      XLSX.utils.sheet_to_json<SpreadsheetRow>(
+        worksheet,
+        {
+          header:
+            netSuiteInventoryHeader.headers,
+          defval: null,
+          raw: true,
+          blankrows: false,
+          range: inventoryRange,
+        },
+      )
+
+    return {
+      sheetName,
+      rows: inventoryRows,
+      columns: detectColumns(inventoryRows),
+    }
+  }
 
   let range:
     XLSX.Range | undefined

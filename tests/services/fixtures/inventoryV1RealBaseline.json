@@ -1,0 +1,17 @@
+{
+  "rows": 6717,
+  "ignoredRows": 2547,
+  "locations": [
+    "CEDIS CDMX",
+    "CEDIS MTY",
+    "PROYECTOS",
+    "VENTAS CDMX",
+    "VENTAS GDL",
+    "VENTAS MER",
+    "VENTAS MTY",
+    "VENTAS PUE",
+    "VENTAS QRO",
+    "VENTAS VER"
+  ],
+  "sha256": "c23a82042de4c818c409594ee0e595b9e45aa4428b0e451968f1c01ac44a1485"
+}

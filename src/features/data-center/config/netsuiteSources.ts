@@ -24,6 +24,8 @@ export interface NetsuiteSource {
   kind: NetsuiteSourceKind
   url: string
   staleAfterDays: number
+  // Overrides the help line of its kind.
+  help?: string
 }
 
 // Same order as importPluginRegistry.
@@ -58,6 +60,8 @@ export const NETSUITE_SOURCES: Partial<
     kind: 'report',
     url: 'https://4820964.app.netsuite.com/app/reporting/reportrunner.nl?cr=478&reload=T',
     staleAfterDays: 7,
+    // DC-002: the raw NetSuite export imports as is.
+    help: 'Ejecutar el reporte, usar Exportar → Excel y arrastrar el archivo tal cual (no hace falta limpiarlo)',
   },
   projects: {
     name: 'TS - Mis Proyectos PMs',

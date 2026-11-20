@@ -157,6 +157,24 @@ function normalizeLongInventoryRows(
   return { rows: normalizedRows, ignoredRows }
 }
 
+/**
+ * NetSuite grouping rows such as "Inventory Item": a label in the item
+ * column, without brand, code or any number (DC-002). They are ignored
+ * rows, not errors.
+ */
+function isGroupingRow(
+  row: RawInventoryRow,
+  validation: InventoryValidationResult,
+): boolean {
+  return (
+    !text(getValue(row, validation, 'brand')) &&
+    !identifier(getValue(row, validation, 'productCode')) &&
+    Object.values(row).every(
+      (value) => typeof value !== 'number',
+    )
+  )
+}
+
 function normalizeWideInventoryRows(
   rows: RawInventoryRow[],
   validation: InventoryValidationResult,
@@ -169,7 +187,10 @@ function normalizeWideInventoryRows(
       getValue(row, validation, 'productName'),
     )
 
-    if (!productName) {
+    if (
+      !productName ||
+      isGroupingRow(row, validation)
+    ) {
       ignoredRows += 1
       continue
     }

@@ -360,6 +360,19 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Última carga: fecha del último import completado de cada dataset en el store. Corte: fecha máxima de venta (`salesSummary.periodEnd`) y fecha de snapshot de inventario (`inventorySummary.periodEnd`). El estado se mide desde el corte o, sin corte, desde la última carga, comparando la fecha local del navegador (AAAA-MM-DD, sin horas).
 - Solo frontend, sin cambios de permisos: se ve donde ya se ve el Data Center. La carga sigue siendo manual (exportar de NetSuite y arrastrar al Data Center).
 
+## Data Center — DC-002
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| DC-002 | Importar el inventario tal como sale de NetSuite ("TS - Reporte de inventario por sucursal"), sin normalizarlo a mano | Implementado · pendiente de validación funcional y despliegue |
+
+- El parser detecta el preámbulo de NetSuite también para inventario: la fila de encabezado es la que contiene "Item" y "Marca". Si las sucursales vienen en celdas combinadas con las métricas en la fila siguiente, el encabezado se arma como "<SUCURSAL> <MÉTRICA>" (con `!merges`, o con el último grupo no vacío si no hay combinadas). La detección de ventas no cambia, y los archivos con encabezado en la fila 1 sin celdas combinadas (el V1 normalizado a mano) siguen el camino anterior: una prueba compara su resultado contra una línea base generada antes del cambio.
+- Las filas de agrupación ("Inventory Item": texto en el artículo, sin marca, sin código y sin números) cuentan como filas ignoradas, no como errores.
+- Alias de sucursales en un solo lugar (`importers/inventory/inventoryLocationAliases.ts`): `002 CDMX : CEDIS` → `CEDIS CDMX`, `002 CDMX : PROYECTOS` → `PROYECTOS`, `002 CDMX : VENTAS.` → `VENTAS CDMX`, `011 QUERETARO : VENTAS` → `VENTAS QRO`, `013 PUEBLA : VENTAS` → `VENTAS PUE`, `015 GUADALAJARA : VENTAS` → `VENTAS GDL`, `017 VERACRUZ : VENTAS` → `VENTAS VER`, `019 MERIDA : VENTAS` → `VENTAS MER`, `021 MONTERREY : CEDIS MTY` → `CEDIS MTY` y `021 MONTERREY : VENTAS` → `VENTAS MTY`. Se comparan sin mayúsculas, acentos, signos ni espacios repetidos. Una sucursal nueva conserva su nombre de NetSuite y el panel de importación muestra el aviso amarillo "Sucursal sin alias: …". "Total" se sigue ignorando.
+- Fuentes de NetSuite (DC-001): la ayuda de inventario dice "Ejecutar el reporte, usar Exportar → Excel y arrastrar el archivo tal cual (no hace falta limpiarlo)".
+- Verificación con el archivo real del 20 nov 2026 (no versionado): 4,677 artículos, las 10 sucursales con su nombre corto y, en cada artículo, la suma de "En Mano" de las sucursales igual a "Total En Mano". En esa exportación CEDIS CDMX y CEDIS MTY vienen vacías y el reporte no trae "Average Cost" en muchas posiciones; las posiciones sin costo quedan sin valor (SEC-003C).
+- El reporte no trae fecha de corte, igual que el V1: el inventario se sigue importando sin `snapshotDate` y en Fuentes de NetSuite se mide por la última carga.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

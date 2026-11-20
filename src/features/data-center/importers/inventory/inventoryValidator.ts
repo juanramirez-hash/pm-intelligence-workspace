@@ -9,6 +9,9 @@ import {
   RECOMMENDED_INVENTORY_FIELDS,
   REQUIRED_INVENTORY_FIELDS,
 } from './inventorySchema'
+import {
+  resolveInventoryLocation,
+} from './inventoryLocationAliases'
 
 export type InventoryColumnMap =
   Partial<Record<InventoryField, string>>
@@ -40,6 +43,8 @@ export interface InventoryValidationResult
   missingRequiredFields: InventoryField[]
   missingRecommendedFields: InventoryField[]
   unknownColumns: string[]
+  // Wide-layout branches without an alias, kept with their NetSuite name.
+  unaliasedLocations: string[]
 }
 
 export function normalizeInventoryHeader(
@@ -150,11 +155,15 @@ function parseWideLocationColumn(
 
 function buildWideLocationColumns(
   headers: readonly string[],
-): Record<string, WideInventoryLocationColumnMap> {
+): {
+  columns: Record<string, WideInventoryLocationColumnMap>
+  unaliasedLocations: string[]
+} {
   const result: Record<
     string,
     WideInventoryLocationColumnMap
   > = {}
+  const unaliasedLocations = new Set<string>()
 
   for (const header of headers) {
     const parsed = parseWideLocationColumn(header)
@@ -163,16 +172,31 @@ function buildWideLocationColumns(
       continue
     }
 
-    const locationColumns = result[parsed.location] ?? {}
+    // NetSuite branch names map to the short location names (DC-002).
+    const { location, aliased } =
+      resolveInventoryLocation(parsed.location)
+
+    if (!aliased) {
+      unaliasedLocations.add(location)
+    }
+
+    const locationColumns = result[location] ?? {}
     locationColumns[parsed.metric] = header
-    result[parsed.location] = locationColumns
+    result[location] = locationColumns
   }
 
-  return Object.fromEntries(
+  const columns = Object.fromEntries(
     Object.entries(result).filter(
-      ([, columns]) => Boolean(columns.onHand),
+      ([, locationColumns]) => Boolean(locationColumns.onHand),
     ),
   )
+
+  return {
+    columns,
+    unaliasedLocations: [...unaliasedLocations].filter(
+      (location) => Boolean(columns[location]),
+    ),
+  }
 }
 
 export function validateInventoryHeaders(
@@ -207,7 +231,10 @@ export function validateInventoryHeaders(
     (field) => Boolean(columnMap[field]),
   )
 
-  const wideLocationColumns = buildWideLocationColumns(
+  const {
+    columns: wideLocationColumns,
+    unaliasedLocations,
+  } = buildWideLocationColumns(
     sourceHeaders,
   )
   const wideLayoutValid =
@@ -272,6 +299,7 @@ export function validateInventoryHeaders(
     wideLocationColumns,
     missingRequiredFields: [...missingRequiredFields],
     missingRecommendedFields: [...missingRecommendedFields],
+    unaliasedLocations,
     unknownColumns: sourceHeaders.filter(
       (header) => !recognizedColumns.has(header),
     ),

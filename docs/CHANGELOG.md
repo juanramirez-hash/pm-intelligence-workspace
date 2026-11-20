@@ -1,3 +1,11 @@
+# 0.57.0-DC-002
+
+- Imports the raw NetSuite "TS - Reporte de inventario por sucursal" export as is: the parser detects its preamble (header row with "Item" and "Marca") and combines the two-row header as "<BRANCH> <METRIC>", using the merged branch cells (or the last non-empty branch). Sales detection and header-on-row-1 files are unchanged (no-regression test against a baseline generated with the previous code).
+- Ignores NetSuite grouping rows such as "Inventory Item" as ignored rows, not errors.
+- Maps NetSuite branches to short location names in one table (`inventoryLocationAliases.ts`), matching without case, accents, punctuation or repeated spaces; a branch without alias keeps its NetSuite name and the import panel shows "Sucursal sin alias: …" as a warning.
+- Updates the inventory help line of the NetSuite sources panel: the raw export can be dropped as is.
+- Adds tests with a synthetic NetSuite-shaped workbook and a local check against the real export in `tmp/` (skipped when the file is missing): 4,677 articles, 10 short branches and per-article "En Mano" equal to "Total En Mano".
+
 # 0.57.0-DC-001
 
 - Adds the "Fuentes de NetSuite" section at the top of the Data Center: one row per importer with the NetSuite report, an "Abrir en NetSuite" link, the last completed import, the data cutoff (latest sale date and inventory snapshot date) and a status ("Al día", "Atrasado", "Sin datos" or "Fuente sin configurar") shown with color and text.

@@ -89,6 +89,10 @@ import {
   apiDataRepository,
 } from '../repositories/apiDataRepository'
 
+import {
+  inventoryImportWarnings,
+} from '../importers/inventory/inventoryLocationAliases'
+
 
 import {
   buildPurchaseRequestBusinessModel,
@@ -102,6 +106,9 @@ export interface DataCenterState {
   fileMetadata: FileMetadata | null
 
   importErrors: ImportError[]
+
+  // Non-blocking import notices, such as inventory branches without alias.
+  importWarnings: string[]
 
   lastImportedFile: string | null
 
@@ -384,6 +391,8 @@ export const useDataCenterStore =
       fileMetadata: null,
 
       importErrors: [],
+
+      importWarnings: [],
 
       lastImportedFile: null,
 
@@ -728,6 +737,8 @@ export const useDataCenterStore =
 
           importErrors: [],
 
+          importWarnings: [],
+
           persistenceError: null,
         })
 
@@ -922,6 +933,9 @@ export const useDataCenterStore =
                 inventoryLastImportedAt: importedAt,
                 importStatus: 'processing',
                 importErrors: [],
+                importWarnings: inventoryImportWarnings(
+                  result.validation,
+                ),
                 isPersisting: true,
               })
 

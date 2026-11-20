@@ -139,6 +139,9 @@ describe('NetSuite source status (DC-001)', () => {
     expect(rows.get('projects')?.help).toBe(
       'Abrir la búsqueda y usar Exportar → CSV',
     )
+    expect(rows.get('inventory')?.help).toBe(
+      'Ejecutar el reporte, usar Exportar → Excel y arrastrar el archivo tal cual (no hace falta limpiarlo)',
+    )
   })
 
   it('counts calendar days across month and year boundaries', () => {

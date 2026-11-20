@@ -150,7 +150,9 @@ export function buildNetsuiteSourceRows(
       importerId: id,
       label,
       source,
-      help: source ? NETSUITE_EXPORT_HELP[source.kind] : null,
+      help: source
+        ? source.help ?? NETSUITE_EXPORT_HELP[source.kind]
+        : null,
       lastImportedAt: dates.lastImportedAt,
       dataCutoff: dates.dataCutoff,
       referenceDate,
