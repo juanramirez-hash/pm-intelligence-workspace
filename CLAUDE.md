@@ -208,6 +208,12 @@ Claude Code **nunca** ejecuta migraciones ni comandos en producción; solo prepa
 | Backend | Servicio systemd `pm-intelligence-api.service` (no pm2). `WorkingDirectory`: `server/`. Escucha en `127.0.0.1:3001`. `Restart=on-failure` |
 | Frontend | Nginx, sitio `pm-intelligence`, dominio `pm.botintelligence.cloud`. Sirve `/opt/pm-intelligence-workspace/dist`; `/api/` y `/signin/google` van a `127.0.0.1:3001` |
 | Compresión | nginx comprime JSON, CSS y JS (gzip en el sitio `pm-intelligence`, 30 oct 2026). Respaldo de la configuración anterior en `~/respaldos/nginx-pm-intelligence-*.conf` |
+| Entrada (20 nov 2026) | El tráfico entra por un túnel de Cloudflare (`cloudflared`) a nginx en `127.0.0.1:8080`; no hay exposición directa a internet |
+| Configuración nginx (20 nov 2026) | `/etc/nginx/sites-enabled/pm-intelligence` es un enlace a `/etc/nginx/sites-available/pm-intelligence` (única fuente). Antes era una copia aparte |
+| `X-Forwarded-Proto` (20 nov 2026) | `proxy_set_header X-Forwarded-Proto https` es **obligatorio** en `/api/` y `/signin/google`: sin él la cookie de sesión `secure` no se guarda y nadie puede iniciar sesión |
+| IP real (20 nov 2026) | nginx usa `set_real_ip_from 127.0.0.1` y `real_ip_header CF-Connecting-IP` para que `req.ip` sea la IP real (límite de intentos de login) |
+| Tamaño de cuerpo (20 nov 2026) | `client_max_body_size 10m` en nginx; Express limita a 100 KB fuera de las rutas de importación |
+| Cabeceras de seguridad (20 nov 2026) | En nginx; la CSP está en `Content-Security-Policy-Report-Only` hasta revisar la consola |
 | `/opt/pm-intelligence-workspace` | Clon viejo de `main`: **solo se usa su `dist/`** |
 | n8n | Corre en el mismo servidor: respaldos, restauraciones y refresh de vistas se hacen **fuera de horario** |
 

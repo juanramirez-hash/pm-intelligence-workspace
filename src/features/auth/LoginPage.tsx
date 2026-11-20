@@ -65,6 +65,14 @@ export function LoginPage() {
       setError(
         'Tu cuenta de Google no está autorizada para acceder a PM Intelligence.',
       )
+    } else if (authError === 'csrf') {
+      setError(
+        'No se pudo verificar el inicio de sesión. Intenta de nuevo.',
+      )
+    } else if (authError === 'rate_limited') {
+      setError(
+        'Demasiados intentos. Espera unos minutos.',
+      )
     } else if (authError) {
       setError(
         'No fue posible iniciar sesión con Google.',

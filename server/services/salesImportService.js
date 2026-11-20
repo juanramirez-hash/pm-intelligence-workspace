@@ -156,6 +156,8 @@ export async function importSalesDataset(
       )
 
     await client.query('BEGIN')
+    // This transaction refreshes aggregates; the pool default is 2 min (SEC-004).
+    await client.query("SET LOCAL statement_timeout = '15min'")
 
     const replacedResult =
       await client.query(

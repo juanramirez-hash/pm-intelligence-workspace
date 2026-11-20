@@ -1,3 +1,13 @@
+# 0.57.0-SEC-004
+
+- Regenerates the session on `/signin/google` before saving the user, to prevent session fixation (audit finding S5).
+- Verifies the Google CSRF token on `/signin/google`: the `g_csrf_token` form field and cookie must exist and match, or the login redirects to `/?auth_error=csrf` without verifying the credential. Cookies are read with a minimal parser, without cookie-parser.
+- Removes the unused `POST /api/auth/google` (the login uses the Google redirect flow).
+- Adds `express-rate-limit` (audit finding S6): 20 sign-in attempts per 15 minutes per IP (then `/?auth_error=rate_limited`), and 120 requests per minute per user on `/api/search` and `/api/data/sales/analytics/*` (then 429 JSON).
+- Limits request bodies to 100 kb JSON and 20 kb forms; import routes (chunks, `/import`, `targets/import` and `POST /api/data/exchange-rates`) accept 10 MB only after authentication and the import permission. Oversized bodies answer 413 JSON.
+- Sets `statement_timeout` (2 min) and `idle_in_transaction_session_timeout` (1 min) on the PostgreSQL pool, and 15 min with `SET LOCAL` in the import transactions that refresh aggregates (audit finding S8, timeouts).
+- Shows the `csrf` and `rate_limited` login errors on the login page. No migrations.
+
 # 0.57.0-OPS-001
 
 - Checks the database schema before the backend listens (`server/db/schemaCheck.js`): every table and column in `REQUIRED_SCHEMA` (today `data_cache_version` from migration `036` and `app_roles.cost_access` from `037`) must exist. A missing one logs "Falta la migración NNN: …" and exits with code 1 without retrying, so `systemctl status` shows the failure instead of every request answering 500.

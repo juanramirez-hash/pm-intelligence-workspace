@@ -7,10 +7,14 @@ import { loadAuthenticatedUser } from './middleware/loadAuthenticatedUser.js'
 import { createActionsRouter } from './routes/actions.js'
 import { createMetricsRouter } from './routes/metrics.js'
 import { createSearchRouter } from './routes/search.js'
+import { createImportBodyParser } from './http/requestLimits.js'
 
 export function registerBusinessRoutes(app, pool) {
   const authenticatedUser =
     loadAuthenticatedUser(pool)
+
+  const importBodyParser =
+    createImportBodyParser()
 
   // Register before existing /api/data routers so only team-wide writers can import.
   app.use(
@@ -40,7 +44,13 @@ export function registerBusinessRoutes(app, pool) {
               requireDataImportAccess(
                 req,
                 res,
-                next,
+                // Large import bodies are read only after the import permission.
+                () =>
+                  importBodyParser(
+                    req,
+                    res,
+                    next,
+                  ),
               ),
           ),
       )

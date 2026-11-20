@@ -335,8 +335,23 @@ Incidente del 13 nov 2026: la 037 no se aplicó en producción (el `pg_dump` sal
 - `server/scripts/apply-migration.sh` (se ejecuta con `bash server/scripts/apply-migration.sh server/migrations/NNN_….sql`): respaldo con `pg_dump` como `postgres` en `~/respaldos/pm_intelligence_db_pre_<NNN>_<fecha>.dump` con `umask 077`; se detiene si pesa menos de 1 MB; aplica con `sudo -u postgres psql -d pm_intelligence_db -v ON_ERROR_STOP=1 -1`; se detiene con un mensaje claro si `psql` falla; lista los requisitos de `REQUIRED_SCHEMA` que sigan faltando, con la misma consulta del backend, e indica reiniciar el servicio sin hacerlo por su cuenta.
 - CLAUDE.md §12: `app_users`, `app_roles` y `app_user_brand_assignments` son de `postgres`, no de `pm_intelligence`; las migraciones se aplican con el script.
 
+## Seguridad — SEC-004
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| SEC-004 (S5, S6 y timeouts de S8) | Sesión, login, límites de peticiones y timeouts de PostgreSQL | Implementado · pendiente de validación funcional y despliegue |
+
+Hallazgos atendidos:
+
+- **S5 — Sesión y login.** `/signin/google` regenera la sesión (`req.session.regenerate()`) antes de guardar el usuario, para evitar la fijación de sesión. Valida el CSRF de Google: el campo `g_csrf_token` del formulario y la cookie `g_csrf_token` deben existir y ser iguales; si no, redirige a `/?auth_error=csrf` sin verificar la credencial. Se eliminó `POST /api/auth/google`, que el frontend no usaba (el login es `ux_mode: 'redirect'`).
+- **S6 — Límites.** `/signin/google`: 20 intentos por 15 minutos por IP, después redirige a `/?auth_error=rate_limited`. `/api/search` y `/api/data/sales/analytics/*`: 120 peticiones por minuto por usuario (o por IP sin sesión), después 429 JSON. Cuerpos: JSON de 100 kb y formularios de 20 kb en general; las rutas de importación (chunks, `/import`, `targets/import` y `POST /api/data/exchange-rates`) aceptan 10 MB, y solo después de `requireAuth`, `loadAuthenticatedUser` y `requireDataImportAccess`. Un cuerpo mayor responde 413 JSON. LoginPage muestra los mensajes de `csrf` y `rate_limited`.
+- **S8 — Timeouts.** `statement_timeout` (2 min) e `idle_in_transaction_session_timeout` (1 min) en el pool; 15 min solo en transacciones de importación con refresco de agregados (`finalizeSalesChunkImport`, `importSalesDataset` y `finalizeProductChunkImport`, con `SET LOCAL statement_timeout = '15min'`).
+
+Los contadores de límite viven en memoria: se reinician con el backend y suponen un solo proceso. El límite de cuerpo de nginx (`client_max_body_size`) es independiente y se revisa en producción. Sin migraciones.
+
 ## Pendientes de seguridad
 
+- S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.
 - Indicadores derivados del monto en órdenes de compra: `value_classification`, `value_score` y `amount_classification` siguen visibles para todos los roles. Revisar si revelan el costo.
 
 ## Pendientes técnicos

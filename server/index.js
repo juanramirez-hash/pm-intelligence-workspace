@@ -6,6 +6,15 @@ import connectPgSimple from 'connect-pg-simple'
 import { OAuth2Client } from 'google-auth-library'
 import { pool } from './db/pool.js'
 import { assertSchemaOrExit } from './db/schemaCheck.js'
+import { createGoogleSigninHandler } from './auth/googleSignin.js'
+import {
+  createGlobalBodyParsers,
+  payloadTooLargeHandler,
+} from './http/requestLimits.js'
+import {
+  createApiRateLimit,
+  createSigninRateLimit,
+} from './http/rateLimits.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { requireAdmin } from './middleware/requireAdmin.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
@@ -54,16 +63,9 @@ const PgSession = connectPgSimple(session)
 
 app.set('trust proxy', 1)
 
+// 100 kb JSON / 20 kb forms; import routes get 10 MB after auth (SEC-004).
 app.use(
-  express.json({
-    limit: '10mb',
-  }),
-)
-
-app.use(
-  express.urlencoded({
-    extended: false,
-  }),
+  ...createGlobalBodyParsers(),
 )
 
 app.use(
@@ -201,28 +203,6 @@ async function authenticateGoogleCredential(
   }
 }
 
-function saveSession(
-  req,
-  user,
-) {
-  return new Promise(
-    (resolve, reject) => {
-      req.session.user = user
-
-      req.session.save(
-        (error) => {
-          if (error) {
-            reject(error)
-            return
-          }
-
-          resolve()
-        },
-      )
-    },
-  )
-}
-
 app.get(
   '/api/health',
   async (_req, res) => {
@@ -259,115 +239,12 @@ app.get(
 )
 
 app.post(
-  '/api/auth/google',
-  async (req, res) => {
-    try {
-      const credential =
-        req.body?.credential
-
-      if (
-        typeof credential !==
-          'string' ||
-        credential.length === 0
-      ) {
-        return res
-          .status(400)
-          .json({
-            ok: false,
-            error:
-              'Google credential is required',
-          })
-      }
-
-      const user =
-        await authenticateGoogleCredential(
-          credential,
-        )
-
-      await saveSession(
-        req,
-        user,
-      )
-
-      return res.json({
-        ok: true,
-        authenticated: true,
-        user,
-      })
-    } catch (error) {
-      console.error(
-        'Google authentication failed:',
-        error,
-      )
-
-      const statusCode =
-        Number(
-          error?.statusCode,
-        ) || 401
-
-      return res
-        .status(statusCode)
-        .json({
-          ok: false,
-          error:
-            statusCode === 403
-              ? 'User is not authorized'
-              : 'Google authentication failed',
-        })
-    }
-  },
-)
-
-app.post(
   '/signin/google',
-  async (req, res) => {
-    try {
-      const credential =
-        req.body?.credential
-
-      if (
-        typeof credential !==
-          'string' ||
-        credential.length === 0
-      ) {
-        return res.redirect(
-          '/?auth_error=missing_credential',
-        )
-      }
-
-      const user =
-        await authenticateGoogleCredential(
-          credential,
-        )
-
-      await saveSession(
-        req,
-        user,
-      )
-
-      return res.redirect('/')
-    } catch (error) {
-      console.error(
-        'Google redirect authentication failed:',
-        error,
-      )
-
-      const statusCode =
-        Number(
-          error?.statusCode,
-        ) || 401
-
-      if (statusCode === 403) {
-        return res.redirect(
-          '/?auth_error=unauthorized',
-        )
-      }
-
-      return res.redirect(
-        '/?auth_error=google',
-      )
-    }
-  },
+  createSigninRateLimit(),
+  createGoogleSigninHandler({
+    authenticate:
+      authenticateGoogleCredential,
+  }),
 )
 
 app.post(
@@ -400,6 +277,16 @@ app.post(
       },
     )
   },
+)
+
+app.use(
+  '/api/search',
+  createApiRateLimit(),
+)
+
+app.use(
+  '/api/data/sales/analytics',
+  createApiRateLimit(),
 )
 
 registerBusinessRoutes(app, pool)
@@ -503,6 +390,8 @@ app.use(
   requireAdmin,
   createSettingsRolesRouter(pool),
 )
+
+app.use(payloadTooLargeHandler)
 
 // Do not serve requests without the migrations the code depends on (OPS-001).
 await assertSchemaOrExit(pool)

@@ -8,4 +8,10 @@ export const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  // SEC-004: no statement runs longer than 2 min (import transactions that
+  // refresh aggregates raise it to 15 min with SET LOCAL), and a transaction
+  // left idle is closed after 1 min so it cannot keep rows such as
+  // app_users locked.
+  statement_timeout: 120000,
+  idle_in_transaction_session_timeout: 60000,
 })
