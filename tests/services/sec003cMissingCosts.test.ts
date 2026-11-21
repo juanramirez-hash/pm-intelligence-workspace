@@ -272,10 +272,28 @@ describe('SEC-003C missing costs', () => {
         amountForeignCurrency: null,
         linesWithoutAmount: 1,
       })
-      expect(purchasing.totals.orderedAmountForeignCurrency).toBe(1450)
+      // PUR-001: amounts by currency, never added across currencies.
+      expect(purchasing.totals.amountsByCurrency).toEqual({
+        USD: expect.objectContaining({
+          amount: 1450,
+          linesWithoutAmount: 2,
+        }),
+      })
+      // Conservation against the pre-PUR-001 total (checked only here).
+      expect(
+        Object.values(purchasing.totals.amountsByCurrency).reduce(
+          (total, entry) => total + (entry.amount ?? 0),
+          0,
+        ),
+      ).toBe(1450)
       expect(purchasing.totals.linesWithoutAmount).toBe(2)
       expect(byBrand.get('HIKVISION')).toMatchObject({
-        orderedAmountForeignCurrency: null,
+        amountsByCurrency: {
+          USD: expect.objectContaining({
+            amount: null,
+            linesWithoutAmount: 2,
+          }),
+        },
         linesWithoutAmount: 2,
       })
     })
@@ -286,11 +304,15 @@ describe('SEC-003C missing costs', () => {
         hidePurchaseOrderAmounts(always),
       )
 
-      expect(purchasing.totals.orderedAmountForeignCurrency).toBeNull()
+      expect(purchasing.totals.amountsByCurrency.USD?.amount).toBeNull()
       expect(
         purchasing.aging
           .filter((bucket) => bucket.purchaseOrders > 0)
-          .every((bucket) => bucket.orderedAmountForeignCurrency === null),
+          .every((bucket) =>
+            Object.values(bucket.amountsByCurrency).every(
+              (entry) => entry.amount === null,
+            ),
+          ),
       ).toBe(true)
     })
   })

@@ -341,7 +341,6 @@
       "purchaseRequestsWithoutPurchaseOrder": 0,
       "purchaseRequestsWithPurchaseOrder": 0,
       "orderedQuantity": 50,
-      "orderedAmountForeignCurrency": 3950,
       "requestedQuantity": 0,
       "suppliers": 2,
       "buyers": 0,
@@ -374,7 +373,6 @@
         "purchaseOrderLines": 1,
         "purchaseRequests": 0,
         "orderedQuantity": 10,
-        "orderedAmountForeignCurrency": 2000,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 1,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -386,7 +384,6 @@
         "purchaseOrderLines": 4,
         "purchaseRequests": 0,
         "orderedQuantity": 40,
-        "orderedAmountForeignCurrency": 1950,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 0,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -401,7 +398,6 @@
         "purchaseOrderLines": 2,
         "purchaseRequests": 0,
         "orderedQuantity": 20,
-        "orderedAmountForeignCurrency": 2500,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 0,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -413,7 +409,6 @@
         "purchaseOrderLines": 3,
         "purchaseRequests": 0,
         "orderedQuantity": 30,
-        "orderedAmountForeignCurrency": 1450,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 0,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -427,7 +422,6 @@
         "purchaseOrderLines": 2,
         "purchaseRequests": 0,
         "orderedQuantity": 20,
-        "orderedAmountForeignCurrency": 2500,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 0,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -439,7 +433,6 @@
         "purchaseOrderLines": 1,
         "purchaseRequests": 0,
         "orderedQuantity": 10,
-        "orderedAmountForeignCurrency": 1000,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 0,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -451,7 +444,6 @@
         "purchaseOrderLines": 1,
         "purchaseRequests": 0,
         "orderedQuantity": 10,
-        "orderedAmountForeignCurrency": 300,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 0,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -463,7 +455,6 @@
         "purchaseOrderLines": 1,
         "purchaseRequests": 0,
         "orderedQuantity": 10,
-        "orderedAmountForeignCurrency": 150,
         "requestedQuantity": 0,
         "overduePurchaseOrders": 0,
         "purchaseRequestsWithoutPurchaseOrder": 0
@@ -473,46 +464,38 @@
       {
         "status": "PENDING RECEIPT",
         "purchaseOrders": 2,
-        "purchaseRequests": 0,
-        "orderedAmountForeignCurrency": 3500
+        "purchaseRequests": 0
       },
       {
         "status": "FULLY BILLED",
         "purchaseOrders": 1,
-        "purchaseRequests": 0,
-        "orderedAmountForeignCurrency": 450
+        "purchaseRequests": 0
       }
     ],
     "aging": [
       {
         "bucket": "current",
-        "purchaseOrders": 2,
-        "orderedAmountForeignCurrency": 1950
+        "purchaseOrders": 2
       },
       {
         "bucket": "1_7_days",
-        "purchaseOrders": 0,
-        "orderedAmountForeignCurrency": 0
+        "purchaseOrders": 0
       },
       {
         "bucket": "8_15_days",
-        "purchaseOrders": 0,
-        "orderedAmountForeignCurrency": 0
+        "purchaseOrders": 0
       },
       {
         "bucket": "16_30_days",
-        "purchaseOrders": 0,
-        "orderedAmountForeignCurrency": 0
+        "purchaseOrders": 0
       },
       {
         "bucket": "31_plus_days",
-        "purchaseOrders": 1,
-        "orderedAmountForeignCurrency": 2000
+        "purchaseOrders": 1
       },
       {
         "bucket": "undated",
-        "purchaseOrders": 0,
-        "orderedAmountForeignCurrency": 0
+        "purchaseOrders": 0
       }
     ]
   },

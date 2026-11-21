@@ -373,6 +373,19 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Verificación con el archivo real del 20 nov 2026 (no versionado): 4,677 artículos, las 10 sucursales con su nombre corto y, en cada artículo, la suma de "En Mano" de las sucursales igual a "Total En Mano". En esa exportación CEDIS CDMX y CEDIS MTY vienen vacías y el reporte no trae "Average Cost" en muchas posiciones; las posiciones sin costo quedan sin valor (SEC-003C).
 - El reporte no trae fecha de corte, igual que el V1: el inventario se sigue importando sin `snapshotDate` y en Fuentes de NetSuite se mide por la última carga.
 
+## Purchasing — PUR-001
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| PUR-001 | Montos de Purchasing separados por moneda, sin conversión (hallazgo R9 de la auditoría) | Implementado · pendiente de validación funcional y despliegue |
+
+- Decisión del negocio: los montos de compras se muestran por moneda y nunca se convierten con tipo de cambio.
+- El engine (`purchasingAnalytics`) calcula totales, grupos (proveedor, comprador, marca y artículo), estados y aging en `amountsByCurrency`: por código de moneda (USD, MXN, …), con su monto, sus líneas sin monto (SEC-003C), órdenes, líneas, cantidad y vencidas. El código se normaliza (mayúsculas, sin espacios); una orden sin moneda va al grupo `SIN_MONEDA` ("Sin moneda") y se cuenta en `purchaseOrdersWithoutCurrency`. El campo `orderedAmountForeignCurrency`, que sumaba todas las monedas, ya no existe.
+- `selectPurchasingCurrencyView` arma los rankings, el aging y los estados de una moneda: solo entran las órdenes de esa moneda, ordenadas por su monto en ella. El ranking por comprador no tiene montos (se arma con solicitudes). Los grupos que solo tienen solicitudes, sin órdenes, no aparecen en los rankings con monto.
+- Purchasing Workspace: el KPI "Monto ordenado" muestra cada moneda ("USD $1,234,567 · MXN $890,123"), conserva "Monto de tus marcas" y "Sin acceso a costo"; un selector de moneda (USD por defecto) aplica a rankings y aging, e indica cuántas órdenes quedan en otras monedas; aviso amarillo con el número de órdenes sin moneda; cada PO se muestra con su propia moneda.
+- Ningún otro módulo usa el monto de compras: no hay exportación de Purchasing, Executive solo usa la disponibilidad de los datasets y el resumen de importación del Data Center ya separaba por moneda.
+- Pruebas: no regresión contra una línea base generada antes del cambio con datos solo en USD (mismos montos, faltantes y orden); datos mixtos USD + MXN sin sumas entre monedas; rankings por moneda; grupo "Sin moneda"; combinación con costos ocultos. En la línea base de SEC-003C se quitaron las 17 claves `orderedAmountForeignCurrency` (sus valores quedan en la prueba, que verifica que la separación por moneda los conserva); las órdenes de ese fixture son todas USD.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.
@@ -383,8 +396,6 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - SQL-002: `p_concurrently` en `refresh_sales_fallback_owner_candidates()` no hace refresh concurrente real. Medido en `pm_intelligence_test`: el refresh tarda ~5 s con 546,520 ventas, así que el refresh concurrente no es necesario por ahora. Reevaluar si el tiempo crece; si se cambia, hacerlo en una migración nueva, no editando la 035.
 
 ## Pendientes de calidad de datos
-
-- **Prioridad alta:** Purchasing suma amountForeignCurrency de distintas monedas y lo presenta como USD.
 
 - STREAMAX aparece con dos nombres de marca en ventas: `MERIVA TECHNOLOGY - STREAMAX` (hasta 2025) y `STREAMAX - MERIVA` (desde 2026). Ambos resuelven al mismo `brand_id`, pero generan claves de marca (`scope_brand_key`) distintas; por eso 8 `base_id` aparecen dos veces en `sales_fallback_owner_candidates`.
 

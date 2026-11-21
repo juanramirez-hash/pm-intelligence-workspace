@@ -40,8 +40,19 @@ import {
   filterPurchasingLines,
   filterPurchasingOrders,
   filterPurchasingRequests,
+  formatPurchasingAmount,
   getPurchasingWorkspaceGroups,
 } from '../engine/purchasingWorkspaceModel'
+
+import {
+  defaultPurchasingCurrency,
+  purchasingCurrencyLabel,
+  selectPurchasingCurrencyView,
+} from '../../../core/business/analytics/purchasing'
+
+import type {
+  PurchasingAnalyticsTotals,
+} from '../../../core/business/analytics/purchasing'
 
 import type {
   PurchasingWorkspaceDimension,
@@ -58,7 +69,12 @@ import {
   costTotalLabel,
   describeMissingCosts,
   formatCostTotal,
+  NO_COST_ACCESS_LABEL,
 } from '../../auth/costPresentation'
+
+import type {
+  CostVisibility,
+} from '../../auth/brandAccess'
 
 import {
   useCostVisibility,
@@ -72,17 +88,30 @@ import {
   PurchasingForecastSummary,
 } from '../components/PurchasingForecastSummary'
 
-function formatCurrency(
-  value: number,
+// Every currency present, each with its own amount: never added together
+// (PUR-001). E.g. "USD $1,234,567 · MXN $890,123".
+function formatAmountsByCurrency(
+  totals: PurchasingAnalyticsTotals,
+  costVisibility: CostVisibility,
 ): string {
-  return value.toLocaleString(
-    'es-MX',
-    {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    },
-  )
+  if (costVisibility.mode === 'none') {
+    return NO_COST_ACCESS_LABEL
+  }
+
+  if (totals.currencies.length === 0) {
+    return formatPurchasingAmount(0, 'USD')
+  }
+
+  return totals.currencies
+    .map((currency) => {
+      const amount =
+        totals.amountsByCurrency[currency]?.amount ?? null
+
+      return amount === null
+        ? `${purchasingCurrencyLabel(currency)} ${formatCostTotal(amount, costVisibility, String)}`
+        : formatPurchasingAmount(amount, currency)
+    })
+    .join(' · ')
 }
 
 function formatNumber(
@@ -219,15 +248,50 @@ export function PurchasingWorkspacePage() {
       ],
     )
 
+  const [
+    selectedCurrency,
+    setSelectedCurrency,
+  ] =
+    useState<string | null>(
+      null,
+    )
+
+  const currencies =
+    filteredAnalytics.totals.currencies
+
+  // USD by default; the selected one while it has orders.
+  const currency =
+    selectedCurrency &&
+    currencies.includes(selectedCurrency)
+      ? selectedCurrency
+      : defaultPurchasingCurrency(currencies) ??
+        'USD'
+
+  const currencyView =
+    useMemo(
+      () =>
+        selectPurchasingCurrencyView(
+          filteredAnalytics,
+          currency,
+        ),
+      [
+        filteredAnalytics,
+        currency,
+      ],
+    )
+
+  const formatAmount = (value: number) =>
+    formatPurchasingAmount(value, currency)
+
   const dimensionGroups =
     useMemo(
       () =>
         getPurchasingWorkspaceGroups(
-          filteredAnalytics,
+          currencyView,
           dimension,
         ),
       [
-        filteredAnalytics,
+        currencyView,
         dimension,
       ],
     )
@@ -290,10 +354,9 @@ export function PurchasingWorkspacePage() {
               costVisibility,
             )}
             tone="blue"
-            value={formatCostTotal(
-              totals.orderedAmountForeignCurrency,
+            value={formatAmountsByCurrency(
+              totals,
               costVisibility,
-              formatCurrency,
             )}
           />
 
@@ -548,6 +611,49 @@ export function PurchasingWorkspacePage() {
           </div>
         </section>
 
+        <section className="mt-5 flex flex-wrap items-center gap-3 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            Moneda de rankings y aging
+            <select
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+              onChange={(event) =>
+                setSelectedCurrency(
+                  event.target.value,
+                )
+              }
+              value={currency}
+            >
+              {(currencies.length > 0
+                ? currencies
+                : [currency]
+              ).map(
+                (code) => (
+                  <option
+                    key={code}
+                    value={code}
+                  >
+                    {purchasingCurrencyLabel(code)}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <p className="text-xs text-slate-500">
+            {currencyView.purchaseOrdersInOtherCurrencies === 1
+              ? '1 orden en otras monedas queda fuera de rankings y aging'
+              : `${currencyView.purchaseOrdersInOtherCurrencies} órdenes en otras monedas quedan fuera de rankings y aging`}
+          </p>
+
+          {totals.purchaseOrdersWithoutCurrency > 0 && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              {totals.purchaseOrdersWithoutCurrency === 1
+                ? '1 orden sin moneda'
+                : `${totals.purchaseOrdersWithoutCurrency} órdenes sin moneda`}
+            </p>
+          )}
+        </section>
+
         <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
           <WorkspaceSection
             actions={(
@@ -590,6 +696,7 @@ export function PurchasingWorkspacePage() {
           >
             <PurchasingRankingTable
               costVisibility={costVisibility}
+              currency={currency}
               groupsAreBrands={
                 dimension === 'brand'
               }
@@ -660,7 +767,7 @@ export function PurchasingWorkspacePage() {
             tone="slate"
           >
             <div className="space-y-3">
-              {filteredAnalytics.aging.map(
+              {currencyView.aging.map(
                 (summary) => (
                   <article
                     className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
@@ -687,9 +794,9 @@ export function PurchasingWorkspacePage() {
                       <p className="text-sm font-semibold text-slate-900">
                         {
                           formatCostTotal(
-                            summary.orderedAmountForeignCurrency,
+                            summary.amount,
                             costVisibility,
-                            formatCurrency,
+                            formatAmount,
                           )
                         }
                       </p>

@@ -175,4 +175,85 @@ describe('SEC-003C no regression with complete cost data', () => {
       )
     }
   })
+
+  // PUR-001 removed orderedAmountForeignCurrency (a sum that ignored the
+  // currency) from the baseline. The split by currency must conserve it:
+  // this check adds currencies only inside the test; the app never does.
+  it('splits the pre-PUR-001 purchase amounts by currency without losing any', () => {
+    const purchasing = buildOutputs().purchasingAnalytics as {
+      totals: AmountsHolder
+      bySupplier: Array<AmountsHolder & { key: string }>
+      byBrand: Array<AmountsHolder & { key: string }>
+      byItem: Array<AmountsHolder & { key: string }>
+      byStatus: Array<AmountsHolder & { status: string }>
+      aging: Array<AmountsHolder & { bucket: string }>
+    }
+    const byField = <T extends AmountsHolder>(
+      rows: T[],
+      field: (row: T) => string,
+    ) =>
+      Object.fromEntries(
+        rows.map((row) => [field(row), sumAcrossCurrencies(row)]),
+      )
+
+    expect(sumAcrossCurrencies(purchasing.totals)).toBe(
+      PRE_PUR001_MIXED_AMOUNTS.totals,
+    )
+    expect(byField(purchasing.bySupplier, (row) => row.key)).toEqual(
+      PRE_PUR001_MIXED_AMOUNTS.bySupplier,
+    )
+    expect(byField(purchasing.byBrand, (row) => row.key)).toEqual(
+      PRE_PUR001_MIXED_AMOUNTS.byBrand,
+    )
+    expect(byField(purchasing.byItem, (row) => row.key)).toEqual(
+      PRE_PUR001_MIXED_AMOUNTS.byItem,
+    )
+    expect(byField(purchasing.byStatus, (row) => row.status)).toEqual(
+      PRE_PUR001_MIXED_AMOUNTS.byStatus,
+    )
+    expect(byField(purchasing.aging, (row) => row.bucket)).toEqual(
+      PRE_PUR001_MIXED_AMOUNTS.aging,
+    )
+    // The fixture's purchase orders are all in USD.
+    expect(Object.keys(purchasing.totals.amountsByCurrency)).toEqual([
+      'USD',
+    ])
+  })
 })
+
+interface AmountsHolder {
+  amountsByCurrency: Record<string, { amount: number | null }>
+}
+
+// Values of orderedAmountForeignCurrency in sec003cBaseline.json before
+// PUR-001 (the sum of every currency).
+const PRE_PUR001_MIXED_AMOUNTS = {
+  totals: 3950,
+  bySupplier: { 'SUP-2': 2000, 'SUP-1': 1950 },
+  byBrand: { HIKVISION: 2500, UNV: 1450 },
+  byItem: { 'H-1': 2500, 'P-1': 1000, 'P-NEW': 300, 'P-IDLE': 150 },
+  byStatus: { 'PENDING RECEIPT': 3500, 'FULLY BILLED': 450 },
+  aging: {
+    current: 1950,
+    '1_7_days': 0,
+    '8_15_days': 0,
+    '16_30_days': 0,
+    '31_plus_days': 2000,
+    undated: 0,
+  },
+}
+
+/** USD + MXN + SIN_MONEDA: NULL only when every currency is NULL. */
+function sumAcrossCurrencies(row: AmountsHolder): number | null {
+  const amounts = Object.values(row.amountsByCurrency).map(
+    (entry) => entry.amount,
+  )
+
+  if (amounts.length === 0) {
+    return 0
+  }
+
+  return amounts.every((amount) => amount === null)
+    ? null
+    : amounts.reduce<number>((total, amount) => total + (amount ?? 0), 0)
+}

@@ -10,12 +10,15 @@ import type {
 import {
   buildPurchasingAnalytics,
   isClosedPurchaseOrderStatus,
+  PURCHASING_NO_CURRENCY,
+  PURCHASING_NO_CURRENCY_LABEL,
 } from '../../../core/business/analytics/purchasing'
 
 import type {
   PurchasingAgingBucket,
-  PurchasingAnalyticsGroup,
   PurchasingAnalyticsReport,
+  PurchasingCurrencyGroup,
+  PurchasingCurrencyView,
 } from '../../../core/business/analytics/purchasing'
 
 import type {
@@ -310,36 +313,37 @@ export function buildPurchasingWorkspaceAnalytics(
 }
 
 export function getPurchasingWorkspaceGroups(
-  report: PurchasingAnalyticsReport,
+  // Rankings of the selected currency (PUR-001).
+  view: PurchasingCurrencyView,
   dimension: PurchasingWorkspaceDimension,
-): PurchasingAnalyticsGroup[] {
+): PurchasingCurrencyGroup[] {
   if (dimension === 'supplier') {
-    return report.bySupplier.map(
+    return view.bySupplier.map(
       (group) => ({ ...group }),
     )
   }
 
   if (dimension === 'buyer') {
-    return report.byBuyer.map(
+    return view.byBuyer.map(
       (group) => ({ ...group }),
     )
   }
 
   if (dimension === 'brand') {
-    return report.byBrand.map(
+    return view.byBrand.map(
       (group) => ({ ...group }),
     )
   }
 
-  return report.byItem.map(
+  return view.byItem.map(
     (group) => ({ ...group }),
   )
 }
 
 export function filterPurchasingGroups(
-  groups: readonly PurchasingAnalyticsGroup[],
+  groups: readonly PurchasingCurrencyGroup[],
   search: string,
-): PurchasingAnalyticsGroup[] {
+): PurchasingCurrencyGroup[] {
   return groups.filter(
     (group) =>
       matchesPurchasingSearch(
@@ -518,4 +522,27 @@ export function filterPurchasingRequests(
       )
     },
   )
+}
+
+/**
+ * An amount with its own currency code, e.g. "USD $1,234" or
+ * "Sin moneda 1,234". Never converted (PUR-001).
+ */
+export function formatPurchasingAmount(
+  value: number,
+  currency: string,
+): string {
+  const amount =
+    Math.abs(value).toLocaleString(
+      'es-MX',
+      {
+        maximumFractionDigits: 0,
+      },
+    )
+
+  const sign = value < 0 ? '-' : ''
+
+  return currency === PURCHASING_NO_CURRENCY
+    ? `${PURCHASING_NO_CURRENCY_LABEL} ${sign}${amount}`
+    : `${currency} ${sign}$${amount}`
 }

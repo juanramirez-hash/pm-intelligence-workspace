@@ -9,10 +9,25 @@ import {
 import type {
   PurchasingAgingBucket,
   PurchasingAgingSummary,
+  PurchasingAmountsByCurrency,
   PurchasingAnalyticsGroup,
   PurchasingAnalyticsReport,
   PurchasingStatusSummary,
 } from '../analytics/purchasing'
+
+// The report is shared: callers get their own amounts (PUR-001).
+function copyAmountsByCurrency(
+  amounts: PurchasingAmountsByCurrency,
+): PurchasingAmountsByCurrency {
+  return Object.fromEntries(
+    Object.entries(amounts).map(
+      ([currency, amount]) => [
+        currency,
+        { ...amount },
+      ],
+    ),
+  )
+}
 
 function normalizeLimit(
   limit: number,
@@ -69,6 +84,13 @@ export class PurchasingAnalyticsQueries {
 
       totals: {
         ...this.report.totals,
+        amountsByCurrency:
+          copyAmountsByCurrency(
+            this.report.totals.amountsByCurrency,
+          ),
+        currencies: [
+          ...this.report.totals.currencies,
+        ],
       },
 
       linkage: {
@@ -83,6 +105,10 @@ export class PurchasingAnalyticsQueries {
         this.report.bySupplier.map(
           (group) => ({
             ...group,
+            amountsByCurrency:
+              copyAmountsByCurrency(
+                group.amountsByCurrency,
+              ),
           }),
         ),
 
@@ -90,6 +116,10 @@ export class PurchasingAnalyticsQueries {
         this.report.byBuyer.map(
           (group) => ({
             ...group,
+            amountsByCurrency:
+              copyAmountsByCurrency(
+                group.amountsByCurrency,
+              ),
           }),
         ),
 
@@ -97,6 +127,10 @@ export class PurchasingAnalyticsQueries {
         this.report.byBrand.map(
           (group) => ({
             ...group,
+            amountsByCurrency:
+              copyAmountsByCurrency(
+                group.amountsByCurrency,
+              ),
           }),
         ),
 
@@ -104,6 +138,10 @@ export class PurchasingAnalyticsQueries {
         this.report.byItem.map(
           (group) => ({
             ...group,
+            amountsByCurrency:
+              copyAmountsByCurrency(
+                group.amountsByCurrency,
+              ),
           }),
         ),
 
@@ -111,6 +149,10 @@ export class PurchasingAnalyticsQueries {
         this.report.byStatus.map(
           (summary) => ({
             ...summary,
+            amountsByCurrency:
+              copyAmountsByCurrency(
+                summary.amountsByCurrency,
+              ),
           }),
         ),
 
@@ -118,6 +160,10 @@ export class PurchasingAnalyticsQueries {
         this.report.aging.map(
           (summary) => ({
             ...summary,
+            amountsByCurrency:
+              copyAmountsByCurrency(
+                summary.amountsByCurrency,
+              ),
           }),
         ),
     }
@@ -126,6 +172,13 @@ export class PurchasingAnalyticsQueries {
   getTotals() {
     return {
       ...this.report.totals,
+      amountsByCurrency:
+        copyAmountsByCurrency(
+          this.report.totals.amountsByCurrency,
+        ),
+      currencies: [
+        ...this.report.totals.currencies,
+      ],
     }
   }
 
@@ -146,6 +199,10 @@ export class PurchasingAnalyticsQueries {
     return this.report.bySupplier.map(
       (group) => ({
         ...group,
+        amountsByCurrency:
+          copyAmountsByCurrency(
+            group.amountsByCurrency,
+          ),
       }),
     )
   }
@@ -155,6 +212,10 @@ export class PurchasingAnalyticsQueries {
     return this.report.byBuyer.map(
       (group) => ({
         ...group,
+        amountsByCurrency:
+          copyAmountsByCurrency(
+            group.amountsByCurrency,
+          ),
       }),
     )
   }
@@ -164,6 +225,10 @@ export class PurchasingAnalyticsQueries {
     return this.report.byBrand.map(
       (group) => ({
         ...group,
+        amountsByCurrency:
+          copyAmountsByCurrency(
+            group.amountsByCurrency,
+          ),
       }),
     )
   }
@@ -173,6 +238,10 @@ export class PurchasingAnalyticsQueries {
     return this.report.byItem.map(
       (group) => ({
         ...group,
+        amountsByCurrency:
+          copyAmountsByCurrency(
+            group.amountsByCurrency,
+          ),
       }),
     )
   }
@@ -189,6 +258,10 @@ export class PurchasingAnalyticsQueries {
       .map(
         (group) => ({
           ...group,
+          amountsByCurrency:
+            copyAmountsByCurrency(
+              group.amountsByCurrency,
+            ),
         }),
       )
   }
@@ -205,6 +278,10 @@ export class PurchasingAnalyticsQueries {
       .map(
         (group) => ({
           ...group,
+          amountsByCurrency:
+            copyAmountsByCurrency(
+              group.amountsByCurrency,
+            ),
         }),
       )
   }
@@ -221,6 +298,10 @@ export class PurchasingAnalyticsQueries {
       .map(
         (group) => ({
           ...group,
+          amountsByCurrency:
+            copyAmountsByCurrency(
+              group.amountsByCurrency,
+            ),
         }),
       )
   }
@@ -237,6 +318,10 @@ export class PurchasingAnalyticsQueries {
       .map(
         (group) => ({
           ...group,
+          amountsByCurrency:
+            copyAmountsByCurrency(
+              group.amountsByCurrency,
+            ),
         }),
       )
   }
@@ -246,6 +331,10 @@ export class PurchasingAnalyticsQueries {
     return this.report.byStatus.map(
       (summary) => ({
         ...summary,
+        amountsByCurrency:
+          copyAmountsByCurrency(
+            summary.amountsByCurrency,
+          ),
       }),
     )
   }
@@ -255,6 +344,10 @@ export class PurchasingAnalyticsQueries {
     return this.report.aging.map(
       (summary) => ({
         ...summary,
+        amountsByCurrency:
+          copyAmountsByCurrency(
+            summary.amountsByCurrency,
+          ),
       }),
     )
   }
@@ -273,6 +366,10 @@ export class PurchasingAnalyticsQueries {
     return summary
       ? {
           ...summary,
+          amountsByCurrency:
+            copyAmountsByCurrency(
+              summary.amountsByCurrency,
+            ),
         }
       : undefined
   }

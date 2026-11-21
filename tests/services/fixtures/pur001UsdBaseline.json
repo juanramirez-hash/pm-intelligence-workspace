@@ -1,0 +1,304 @@
+{
+  "referenceDate": "2026-08-01",
+  "totals": {
+    "purchaseOrders": 7,
+    "purchaseOrderLines": 8,
+    "purchaseRequests": 3,
+    "openPurchaseOrders": 6,
+    "overduePurchaseOrders": 4,
+    "purchaseOrdersDueNext7Days": 0,
+    "purchaseRequestsWithoutPurchaseOrder": 1,
+    "purchaseRequestsWithPurchaseOrder": 2,
+    "orderedQuantity": 39,
+    "orderedAmountForeignCurrency": 6799.5,
+    "linesWithoutAmount": 1,
+    "requestedQuantity": 12,
+    "suppliers": 4,
+    "buyers": 1,
+    "brands": 3,
+    "items": 6,
+    "linkedRequestRate": 0.6666666666666666,
+    "overdueOrderRate": 0.6666666666666666
+  },
+  "linkage": {
+    "purchaseRequests": 3,
+    "linkedToPurchaseOrder": 2,
+    "withoutPurchaseOrder": 1,
+    "linkedPurchaseOrderExists": 2,
+    "orphanPurchaseOrderReferences": 0,
+    "linkedToSalesOrder": 0,
+    "linkedToProject": 0
+  },
+  "cycle": {
+    "comparableRequests": 2,
+    "averageDaysRequestToPurchaseOrder": 6,
+    "medianDaysRequestToPurchaseOrder": 6,
+    "minDaysRequestToPurchaseOrder": 6,
+    "maxDaysRequestToPurchaseOrder": 6
+  },
+  "bySupplier": [
+    {
+      "key": "S3",
+      "label": "Proveedor S3",
+      "purchaseOrders": 2,
+      "purchaseOrderLines": 2,
+      "purchaseRequests": 1,
+      "orderedQuantity": 3,
+      "orderedAmountForeignCurrency": 4175,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 2,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "S1",
+      "label": "Proveedor S1",
+      "purchaseOrders": 2,
+      "purchaseOrderLines": 3,
+      "purchaseRequests": 1,
+      "orderedQuantity": 21,
+      "orderedAmountForeignCurrency": 1850.5,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "SIN PROVEEDOR",
+      "label": "Sin proveedor",
+      "purchaseOrders": 1,
+      "purchaseOrderLines": 1,
+      "purchaseRequests": 0,
+      "orderedQuantity": 4,
+      "orderedAmountForeignCurrency": 444,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 0,
+      "overduePurchaseOrders": 1,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "S2",
+      "label": "Proveedor S2",
+      "purchaseOrders": 2,
+      "purchaseOrderLines": 2,
+      "purchaseRequests": 0,
+      "orderedQuantity": 11,
+      "orderedAmountForeignCurrency": 330,
+      "linesWithoutAmount": 1,
+      "requestedQuantity": 0,
+      "overduePurchaseOrders": 1,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    }
+  ],
+  "byBuyer": [
+    {
+      "key": "COMPRADOR UNO",
+      "label": "Comprador Uno",
+      "purchaseOrders": 0,
+      "purchaseOrderLines": 0,
+      "purchaseRequests": 3,
+      "orderedQuantity": 0,
+      "orderedAmountForeignCurrency": 0,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 12,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 1
+    }
+  ],
+  "byBrand": [
+    {
+      "key": "STREAMAX",
+      "label": "STREAMAX",
+      "purchaseOrders": 2,
+      "purchaseOrderLines": 2,
+      "purchaseRequests": 1,
+      "orderedQuantity": 8,
+      "orderedAmountForeignCurrency": 4700,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "UNV",
+      "label": "UNV",
+      "purchaseOrders": 4,
+      "purchaseOrderLines": 4,
+      "purchaseRequests": 1,
+      "orderedQuantity": 18,
+      "orderedAmountForeignCurrency": 1849,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "HIKVISION",
+      "label": "HIKVISION",
+      "purchaseOrders": 2,
+      "purchaseOrderLines": 2,
+      "purchaseRequests": 1,
+      "orderedQuantity": 13,
+      "orderedAmountForeignCurrency": 250.5,
+      "linesWithoutAmount": 1,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 1
+    }
+  ],
+  "byItem": [
+    {
+      "key": "S-1",
+      "label": "S-1",
+      "purchaseOrders": 1,
+      "purchaseOrderLines": 1,
+      "purchaseRequests": 1,
+      "orderedQuantity": 2,
+      "orderedAmountForeignCurrency": 4100,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "U-1",
+      "label": "U-1",
+      "purchaseOrders": 2,
+      "purchaseOrderLines": 2,
+      "purchaseRequests": 1,
+      "orderedQuantity": 11,
+      "orderedAmountForeignCurrency": 1075,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "S-2",
+      "label": "S-2",
+      "purchaseOrders": 1,
+      "purchaseOrderLines": 1,
+      "purchaseRequests": 0,
+      "orderedQuantity": 6,
+      "orderedAmountForeignCurrency": 600,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 0,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "U-3",
+      "label": "U-3",
+      "purchaseOrders": 1,
+      "purchaseOrderLines": 1,
+      "purchaseRequests": 0,
+      "orderedQuantity": 4,
+      "orderedAmountForeignCurrency": 444,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 0,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "U-2",
+      "label": "U-2",
+      "purchaseOrders": 1,
+      "purchaseOrderLines": 1,
+      "purchaseRequests": 0,
+      "orderedQuantity": 3,
+      "orderedAmountForeignCurrency": 330,
+      "linesWithoutAmount": 0,
+      "requestedQuantity": 0,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 0
+    },
+    {
+      "key": "H-1",
+      "label": "H-1",
+      "purchaseOrders": 2,
+      "purchaseOrderLines": 2,
+      "purchaseRequests": 1,
+      "orderedQuantity": 13,
+      "orderedAmountForeignCurrency": 250.5,
+      "linesWithoutAmount": 1,
+      "requestedQuantity": 4,
+      "overduePurchaseOrders": 0,
+      "purchaseRequestsWithoutPurchaseOrder": 1
+    }
+  ],
+  "byStatus": [
+    {
+      "status": "PENDING RECEIPT",
+      "purchaseOrders": 5,
+      "purchaseRequests": 0,
+      "orderedAmountForeignCurrency": 6355.5,
+      "linesWithoutAmount": 0
+    },
+    {
+      "status": "FULLY BILLED",
+      "purchaseOrders": 1,
+      "purchaseRequests": 0,
+      "orderedAmountForeignCurrency": 444,
+      "linesWithoutAmount": 0
+    },
+    {
+      "status": "PARTIALLY RECEIVED",
+      "purchaseOrders": 1,
+      "purchaseRequests": 0,
+      "orderedAmountForeignCurrency": null,
+      "linesWithoutAmount": 1
+    },
+    {
+      "status": "APPROVED",
+      "purchaseOrders": 0,
+      "purchaseRequests": 2,
+      "orderedAmountForeignCurrency": 0,
+      "linesWithoutAmount": 0
+    },
+    {
+      "status": "PENDING",
+      "purchaseOrders": 0,
+      "purchaseRequests": 1,
+      "orderedAmountForeignCurrency": 0,
+      "linesWithoutAmount": 0
+    }
+  ],
+  "aging": [
+    {
+      "bucket": "current",
+      "purchaseOrders": 2,
+      "orderedAmountForeignCurrency": 1250.5,
+      "linesWithoutAmount": 1
+    },
+    {
+      "bucket": "1_7_days",
+      "purchaseOrders": 1,
+      "orderedAmountForeignCurrency": 330,
+      "linesWithoutAmount": 0
+    },
+    {
+      "bucket": "8_15_days",
+      "purchaseOrders": 0,
+      "orderedAmountForeignCurrency": 0,
+      "linesWithoutAmount": 0
+    },
+    {
+      "bucket": "16_30_days",
+      "purchaseOrders": 1,
+      "orderedAmountForeignCurrency": 4100,
+      "linesWithoutAmount": 0
+    },
+    {
+      "bucket": "31_plus_days",
+      "purchaseOrders": 2,
+      "orderedAmountForeignCurrency": 519,
+      "linesWithoutAmount": 0
+    },
+    {
+      "bucket": "undated",
+      "purchaseOrders": 1,
+      "orderedAmountForeignCurrency": 600,
+      "linesWithoutAmount": 0
+    }
+  ]
+}

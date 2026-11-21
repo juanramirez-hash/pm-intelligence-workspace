@@ -1,3 +1,11 @@
+# 0.57.0-PUR-001
+
+- Keeps Purchasing amounts by currency and never converts or adds them across currencies (audit finding R9): totals, supplier, buyer, brand and item groups, statuses and aging carry `amountsByCurrency` (amount, lines without amount, orders, lines, quantity and overdue orders per currency code). `orderedAmountForeignCurrency`, which added every currency together, is removed.
+- Normalizes currency codes (upper case, no spaces); orders without currency go to the "Sin moneda" group and are counted.
+- Adds `selectPurchasingCurrencyView`: rankings, aging and statuses of one currency, ordered by the amount in that currency, leaving other currencies out.
+- Purchasing Workspace: the "Monto ordenado" KPI lists every currency ("USD $1,234,567 · MXN $890,123"), a currency selector (USD by default) drives rankings and aging and shows how many orders are in other currencies, an amber notice counts orders without currency, and each purchase order shows its own currency instead of a fixed USD.
+- Adds tests for mixed USD and MXN data, per-currency rankings, orders without currency, hidden costs and a no-regression baseline generated with the previous code for USD-only data. Removes the 17 `orderedAmountForeignCurrency` keys from the SEC-003C baseline; their values stay in the test, which checks that the split by currency conserves them.
+
 # 0.57.0-DC-002
 
 - Imports the raw NetSuite "TS - Reporte de inventario por sucursal" export as is: the parser detects its preamble (header row with "Item" and "Marca") and combines the two-row header as "<BRANCH> <METRIC>", using the merged branch cells (or the last non-empty branch). Sales detection and header-on-row-1 files are unchanged (no-regression test against a baseline generated with the previous code).

@@ -6,9 +6,17 @@ import type {
   BusinessPurchaseRequest,
 } from '../../../core/business/entities/purchaseRequest'
 
-import type {
-  PurchasingAnalyticsGroup,
+import {
+  normalizePurchasingCurrency,
 } from '../../../core/business/analytics/purchasing'
+
+import type {
+  PurchasingCurrencyGroup,
+} from '../../../core/business/analytics/purchasing'
+
+import {
+  formatPurchasingAmount,
+} from '../engine/purchasingWorkspaceModel'
 
 import type {
   CostVisibility,
@@ -21,19 +29,6 @@ import {
   formatCostTotal,
   formatCostValue,
 } from '../../auth/costPresentation'
-
-function formatCurrency(
-  value: number,
-): string {
-  return value.toLocaleString(
-    'es-MX',
-    {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    },
-  )
-}
 
 function formatNumber(
   value: number,
@@ -57,6 +52,7 @@ function formatDate(
 }
 
 // An order can mix brands: lines outside the user's brands have no amount.
+// Each order shows its own currency (PUR-001).
 function formatOrderAmount(
   order: BusinessPurchaseOrder,
   costVisibility: CostVisibility,
@@ -73,9 +69,15 @@ function formatOrderAmount(
       : NO_COST_ACCESS_LABEL
   }
 
+  const currency =
+    normalizePurchasingCurrency(
+      order.currency,
+    )
+
   const amount =
-    formatCurrency(
+    formatPurchasingAmount(
       order.amountForeignCurrency,
+      currency,
     )
 
   if (order.linesWithoutAmount === 0) {
@@ -89,11 +91,11 @@ function formatOrderAmount(
 
 interface PurchasingRankingTableProps {
   groups:
-    readonly PurchasingAnalyticsGroup[]
+    readonly PurchasingCurrencyGroup[]
   onSelect?:
     (
       group:
-        PurchasingAnalyticsGroup,
+        PurchasingCurrencyGroup,
     ) => void
   costVisibility:
     CostVisibility
@@ -101,6 +103,9 @@ interface PurchasingRankingTableProps {
   // rows can mix brands.
   groupsAreBrands:
     boolean
+  // Currency of the ranking: amounts in other currencies are left out.
+  currency:
+    string
 }
 
 export function PurchasingRankingTable({
@@ -108,7 +113,11 @@ export function PurchasingRankingTable({
   onSelect,
   costVisibility,
   groupsAreBrands,
+  currency,
 }: PurchasingRankingTableProps) {
+  const formatAmount = (value: number) =>
+    formatPurchasingAmount(value, currency)
+
   if (groups.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-slate-400">
@@ -151,15 +160,15 @@ export function PurchasingRankingTable({
               <td className="px-3 py-3 text-right text-slate-700">{formatNumber(group.orderedQuantity)}</td>
               <td className="px-3 py-3 text-right font-semibold text-slate-900">{groupsAreBrands
                 ? formatCostValue(
-                    group.orderedAmountForeignCurrency,
+                    group.amount,
                     costVisibility,
                     group.key,
-                    formatCurrency,
+                    formatAmount,
                   )
                 : formatCostTotal(
-                    group.orderedAmountForeignCurrency,
+                    group.amount,
                     costVisibility,
-                    formatCurrency,
+                    formatAmount,
                   )}</td>
               <td className="px-3 py-3 text-right text-rose-600">{group.overduePurchaseOrders}</td>
             </tr>
