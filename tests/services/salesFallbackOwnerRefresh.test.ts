@@ -46,7 +46,6 @@ describe(
     )
 
     for (const service of [
-      'server/services/salesImportService.js',
       'server/services/salesChunkImportService.js',
       'server/services/productChunkImportService.js',
     ]) {

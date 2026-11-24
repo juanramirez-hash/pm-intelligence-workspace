@@ -17,7 +17,6 @@ import {
 } from './http/rateLimits.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { requireAdmin } from './middleware/requireAdmin.js'
-import { createDataStatusRouter } from './routes/dataStatus.js'
 import { createSalesRouter } from './routes/sales.js'
 import { createInventoryRouter } from './routes/inventory.js'
 import { createTargetsRouter } from './routes/targets.js'
@@ -290,13 +289,6 @@ app.use(
 )
 
 registerBusinessRoutes(app, pool)
-
-app.use(
-  '/api/data',
-  requireAuth,
-  authenticatedUser,
-  createDataStatusRouter(pool),
-)
 
 app.use(
   '/api/data/sales',

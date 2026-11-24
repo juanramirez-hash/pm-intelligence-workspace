@@ -1,3 +1,9 @@
+# 0.57.0-R2
+
+- Removes 60 production files in `src/` that `src/main.tsx` does not reach through static or dynamic imports (5,791 lines): Pulse and its engine, the unused atlas widgets, Brand Dashboard and its executive briefing, unused workspace and business components, `revenueComparison.ts`, `datasetHealthAdapter.ts`, `ExecutiveInsightPanel.tsx`, `salesPipeline.ts` and 10 re-export-only index files. Removes the 2 tests that only covered removed widgets. No behavior changes.
+- Removes the backend routes the frontend does not call: `GET /api/data/status` and the non-chunked `POST /api/data/sales/import` and `POST /api/data/inventory/import`, with `salesImportService.js` and `inventoryImportService.js`. The refresh and timeout tests keep watching the chunked import services.
+- Removes the one-off `scripts/integrate-business-routes.mjs` and the IW-006 context files, and moves the old root notes (`README_APLICACION.md`, `README_FIX.md`, `CHANGELOG_0.24.2.md`, `PRODUCT_MASTER_CONSOLIDATION_v0.24.5.md`) to `docs/archive/`.
+
 # 0.57.0-PUR-001
 
 - Keeps Purchasing amounts by currency and never converts or adds them across currencies (audit finding R9): totals, supplier, buyer, brand and item groups, statuses and aging carry `amountsByCurrency` (amount, lines without amount, orders, lines, quantity and overdue orders per currency code). `orderedAmountForeignCurrency`, which added every currency together, is removed.

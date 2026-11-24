@@ -386,6 +386,17 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Ningún otro módulo usa el monto de compras: no hay exportación de Purchasing, Executive solo usa la disponibilidad de los datasets y el resumen de importación del Data Center ya separaba por moneda.
 - Pruebas: no regresión contra una línea base generada antes del cambio con datos solo en USD (mismos montos, faltantes y orden); datos mixtos USD + MXN sin sumas entre monedas; rankings por moneda; grupo "Sin moneda"; combinación con costos ocultos. En la línea base de SEC-003C se quitaron las 17 claves `orderedAmountForeignCurrency` (sus valores quedan en la prueba, que verifica que la separación por moneda los conserva); las órdenes de ese fixture son todas USD.
 
+## Limpieza — R2
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| R2 | Eliminar código muerto, rutas de backend sin uso y residuos versionados (hallazgo R2 de la auditoría), sin cambios de comportamiento | Implementado · pendiente de validación funcional y despliegue |
+
+- Frontend: 60 archivos de producción en `src/` que no se alcanzan desde `src/main.tsx` (imports estáticos y dinámicos), 5,791 líneas: Pulse (`features/pulse`, `engine/pulseEngine.ts`, `engine/types.ts` y sus widgets de `atlas`), los widgets `atlas/widgets/executiveBrief` y `atlas/widgets/opportunity`, Brand Dashboard (`features/brand-dashboard`, `components/business/executive-briefing`, `core/insights`), componentes sin uso (`components/business/ranking`, `components/workspace/layout` y `toolbar`, `brand-workspace/components`, `shared/ui`), `core/business/metrics/revenueComparison.ts`, `datasetHealthAdapter.ts`, `ExecutiveInsightPanel.tsx`, `brandIntelligenceTypes.ts` de `features`, `salesPipeline.ts` y 10 índices que solo re-exportaban. Se eliminaron las 2 pruebas que solo cubrían widgets eliminados.
+- Se conservan 5 archivos que no alcanza `main.tsx`: `buildConstants.d.ts` (tipos globales), `core/business/testing/createMinimalBusinessModel.ts` y los índices de `importers/inventory`, `importers/products` y `forecast-workspace`, que usan pruebas de código vivo.
+- Backend: se eliminaron `GET /api/data/status` (`routes/dataStatus.js`) y las importaciones sin chunks `POST /api/data/sales/import` y `POST /api/data/inventory/import` con `salesImportService.js` e `inventoryImportService.js`; el frontend solo usa las importaciones por chunks. Las pruebas de refresco y `statement_timeout` (SEC-004) siguen vigilando `salesChunkImportService.js` y `productChunkImportService.js`. El límite de 10 MB para `/api/data/<x>/import` no cambia (lo usa `targets/import`).
+- Residuos: se eliminaron `scripts/integrate-business-routes.mjs`, `IW006_CONTEXTO_ACTUAL.txt` e `IW006_PREPARAR_CONTEXTO.cmd`; `README_APLICACION.md`, `README_FIX.md`, `CHANGELOG_0.24.2.md` y `PRODUCT_MASTER_CONSOLIDATION_v0.24.5.md` se movieron a `docs/archive/`.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

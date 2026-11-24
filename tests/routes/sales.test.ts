@@ -49,10 +49,6 @@ vi.mock('../../server/services/salesReadService.js', () => ({
   loadSalesDataset: mocks.loadSalesDataset,
 }))
 
-vi.mock('../../server/services/salesImportService.js', () => ({
-  importSalesDataset: vi.fn(),
-}))
-
 vi.mock('../../server/services/salesChunkImportService.js', () => ({
   appendSalesChunk: vi.fn(),
   cancelSalesChunkImport: vi.fn(),

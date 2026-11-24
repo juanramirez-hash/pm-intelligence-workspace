@@ -1,3 +1,0 @@
-export {
-  WorkspaceToolbar,
-} from './WorkspaceToolbar'

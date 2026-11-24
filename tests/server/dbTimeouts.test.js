@@ -34,7 +34,6 @@ describe('PostgreSQL timeouts (SEC-004)', () => {
     expect(refreshing.map(([file]) => file).sort()).toEqual([
       'productChunkImportService.js',
       'salesChunkImportService.js',
-      'salesImportService.js',
     ])
 
     for (const [file, source] of refreshing) {

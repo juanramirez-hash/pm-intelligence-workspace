@@ -1,3 +1,0 @@
-export {
-  BrandTable,
-} from './BrandTable'
