@@ -31,9 +31,9 @@ export interface BrandIntelligenceOptions {
   attentionDeclineThreshold?: number
 }
 
-const DEFAULT_STABLE_THRESHOLD = 0.05
+export const DEFAULT_STABLE_THRESHOLD = 0.05
 
-const DEFAULT_ATTENTION_DECLINE_THRESHOLD =
+export const DEFAULT_ATTENTION_DECLINE_THRESHOLD =
   -0.15
 
 function createEmptyPeriodMetrics():

@@ -397,6 +397,19 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Backend: se eliminaron `GET /api/data/status` (`routes/dataStatus.js`) y las importaciones sin chunks `POST /api/data/sales/import` y `POST /api/data/inventory/import` con `salesImportService.js` e `inventoryImportService.js`; el frontend solo usa las importaciones por chunks. Las pruebas de refresco y `statement_timeout` (SEC-004) siguen vigilando `salesChunkImportService.js` y `productChunkImportService.js`. El límite de 10 MB para `/api/data/<x>/import` no cambia (lo usa `targets/import`).
 - Residuos: se eliminaron `scripts/integrate-business-routes.mjs`, `IW006_CONTEXTO_ACTUAL.txt` e `IW006_PREPARAR_CONTEXTO.cmd`; `README_APLICACION.md`, `README_FIX.md`, `CHANGELOG_0.24.2.md` y `PRODUCT_MASTER_CONSOLIDATION_v0.24.5.md` se movieron a `docs/archive/`.
 
+## Mi día — MD-001
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| MD-001 | Backend de "Mi día": venta, cuota, avance, cierre por ritmo, brecha diaria, variación, GP, margen, clientes, productos, participación, estado, tendencia y atención de las marcas del usuario, más los clientes por recuperar | Implementado · pendiente de validación funcional y despliegue |
+
+- `GET /api/my-day?period=YYYY-MM`: el periodo por defecto es el mes de la fecha de corte (`MAX(sale_date)`). Devuelve `dataCutoff`, `periodStatus` (`open`, `closed`), días hábiles (`elapsed`, `total`, `remaining`, lunes a viernes, `holidaysExcluded: false`), la ventana de comparación, las reglas (`rules`), el total de la cartera (`portfolio`) y una fila por marca (`brands`). Un periodo posterior al corte responde sin marcas (`reason: 'period-after-data-cutoff'`).
+- `GET /api/my-day/lost-customers`: los clientes que compraban la marca y llevan 2 meses completos sin comprarla, con la misma regla y consulta que `/api/metrics/brands/:brand/lost-customers`, para todas las marcas del usuario (una fila por marca y cliente). Acepta `brand` solo dentro de las marcas del usuario, y `period`, `inactivePeriods`, `basePeriods`, `limit` y `offset`.
+- Marcas: las asignadas al usuario (`app_user_brand_assignments`), nunca las que envía el cliente. Con alcance `all` y sin asignaciones, todas las marcas con venta o meta en el periodo o el anterior. Sin asignaciones y sin alcance `all`: 200 con `brands: []` y `reason: 'no-brand-assignments'`. Los alcances sin acceso comercial se rechazan con 403, como en `requireBrandScope`.
+- Estado, tendencia, participación y atención usan las reglas de la tabla "Detalle ejecutivo por marca" de Executive: ±5 % para estable, caída de 15 % o más para atención, y el mismo comparativo contra el mes anterior cortado en los mismos días hábiles. La participación es dentro de la cartera del usuario. Una prueba de paridad compara umbrales, textos y fechas de corte (todos los días de 2024 a 2027) con el frontend.
+- Ritmo: cierre proyectado = venta / días hábiles transcurridos × días hábiles del mes; brecha diaria = (cuota − venta) / días hábiles restantes. En el total de la cartera, la cuota, el avance y la brecha usan solo las marcas con meta. `target.workingDays` de `brand_targets` se devuelve como dato informativo y no se usa en el cálculo.
+- Umbrales en `server/services/myDayRules.js` (`MY_DAY_RULES`). Límite de solicitudes de SEC-004 en `/api/my-day`. Sin migraciones; `/api/metrics/*` y `comparisonWindow` no cambian. En el frontend solo se exportan los dos umbrales de `brandIntelligence.ts` para la prueba de paridad.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

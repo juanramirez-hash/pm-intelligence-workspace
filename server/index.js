@@ -288,6 +288,11 @@ app.use(
   createApiRateLimit(),
 )
 
+app.use(
+  '/api/my-day',
+  createApiRateLimit(),
+)
+
 registerBusinessRoutes(app, pool)
 
 app.use(

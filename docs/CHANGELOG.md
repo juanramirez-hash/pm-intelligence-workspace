@@ -1,3 +1,10 @@
+# 0.57.0-MD-001
+
+- Adds `GET /api/my-day` for the "Mi día" home: for the user's brands and the data cutoff month (or `period`), revenue, quota, attainment, projected close and daily gap with Monday-to-Friday working days, variation against the previous month cut on the same working days, gross profit, margin, customers, products, share inside the user's brands, status, trend and attention, plus portfolio totals and the data cutoff.
+- Adds `GET /api/my-day/lost-customers`: customers who bought a brand and have not bought it for 2 completed months, with the `/api/metrics/brands/:brand/lost-customers` rule, for all the user's brands.
+- Takes the brands from the user's assignments only; scope `all` without assignments uses every brand with sales or target, and users without assignments get an empty answer (`no-brand-assignments`).
+- Keeps status, trend and attention identical to the Executive brand table, with a parity test for thresholds, texts and working-day cutoffs; exports the two Executive thresholds for that test. Applies the SEC-004 API rate limit. No migrations; `/api/metrics/*` is unchanged.
+
 # 0.57.0-R2
 
 - Removes 60 production files in `src/` that `src/main.tsx` does not reach through static or dynamic imports (5,791 lines): Pulse and its engine, the unused atlas widgets, Brand Dashboard and its executive briefing, unused workspace and business components, `revenueComparison.ts`, `datasetHealthAdapter.ts`, `ExecutiveInsightPanel.tsx`, `salesPipeline.ts` and 10 re-export-only index files. Removes the 2 tests that only covered removed widgets. No behavior changes.

@@ -82,7 +82,7 @@ Fuentes operativas (archivos Excel/CSV)
 
 Capa de servidor (en curso en la rama v0.57.0, "production platform foundation"):
 
-- `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, settingsUsers, settingsRoles).
+- `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, myDay, settingsUsers, settingsRoles).
 - `server/services/`: importación por chunks con tablas staging, agregados de negocio (`refresh_business_aggregates`), analítica de ventas en SQL, búsqueda global y conciliación de facturación de proyectos.
 - `server/middleware/`: `requireAuth`, `requireAdmin`, `requireBrandScope`, `requireWriteAccess` (usuarios, roles y asignación de marcas por PM).
 - `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `037`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.

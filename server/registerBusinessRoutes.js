@@ -6,6 +6,7 @@ import { requireAuth } from './middleware/requireAuth.js'
 import { loadAuthenticatedUser } from './middleware/loadAuthenticatedUser.js'
 import { createActionsRouter } from './routes/actions.js'
 import { createMetricsRouter } from './routes/metrics.js'
+import { createMyDayRouter } from './routes/myDay.js'
 import { createSearchRouter } from './routes/search.js'
 import { createImportBodyParser } from './http/requestLimits.js'
 
@@ -69,6 +70,14 @@ export function registerBusinessRoutes(app, pool) {
     requireAuth,
     authenticatedUser,
     createMetricsRouter(pool),
+  )
+
+  // MD-001. Rate limited in index.js (createApiRateLimit, SEC-004).
+  app.use(
+    '/api/my-day',
+    requireAuth,
+    authenticatedUser,
+    createMyDayRouter(pool),
   )
 
   app.use(
