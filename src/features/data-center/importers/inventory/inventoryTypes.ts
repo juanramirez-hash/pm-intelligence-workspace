@@ -19,6 +19,11 @@ export interface NormalizedInventoryRow {
   unitCost: number | null
   inventoryValue: number | null
   currency: string | null
+
+  // MD-002: "Estatus" and "Fecha de ultima venta" of the NetSuite export.
+  // Optional: rows read back from the API do not carry them.
+  catalogStatus?: string | null
+  lastSaleDate?: string | null
 }
 
 export interface InventoryDatasetSummary {

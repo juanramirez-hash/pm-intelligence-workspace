@@ -19,6 +19,26 @@ export const REQUIRED_SCHEMA = [
     table: 'app_roles',
     column: 'cost_access',
   },
+  {
+    migration: '038',
+    table: 'inventory_snapshots',
+    column: 'catalog_status',
+  },
+  {
+    migration: '038',
+    table: 'inventory_snapshots',
+    column: 'last_sale_date',
+  },
+  {
+    migration: '038',
+    table: 'inventory_import_staging',
+    column: 'catalog_status',
+  },
+  {
+    migration: '038',
+    table: 'inventory_import_staging',
+    column: 'last_sale_date',
+  },
 ]
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/

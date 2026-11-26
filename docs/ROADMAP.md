@@ -410,12 +410,32 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Ritmo: cierre proyectado = venta / días hábiles transcurridos × días hábiles del mes; brecha diaria = (cuota − venta) / días hábiles restantes. En el total de la cartera, la cuota, el avance y la brecha usan solo las marcas con meta. `target.workingDays` de `brand_targets` se devuelve como dato informativo y no se usa en el cálculo.
 - Umbrales en `server/services/myDayRules.js` (`MY_DAY_RULES`). Límite de solicitudes de SEC-004 en `/api/my-day`. Sin migraciones; `/api/metrics/*` y `comparisonWindow` no cambian. En el frontend solo se exportan los dos umbrales de `brandIntelligence.ts` para la prueba de paridad.
 
+## Mi día — MD-002
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| MD-002 | Backend de disponibilidad de "Mi día": agotados, por agotarse y llegadas de órdenes de compra de las marcas del usuario; `view=all` para alcance `all`; estatus y fecha de última venta desde el inventario (migración 038) | Implementado · pendiente de validación funcional y despliegue |
+
+- `GET /api/my-day/stock-alerts`: resumen con los primeros `limit` (20 por defecto) de cada lista, el total, la calidad de datos y la frescura de inventario, órdenes de compra y ventas (atrasado después de 7 días, igual que DC-001). `GET /api/my-day/stock-alerts/out-of-stock` y `/low-stock`: la lista completa, paginada con `limit` y `offset`.
+- Fuente del artículo: el último import completado de inventario (por `import_id`). Llave: el código de "Item" en mayúsculas, sin espacios en los extremos y con espacios colapsados; es la misma llave para `purchase_orders.item_code` y `sales_facts.product_name`. Marca, estatus ("Estatus") y fecha de última venta ("Fecha de ultima venta") salen del inventario, no del Product Master. Existencia = suma de "En Mano" de todas las sucursales; por recibir (`pendingReceiptUnits`) = suma de "Cantidad Actual en Orden", que NetSuite ya calcula descontando lo recibido. No se usa la cantidad de las PO ni "Cantidad Actual en Tránsito" (traspasos entre sucursales).
+- Agotados: todos los artículos `DE LINEA` con existencia total 0, sin excluir ninguno, ordenados por venta promedio mensual de los últimos 3 meses (mayor a menor); los que no vendieron en 3 meses van al final por fecha de última venta (más reciente primero) y los que nunca vendieron, al último. Por agotarse: `DE LINEA`, existencia > 0, venta neta > 0 y cobertura ≤ 30 días. Ventana de ventas en días calendario, de la fecha de corte de ventas hacia atrás 3 meses.
+- Próxima llegada por artículo (`arrivalStatus`): `scheduled` (PO pendiente con fecha estimada ≥ corte), `overdue` (solo PO con fecha anterior al corte), `no-date`, `no-po-data` (en orden > 0 sin PO pendiente cargada) y `no-po` (en orden = 0; si aun así hay PO pendiente, se cuenta en `dataQuality.purchaseOrdersWithoutOnOrder`). PO pendiente = `Pending Receipt` o `Pending Bill`, solo líneas de producto; `Pending Supervisor Approval` no cuenta.
+- `GET /api/my-day/arrivals`: una fila por PO pendiente con fecha estimada entre el corte y el corte + 14 días, más las atrasadas. Montos por moneda sin conversión (PUR-001); sin acceso a costos el monto es `null` con `costHidden: true`, nunca 0 (SEC-003A, misma condición que el servicio de compras).
+- Un import de inventario sin estatus responde `reason: 'catalog-status-missing'`; los artículos sin estatus o sin marca se cuentan en `dataQuality`, nunca se infieren. "- Unassigned -" no se oculta.
+- `view`: `mine` por defecto (comportamiento de MD-001); `view=all` solo con alcance `all` (403 sin él, 400 con un valor inválido) en `/api/my-day`, `/lost-customers`, `/stock-alerts` y `/arrivals`. El filtro `brand` solo se acepta dentro de las marcas del usuario.
+- Migración 038: `catalog_status` y `last_sale_date` en `inventory_snapshots` y en `inventory_import_staging`, con rollback y entrada en `REQUIRED_SCHEMA`. No modifica datos y no sube `data_cache_version`; los datos llegan con la siguiente carga de inventario.
+- Reglas en `server/services/myDayAvailabilityRules.js` (`MY_DAY_AVAILABILITY_RULES`), devueltas en `rules`. Sin índices nuevos.
+- DC-001: la fuente "TS - Lista de PO con Item" (búsqueda guardada 3582, exportada a Excel) queda configurada para Órdenes de compra.
+- Pendiente fuera de MD-002: el export de PO's solo trae PO con fecha del 1 oct al 25 nov 2026; hasta ampliar el filtro a todas las abiertas, habrá artículos con `no-po-data`.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.
 - Indicadores derivados del monto en órdenes de compra: `value_classification`, `value_score` y `amount_classification` siguen visibles para todos los roles. Revisar si revelan el costo.
 
 ## Pendientes técnicos
+
+- Compras × Inventario del frontend (`purchasingInventoryAnalytics.ts`) une `inventory.productCode` con `po.itemCode`. El export crudo de inventario no trae columna de código, así que solo empatan los artículos que existen en el Product Master (su Name se usa como código). Arreglo propuesto: copiar "Item" a `productCode` al armar la fila del inventario, después de descartar las filas de agrupación, con su prueba.
 
 - SQL-002: `p_concurrently` en `refresh_sales_fallback_owner_candidates()` no hace refresh concurrente real. Medido en `pm_intelligence_test`: el refresh tarda ~5 s con 546,520 ventas, así que el refresh concurrente no es necesario por ahora. Reevaluar si el tiempo crece; si se cambia, hacerlo en una migración nueva, no editando la 035.
 

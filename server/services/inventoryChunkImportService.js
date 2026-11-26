@@ -162,7 +162,9 @@ export async function appendInventoryChunk(
             on_order,
             unit_cost,
             inventory_value,
-            currency
+            currency,
+            catalog_status,
+            last_sale_date
           )
           VALUES (
             $1,
@@ -180,7 +182,9 @@ export async function appendInventoryChunk(
             $13,
             $14,
             $15,
-            $16
+            $16,
+            $17,
+            $18
           )
         `,
         [
@@ -202,6 +206,9 @@ export async function appendInventoryChunk(
           row.unitCost,
           row.inventoryValue,
           row.currency,
+          // MD-002 (migration 038); older clients do not send them.
+          row.catalogStatus ?? null,
+          row.lastSaleDate ?? null,
         ],
       )
 
@@ -537,7 +544,9 @@ export async function finalizeInventoryChunkImport(
               on_order,
               unit_cost,
               inventory_value,
-              currency
+              currency,
+              catalog_status,
+              last_sale_date
             )
             SELECT
               staging.import_id,
@@ -554,7 +563,9 @@ export async function finalizeInventoryChunkImport(
               staging.on_order,
               staging.unit_cost,
               staging.inventory_value,
-              staging.currency
+              staging.currency,
+              staging.catalog_status,
+              staging.last_sale_date
             FROM inventory_import_staging staging
             WHERE staging.import_id = $1
             ORDER BY

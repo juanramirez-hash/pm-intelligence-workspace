@@ -62,6 +62,17 @@ describe('startup schema check (OPS-001)', () => {
     expect(sql).toContain('information_schema.columns')
   })
 
+  it('requires the MD-002 inventory columns of migration 038', () => {
+    const sql = buildMissingSchemaSql()
+
+    for (const table of ['inventory_snapshots', 'inventory_import_staging']) {
+      for (const column of ['catalog_status', 'last_sale_date']) {
+        expect(REQUIRED_SCHEMA).toContainEqual({ migration: '038', table, column })
+        expect(sql).toContain(`('038', '${table}', '${column}')`)
+      }
+    }
+  })
+
   it('rejects requirements that are not plain identifiers', () => {
     expect(() =>
       buildMissingSchemaSql([

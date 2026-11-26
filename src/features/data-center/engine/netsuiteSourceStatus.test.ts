@@ -119,7 +119,6 @@ describe('NetSuite source status (DC-001)', () => {
       'exchange-rates',
       'pricing',
       'product-master',
-      'purchase-orders',
       'purchase-requests',
       'targets',
     ])
@@ -142,6 +141,27 @@ describe('NetSuite source status (DC-001)', () => {
     expect(rows.get('inventory')?.help).toBe(
       'Ejecutar el reporte, usar Exportar → Excel y arrastrar el archivo tal cual (no hace falta limpiarlo)',
     )
+  })
+
+  it('configures the purchase orders saved search, exported to Excel (MD-002)', () => {
+    const rows = rowsAt({
+      'purchase-orders': {
+        lastImportedAt: '2026-11-20T15:00:00.000Z',
+        dataCutoff: null,
+      },
+    })
+
+    expect(NETSUITE_SOURCES['purchase-orders']).toEqual({
+      name: 'TS - Lista de PO con Item',
+      kind: 'saved-search',
+      url: 'https://4820964.app.netsuite.com/app/common/search/searchresults.nl?searchid=3582',
+      staleAfterDays: 7,
+      help: 'Abrir la búsqueda y usar Exportar → Excel',
+    })
+    expect(rows.get('purchase-orders')).toMatchObject({
+      status: 'up-to-date',
+      help: 'Abrir la búsqueda y usar Exportar → Excel',
+    })
   })
 
   it('counts calendar days across month and year boundaries', () => {

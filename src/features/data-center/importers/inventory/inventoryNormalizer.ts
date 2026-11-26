@@ -95,6 +95,110 @@ function dateValue(value: unknown): string | null {
     : date.toISOString().slice(0, 10)
 }
 
+function validDateKey(
+  year: number,
+  month: number,
+  day: number,
+): string | null {
+  const date = new Date(Date.UTC(year, month - 1, day))
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null
+  }
+
+  return date.toISOString().slice(0, 10)
+}
+
+/**
+ * "Fecha de ultima venta" (MD-002): a date cell (local date, as SheetJS
+ * builds it with cellDates), an Excel serial, YYYY-MM-DD or the day-first
+ * D/M/YYYY of the NetSuite Mexico account. Anything else is null, never
+ * guessed.
+ */
+export function lastSaleDateValue(value: unknown): string | null {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime())
+      ? null
+      : validDateKey(
+        value.getFullYear(),
+        value.getMonth() + 1,
+        value.getDate(),
+      )
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value <= 0) {
+      return null
+    }
+
+    const excelEpoch = Date.UTC(1899, 11, 30)
+    return new Date(excelEpoch + Math.floor(value) * 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+  }
+
+  const normalized = text(value)
+  if (!normalized) {
+    return null
+  }
+
+  const isoMatch = normalized.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/,
+  )
+  if (isoMatch) {
+    return validDateKey(
+      Number(isoMatch[1]),
+      Number(isoMatch[2]),
+      Number(isoMatch[3]),
+    )
+  }
+
+  const dayFirstMatch = normalized.match(
+    /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/,
+  )
+  if (dayFirstMatch) {
+    return validDateKey(
+      Number(dayFirstMatch[3]),
+      Number(dayFirstMatch[2]),
+      Number(dayFirstMatch[1]),
+    )
+  }
+
+  return null
+}
+
+/**
+ * Only when the file has the columns: an export without them normalizes
+ * exactly as before (DC-002 V1 regression baselines).
+ */
+function itemFields(
+  row: RawInventoryRow,
+  validation: InventoryValidationResult,
+): Pick<NormalizedInventoryRow, 'catalogStatus' | 'lastSaleDate'> {
+  const fields: Pick<
+    NormalizedInventoryRow,
+    'catalogStatus' | 'lastSaleDate'
+  > = {}
+
+  if (validation.columnMap.catalogStatus) {
+    fields.catalogStatus = identifier(
+      getValue(row, validation, 'catalogStatus'),
+    )
+  }
+
+  if (validation.columnMap.lastSaleDate) {
+    fields.lastSaleDate = lastSaleDateValue(
+      getValue(row, validation, 'lastSaleDate'),
+    )
+  }
+
+  return fields
+}
+
 function normalizeLongInventoryRows(
   rows: RawInventoryRow[],
   validation: InventoryValidationResult,
@@ -151,6 +255,7 @@ function normalizeLongInventoryRows(
       currency: identifier(
         getValue(row, validation, 'currency'),
       ),
+      ...itemFields(row, validation),
     })
   }
 
@@ -257,6 +362,7 @@ function normalizeWideInventoryRows(
         currency: identifier(
           getValue(row, validation, 'currency'),
         ),
+        ...itemFields(row, validation),
       })
       generatedPositions += 1
     }

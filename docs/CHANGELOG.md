@@ -1,3 +1,12 @@
+# 0.57.0-MD-002
+
+- Adds `GET /api/my-day/stock-alerts` and `GET /api/my-day/stock-alerts/:kind` (`out-of-stock`, `low-stock`): `DE LINEA` items of the user's brands with zero total stock, and those with stock and 30 days of coverage or less over the last 3 months of sales, from the latest inventory import. Each row has the pending receipt from NetSuite "Cantidad Actual en Orden", the average monthly sales, the last sale date and the next purchase order arrival with its status (`scheduled`, `overdue`, `no-date`, `no-po-data`, `no-po`).
+- Adds `GET /api/my-day/arrivals`: pending purchase orders expected within 14 days of the data cutoff, plus the overdue ones, with amounts by currency and no conversion; hidden costs are `null`, never 0.
+- Returns the rules, the freshness of inventory, purchases and sales (stale after 7 days, same as DC-001) and data quality counts; missing catalog status is reported, never inferred.
+- Adds the `view` parameter to every "Mi día" route: `mine` by default (unchanged MD-001 behavior), `all` only for scope `all` (403 otherwise, 400 for invalid values).
+- Migration 038 adds `catalog_status` and `last_sale_date` to `inventory_snapshots` and `inventory_import_staging`; the inventory importer reads "Estatus" and "Fecha de ultima venta" from the raw NetSuite export. Includes rollback and the startup schema requirement; does not bump `data_cache_version`.
+- Configures the "TS - Lista de PO con Item" NetSuite source (saved search 3582, Excel export) for purchase orders in the Data Center.
+
 # 0.57.0-MD-001
 
 - Adds `GET /api/my-day` for the "Mi día" home: for the user's brands and the data cutoff month (or `period`), revenue, quota, attainment, projected close and daily gap with Monday-to-Friday working days, variation against the previous month cut on the same working days, gross profit, margin, customers, products, share inside the user's brands, status, trend and attention, plus portfolio totals and the data cutoff.

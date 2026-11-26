@@ -62,7 +62,9 @@ function importInventory(workbook: XLSX.WorkBook) {
     normalized.ignoredRows,
   )
 
-  // Only what existed before DC-002; new validation fields are allowed.
+  // Only what existed before DC-002; new validation fields are allowed, and
+  // so are the MD-002 row fields read from "Estatus" and "Fecha de ultima
+  // venta" (every other field must stay identical).
   return {
     columns: sheet.columns,
     valid: validation.valid,
@@ -70,7 +72,9 @@ function importInventory(workbook: XLSX.WorkBook) {
     wideLocationColumns: validation.wideLocationColumns,
     warnings: validation.warnings,
     ignoredRows: normalized.ignoredRows,
-    rows: normalized.rows,
+    rows: normalized.rows.map(
+      ({ catalogStatus: _catalogStatus, lastSaleDate: _lastSaleDate, ...row }) => row,
+    ),
     summary: model.summary,
   }
 }

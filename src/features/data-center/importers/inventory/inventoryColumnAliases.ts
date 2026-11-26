@@ -13,6 +13,8 @@ export type InventoryField =
   | 'unitCost'
   | 'inventoryValue'
   | 'currency'
+  | 'catalogStatus'
+  | 'lastSaleDate'
 
 export const INVENTORY_COLUMN_ALIASES: Record<
   InventoryField,
@@ -109,4 +111,7 @@ export const INVENTORY_COLUMN_ALIASES: Record<
     'Valor inventario',
   ],
   currency: ['Currency', 'Moneda', 'Divisa'],
+  // MD-002: per-item columns of the raw NetSuite export.
+  catalogStatus: ['Estatus'],
+  lastSaleDate: ['Fecha de ultima venta', 'Fecha de última venta'],
 }

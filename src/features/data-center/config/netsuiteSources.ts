@@ -63,6 +63,14 @@ export const NETSUITE_SOURCES: Partial<
     // DC-002: the raw NetSuite export imports as is.
     help: 'Ejecutar el reporte, usar Exportar → Excel y arrastrar el archivo tal cual (no hace falta limpiarlo)',
   },
+  'purchase-orders': {
+    name: 'TS - Lista de PO con Item',
+    kind: 'saved-search',
+    url: 'https://4820964.app.netsuite.com/app/common/search/searchresults.nl?searchid=3582',
+    staleAfterDays: 7,
+    // MD-002: the purchase orders are exported to Excel, not CSV.
+    help: 'Abrir la búsqueda y usar Exportar → Excel',
+  },
   projects: {
     name: 'TS - Mis Proyectos PMs',
     kind: 'saved-search',

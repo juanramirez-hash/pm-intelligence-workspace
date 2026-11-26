@@ -21,6 +21,8 @@ export const OPTIONAL_INVENTORY_FIELDS: InventoryField[] = [
   'onOrder',
   'unitCost',
   'currency',
+  'catalogStatus',
+  'lastSaleDate',
 ]
 
 export const ALL_INVENTORY_FIELDS: InventoryField[] = [

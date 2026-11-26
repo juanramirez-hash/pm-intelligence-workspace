@@ -27,14 +27,28 @@ vi.mock('../../server/services/myDayService.js', async (importOriginal) => ({
   ...mocks,
 }))
 
+const availability = vi.hoisted(() => ({
+  loadLatestImports: vi.fn(),
+  inventoryHasCatalogStatus: vi.fn(),
+  loadInventoryItems: vi.fn(),
+  loadItemSales: vi.fn(),
+  loadPendingPurchaseOrderLines: vi.fn(),
+}))
+
+vi.mock('../../server/services/myDayAvailabilityService.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...availability,
+}))
+
 import {
   createMyDayRouter,
   resolveMyDayBrandSource,
 } from '../../server/routes/myDay.js'
 
 interface TestRequest {
-  authUser?: { scope?: string, brandIds?: string[] }
+  authUser?: { scope?: string, brandIds?: string[], costAccess?: boolean }
   query: Record<string, string>
+  params?: Record<string, string>
 }
 
 function buildResponse() {
@@ -91,6 +105,35 @@ beforeEach(() => {
   mocks.loadActiveBeforePrevious.mockResolvedValue(new Set(['UNV']))
   mocks.countLostCustomers.mockResolvedValue(new Map())
   mocks.loadLostCustomers.mockResolvedValue({ hasMore: false, rows: [] })
+  availability.loadLatestImports.mockResolvedValue(new Map([
+    ['inventory', { importId: 41, uploadedAt: '2026-11-21T15:00:00.000Z' }],
+    ['purchases', { importId: 42, uploadedAt: '2026-11-21T16:00:00.000Z' }],
+    ['sales', { importId: 43, uploadedAt: '2026-11-21T14:00:00.000Z' }],
+  ]))
+  availability.inventoryHasCatalogStatus.mockResolvedValue(true)
+  availability.loadInventoryItems.mockResolvedValue([
+    {
+      itemKey: 'OUT', itemCode: 'OUT', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'DE LINEA',
+      onHand: 0, pendingReceiptUnits: 10, lastSaleDate: '2026-11-18',
+    },
+    {
+      itemKey: 'LOW', itemCode: 'LOW', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'DE LINEA',
+      onHand: 9, pendingReceiptUnits: 0, lastSaleDate: '2026-11-19',
+    },
+    {
+      itemKey: 'ORDER', itemCode: 'ORDER', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'SOBRE PEDIDO',
+      onHand: 0, pendingReceiptUnits: 0, lastSaleDate: null,
+    },
+  ])
+  // Window 2026-08-21..2026-11-20 = 92 days.
+  availability.loadItemSales.mockResolvedValue(new Map([['OUT', 46], ['LOW', 92]]))
+  availability.loadPendingPurchaseOrderLines.mockResolvedValue([
+    {
+      itemKey: 'OUT', purchaseOrderNumber: 'PO-7', supplierName: 'Proveedor', status: 'Pending Receipt',
+      shipmentStatus: 'EN ADUANA', expectedReceiptDate: '2026-11-28', currency: 'USD',
+      brand: 'UNV', brandKey: 'UNV', costVisible: true, amount: 500,
+    },
+  ])
 })
 
 describe('MD-001 brand source', () => {
@@ -239,6 +282,232 @@ describe('MD-001 GET /api/my-day/lost-customers', () => {
 
     expect(body(res)).toMatchObject({ rows: [], reason: 'no-brand-assignments' })
     expect(mocks.loadLostCustomers).not.toHaveBeenCalled()
+  })
+})
+
+describe('MD-002 view parameter', () => {
+  const ROUTES = ['/', '/lost-customers', '/stock-alerts', '/arrivals']
+
+  it('keeps the MD-001 behavior by default and with view=mine', () => {
+    expect(resolveMyDayBrandSource({ scope: 'all', brandIds: ['UNV'] }, 'mine')).toEqual({
+      mode: 'assigned', brandKeys: ['UNV'],
+    })
+    expect(resolveMyDayBrandSource({ scope: 'all', brandIds: ['UNV'] }, 'all')).toEqual({
+      mode: 'all-brands', brandKeys: [],
+    })
+  })
+
+  it('answers every route with all brands for scope all and view=all', async () => {
+    for (const path of ROUTES) {
+      const res = await invoke(path, {
+        authUser: { scope: 'all', brandIds: ['UNV'] },
+        query: { view: 'all' },
+      })
+
+      expect(res.status).not.toHaveBeenCalled()
+      expect(body(res)).toMatchObject({ ok: true })
+    }
+
+    // MD-001 with view=all: every active brand.
+    expect(mocks.loadActiveBrandKeys).toHaveBeenCalled()
+    // Availability with view=all: no brand filter.
+    expect(availability.loadInventoryItems).toHaveBeenCalledWith(expect.anything(), 41, null)
+    expect(availability.loadPendingPurchaseOrderLines).toHaveBeenCalledWith(
+      expect.anything(), { brandKeys: null }, expect.anything(),
+    )
+  })
+
+  it('rejects view=all without scope all (403) and invalid views (400) on every route', async () => {
+    for (const path of ROUTES) {
+      const forbidden = await invoke(path, {
+        authUser: { scope: 'assigned', brandIds: ['UNV'] },
+        query: { view: 'all' },
+      })
+      const invalid = await invoke(path, {
+        authUser: { scope: 'all', brandIds: ['UNV'] },
+        query: { view: 'todas' },
+      })
+
+      expect(forbidden.status).toHaveBeenCalledWith(403)
+      expect(invalid.status).toHaveBeenCalledWith(400)
+    }
+
+    const kind = await invoke('/stock-alerts/:kind', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: { view: 'all' },
+      params: { kind: 'out-of-stock' },
+    })
+
+    expect(kind.status).toHaveBeenCalledWith(403)
+  })
+})
+
+describe('MD-002 GET /api/my-day/stock-alerts', () => {
+  it('classifies the assigned brands from the latest inventory, without cost', async () => {
+    const res = await invoke('/stock-alerts', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'], costAccess: true },
+      query: { brands: 'HIKVISION' } as Record<string, string>,
+    })
+
+    expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-store')
+    expect(availability.loadInventoryItems).toHaveBeenCalledWith(expect.anything(), 41, ['UNV'])
+    // Only DE LINEA items read sales and purchase orders.
+    expect(availability.loadItemSales).toHaveBeenCalledWith(
+      expect.anything(), ['OUT', 'LOW'], { from: '2026-08-21', to: '2026-11-20', days: 92, months: 3 },
+    )
+    expect(availability.loadPendingPurchaseOrderLines).toHaveBeenCalledWith(
+      expect.anything(), { itemKeys: ['OUT', 'LOW'] }, { mode: 'none' },
+    )
+    expect(body(res)).toMatchObject({
+      ok: true,
+      view: 'mine',
+      dataCutoff: '2026-11-20',
+      brandSource: 'assigned',
+      limit: 20,
+      sources: {
+        inventory: { lastImportedAt: '2026-11-21T15:00:00.000Z' },
+        sales: { dataCutoff: '2026-11-20' },
+      },
+      outOfStock: {
+        total: 1,
+        hasMore: false,
+        rows: [{
+          itemCode: 'OUT', onHand: 0, pendingReceiptUnits: 10, avgMonthlyUnits: 15.33,
+          lastSaleDate: '2026-11-18', arrivalStatus: 'scheduled',
+          nextArrival: { date: '2026-11-28', purchaseOrderNumber: 'PO-7', shipmentStatus: 'EN ADUANA' },
+        }],
+      },
+      lowStock: {
+        total: 1,
+        rows: [{ itemCode: 'LOW', onHand: 9, coverageDays: 9, arrivalStatus: 'no-po' }],
+      },
+      dataQuality: { items: 3, itemsWithoutCatalogStatus: 0 },
+    })
+    expect(JSON.stringify(body(res))).not.toContain('"amount"')
+  })
+
+  it('reports a missing catalog status instead of inferring it', async () => {
+    availability.inventoryHasCatalogStatus.mockResolvedValue(false)
+
+    const res = await invoke('/stock-alerts', { authUser: { scope: 'assigned', brandIds: ['UNV'] }, query: {} })
+
+    expect(body(res)).toMatchObject({
+      reason: 'catalog-status-missing',
+      outOfStock: { total: 0, rows: [] },
+      lowStock: { total: 0, rows: [] },
+    })
+    expect(availability.loadInventoryItems).not.toHaveBeenCalled()
+  })
+
+  it('answers without data when there is no inventory or no assignments', async () => {
+    availability.loadLatestImports.mockResolvedValue(new Map())
+
+    const noInventory = await invoke('/stock-alerts', { authUser: { scope: 'assigned', brandIds: ['UNV'] }, query: {} })
+
+    expect(body(noInventory)).toMatchObject({
+      reason: 'no-inventory-data',
+      sources: { inventory: { status: 'no-data', lastImportedAt: null } },
+    })
+
+    const none = await invoke('/stock-alerts', { authUser: { scope: 'assigned', brandIds: [] }, query: {} })
+
+    expect(body(none)).toMatchObject({ reason: 'no-brand-assignments', outOfStock: { rows: [] } })
+  })
+
+  it('filters one brand only inside the user brands', async () => {
+    await invoke('/stock-alerts', {
+      authUser: { scope: 'assigned', brandIds: ['UNV', 'HIKVISION'] },
+      query: { brand: 'hik vision' },
+    })
+
+    expect(availability.loadInventoryItems).toHaveBeenCalledWith(expect.anything(), 41, ['HIKVISION'])
+
+    const outside = await invoke('/stock-alerts', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: { brand: 'DAHUA' },
+    })
+
+    expect(outside.status).toHaveBeenCalledWith(403)
+  })
+
+  it('pages one list and validates the kind', async () => {
+    const res = await invoke('/stock-alerts/:kind', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: { limit: '1', offset: '0' },
+      params: { kind: 'low-stock' },
+    })
+
+    expect(body(res)).toMatchObject({
+      kind: 'low-stock', limit: 1, offset: 0, total: 1, hasMore: false,
+      rows: [{ itemCode: 'LOW' }],
+    })
+
+    const bad = await invoke('/stock-alerts/:kind', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: {},
+      params: { kind: 'agotados' },
+    })
+
+    expect(bad.status).toHaveBeenCalledWith(400)
+  })
+})
+
+describe('MD-002 GET /api/my-day/arrivals', () => {
+  it('lists the purchase orders of the user brands with the cost scope', async () => {
+    const res = await invoke('/arrivals', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'], costAccess: true },
+      query: {},
+    })
+
+    expect(availability.loadPendingPurchaseOrderLines).toHaveBeenCalledWith(
+      expect.anything(), { brandKeys: ['UNV'] }, { mode: 'assigned', brandKeys: ['UNV'] },
+    )
+    expect(body(res)).toMatchObject({
+      ok: true,
+      dataCutoff: '2026-11-20',
+      window: { from: '2026-11-20', to: '2026-12-04', days: 14 },
+      summary: { purchaseOrders: 1, upcoming: 1, overdue: 0, costHidden: false },
+      total: 1,
+      rows: [{
+        purchaseOrderNumber: 'PO-7',
+        expectedReceiptDate: '2026-11-28',
+        amountsByCurrency: { USD: { amount: 500 } },
+      }],
+    })
+  })
+
+  it('never shows 0 for hidden costs', async () => {
+    availability.loadPendingPurchaseOrderLines.mockResolvedValue([
+      {
+        itemKey: 'OUT', purchaseOrderNumber: 'PO-7', supplierName: 'Proveedor', status: 'Pending Receipt',
+        shipmentStatus: null, expectedReceiptDate: '2026-11-28', currency: 'USD',
+        brand: 'UNV', brandKey: 'UNV', costVisible: false, amount: null,
+      },
+    ])
+
+    const res = await invoke('/arrivals', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'], costAccess: false },
+      query: {},
+    })
+
+    expect(availability.loadPendingPurchaseOrderLines).toHaveBeenCalledWith(
+      expect.anything(), expect.anything(), { mode: 'none' },
+    )
+    expect(body(res)).toMatchObject({
+      summary: { costHidden: true, amountsByCurrency: { USD: { amount: null, linesHidden: 1 } } },
+      rows: [{ costHidden: true, amountsByCurrency: { USD: { amount: null } } }],
+    })
+  })
+
+  it('reports missing purchase order data', async () => {
+    availability.loadLatestImports.mockResolvedValue(new Map([
+      ['inventory', { importId: 41, uploadedAt: '2026-11-21T15:00:00.000Z' }],
+    ]))
+
+    const res = await invoke('/arrivals', { authUser: { scope: 'assigned', brandIds: ['UNV'] }, query: {} })
+
+    expect(body(res)).toMatchObject({ reason: 'no-purchase-data', rows: [], summary: null })
+    expect(availability.loadPendingPurchaseOrderLines).not.toHaveBeenCalled()
   })
 })
 

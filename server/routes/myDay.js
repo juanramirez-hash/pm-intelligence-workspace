@@ -1,17 +1,24 @@
 // MD-001 "Mi día": the PM's brands for the data cutoff month.
 //
-// GET /api/my-day?period=YYYY-MM
-// GET /api/my-day/lost-customers?period=&inactivePeriods=&basePeriods=&brand=&limit=&offset=
+// GET /api/my-day?period=YYYY-MM&view=
+// GET /api/my-day/lost-customers?period=&inactivePeriods=&basePeriods=&brand=&limit=&offset=&view=
+//
+// MD-002 availability:
+// GET /api/my-day/stock-alerts?brand=&limit=&view=
+// GET /api/my-day/stock-alerts/:kind?brand=&limit=&offset=&view=  (out-of-stock | low-stock)
+// GET /api/my-day/arrivals?brand=&limit=&offset=&view=
 //
 // The brands always come from the user's assignments in PostgreSQL
-// (req.authUser.brandIds), never from the client; only the brand filter of
-// lost-customers is accepted, and only inside those brands.
+// (req.authUser.brandIds), never from the client; only the brand filter is
+// accepted, and only inside those brands. view=all (scope 'all' only) shows
+// every brand.
 
 import { Router } from 'express'
 
 import {
   normalizeBrandKey,
   normalizeBrandKeys,
+  resolveCostScope,
 } from '../middleware/requireBrandScope.js'
 
 import {
@@ -45,23 +52,66 @@ import {
   shiftMonth,
 } from '../services/metricPeriods.js'
 
+import {
+  MY_DAY_AVAILABILITY_RULES,
+  buildArrivals,
+  buildStockAlerts,
+  pageRows,
+  resolveSalesWindow,
+  sourceFreshness,
+} from '../services/myDayAvailabilityRules.js'
+
+import {
+  AVAILABILITY_SOURCES,
+  groupLinesByItem,
+  inventoryHasCatalogStatus,
+  loadInventoryItems,
+  loadItemSales,
+  loadLatestImports,
+  loadPendingPurchaseOrderLines,
+} from '../services/myDayAvailabilityService.js'
+
 const VALID_SCOPES = new Set(['all', 'assigned'])
+const VALID_VIEWS = new Set(['mine', 'all'])
+const STOCK_ALERT_KINDS = new Set(['out-of-stock', 'low-stock'])
+
+/** view: 'mine' (default) or 'all'; anything else is 400. */
+export function resolveMyDayView(value) {
+  if (value === undefined) {
+    return 'mine'
+  }
+
+  if (typeof value !== 'string' || !VALID_VIEWS.has(value)) {
+    throw httpError(400, 'Vista inválida')
+  }
+
+  return value
+}
 
 /**
  * - assigned: the user has brand assignments (any scope); only those.
- * - all-brands: scope 'all' without assignments; every brand with sales or
- *   target in the period or the previous one.
+ * - all-brands: scope 'all' without assignments, or view=all; every brand
+ *   (MD-001: every brand with sales or target in the period or the previous
+ *   one).
  * - none: no assignments and no full scope.
  * Scopes without commercial access ('pricing', 'legacy') are rejected, as in
- * requireBrandScope.
+ * requireBrandScope. view=all without scope 'all' is 403.
  */
-export function resolveMyDayBrandSource(authUser) {
+export function resolveMyDayBrandSource(authUser, requestedView) {
   if (!authUser) {
     throw httpError(401, 'Authentication required')
   }
 
   if (!VALID_SCOPES.has(authUser.scope)) {
     throw httpError(403, 'Brand access scope is invalid')
+  }
+
+  if (resolveMyDayView(requestedView) === 'all') {
+    if (authUser.scope !== 'all') {
+      throw httpError(403, 'Vista no permitida')
+    }
+
+    return { mode: 'all-brands', brandKeys: [] }
   }
 
   const brandKeys = normalizeBrandKeys(authUser.brandIds)
@@ -101,6 +151,114 @@ function emptyResponse(fields) {
   }
 }
 
+/**
+ * Brands of the availability blocks: null = every brand (all-brands mode,
+ * "- Unassigned -" included). The brand filter must be inside the user's
+ * brands.
+ */
+export function resolveAvailabilityBrandKeys(source, requestedBrand) {
+  if (requestedBrand === undefined) {
+    return source.mode === 'all-brands' ? null : source.brandKeys
+  }
+
+  const requested = normalizeBrandKey(requestedBrand)
+
+  if (
+    !requested ||
+    (source.mode !== 'all-brands' && !source.brandKeys.includes(requested))
+  ) {
+    throw httpError(403, 'Marca fuera del alcance del usuario')
+  }
+
+  return [requested]
+}
+
+function availabilitySources(imports, dataCutoff, now = new Date()) {
+  const source = (datasetType, cutoff = null) => sourceFreshness(
+    {
+      lastImportedAt: imports.get(datasetType)?.uploadedAt ?? null,
+      dataCutoff: cutoff,
+    },
+    now,
+  )
+
+  return {
+    inventory: source(AVAILABILITY_SOURCES.inventory),
+    purchases: source(AVAILABILITY_SOURCES.purchases),
+    sales: source(AVAILABILITY_SOURCES.sales, dataCutoff),
+  }
+}
+
+const EMPTY_PAGE = Object.freeze({ total: 0, hasMore: false, rows: [] })
+
+/**
+ * Shared part of both stock alert routes. Returns the response base and,
+ * when there is data, the classified alerts.
+ */
+async function loadStockAlerts(pool, req) {
+  const source = resolveMyDayBrandSource(req.authUser, req.query.view)
+  const view = resolveMyDayView(req.query.view)
+  const brandKeys = source.mode === 'none'
+    ? []
+    : resolveAvailabilityBrandKeys(source, req.query.brand)
+  const [dataCutoff, imports] = await Promise.all([
+    loadDataCutoff(pool),
+    loadLatestImports(pool),
+  ])
+  const salesWindow = resolveSalesWindow(dataCutoff)
+  const base = {
+    ok: true,
+    view,
+    dataCutoff,
+    brandSource: source.mode,
+    salesWindow,
+    rules: MY_DAY_AVAILABILITY_RULES,
+    sources: availabilitySources(imports, dataCutoff),
+  }
+  const inventoryImport = imports.get(AVAILABILITY_SOURCES.inventory)
+
+  if (source.mode === 'none') {
+    return { base, reason: 'no-brand-assignments' }
+  }
+
+  if (!inventoryImport) {
+    return { base, reason: 'no-inventory-data' }
+  }
+
+  if (!dataCutoff) {
+    return { base, reason: 'no-sales-data' }
+  }
+
+  if (!(await inventoryHasCatalogStatus(pool, inventoryImport.importId))) {
+    return { base, reason: 'catalog-status-missing' }
+  }
+
+  const items = await loadInventoryItems(
+    pool,
+    inventoryImport.importId,
+    brandKeys,
+  )
+  const itemKeys = items
+    .filter((item) => item.catalogStatus === MY_DAY_AVAILABILITY_RULES.catalogStatus)
+    .map((item) => item.itemKey)
+  const [salesByItem, lines] = await Promise.all([
+    loadItemSales(pool, itemKeys, salesWindow),
+    // Stock alerts show no amounts: no cost is read.
+    loadPendingPurchaseOrderLines(pool, { itemKeys }, { mode: 'none' }),
+  ])
+
+  return {
+    base,
+    alerts: buildStockAlerts({
+      items,
+      salesByItem,
+      linesByItem: groupLinesByItem(lines),
+      window: salesWindow,
+      cutoff: dataCutoff,
+    }),
+  }
+}
+
 export function createMyDayRouter(pool) {
   const router = Router()
 
@@ -111,7 +269,7 @@ export function createMyDayRouter(pool) {
 
   router.get('/', async (req, res) => {
     try {
-      const source = resolveMyDayBrandSource(req.authUser)
+      const source = resolveMyDayBrandSource(req.authUser, req.query.view)
       const dataCutoff = await loadDataCutoff(pool)
       const period = resolvePeriod(req.query, dataCutoff)
 
@@ -193,7 +351,7 @@ export function createMyDayRouter(pool) {
 
   router.get('/lost-customers', async (req, res) => {
     try {
-      const source = resolveMyDayBrandSource(req.authUser)
+      const source = resolveMyDayBrandSource(req.authUser, req.query.view)
       const inactivePeriods = pageInteger(
         req.query.inactivePeriods,
         MY_DAY_RULES.lostCustomers.inactivePeriods,
@@ -275,6 +433,141 @@ export function createMyDayRouter(pool) {
         error,
         'No se pudieron consultar los clientes por recuperar',
       )
+    }
+  })
+
+  router.get('/stock-alerts', async (req, res) => {
+    try {
+      const limit = pageInteger(
+        req.query.limit,
+        MY_DAY_AVAILABILITY_RULES.summaryLimit,
+        100,
+        1,
+      )
+      const { base, reason, alerts } = await loadStockAlerts(pool, req)
+
+      if (!alerts) {
+        return res.json({
+          ...base,
+          limit,
+          reason,
+          outOfStock: EMPTY_PAGE,
+          lowStock: EMPTY_PAGE,
+          dataQuality: null,
+        })
+      }
+
+      return res.json({
+        ...base,
+        limit,
+        outOfStock: pageRows(alerts.outOfStock, limit),
+        lowStock: pageRows(alerts.lowStock, limit),
+        dataQuality: alerts.dataQuality,
+      })
+    } catch (error) {
+      return handleRouteError(res, error, 'No se pudo consultar la disponibilidad')
+    }
+  })
+
+  router.get('/stock-alerts/:kind', async (req, res) => {
+    try {
+      const kind = req.params.kind
+
+      if (!STOCK_ALERT_KINDS.has(kind)) {
+        throw httpError(400, 'Tipo de alerta inválido')
+      }
+
+      const limit = pageInteger(req.query.limit, 50, 500, 1)
+      const offset = pageInteger(req.query.offset, 0, 1000000)
+      const { base, reason, alerts } = await loadStockAlerts(pool, req)
+
+      if (!alerts) {
+        return res.json({
+          ...base,
+          kind,
+          limit,
+          offset,
+          reason,
+          ...EMPTY_PAGE,
+          dataQuality: null,
+        })
+      }
+
+      return res.json({
+        ...base,
+        kind,
+        limit,
+        offset,
+        ...pageRows(
+          kind === 'out-of-stock' ? alerts.outOfStock : alerts.lowStock,
+          limit,
+          offset,
+        ),
+        dataQuality: alerts.dataQuality,
+      })
+    } catch (error) {
+      return handleRouteError(res, error, 'No se pudo consultar la disponibilidad')
+    }
+  })
+
+  router.get('/arrivals', async (req, res) => {
+    try {
+      const source = resolveMyDayBrandSource(req.authUser, req.query.view)
+      const view = resolveMyDayView(req.query.view)
+      const limit = pageInteger(req.query.limit, 50, 500, 1)
+      const offset = pageInteger(req.query.offset, 0, 1000000)
+      const brandKeys = source.mode === 'none'
+        ? []
+        : resolveAvailabilityBrandKeys(source, req.query.brand)
+      const [dataCutoff, imports] = await Promise.all([
+        loadDataCutoff(pool),
+        loadLatestImports(pool),
+      ])
+      const base = {
+        ok: true,
+        view,
+        dataCutoff,
+        brandSource: source.mode,
+        rules: MY_DAY_AVAILABILITY_RULES,
+        sources: availabilitySources(imports, dataCutoff),
+        limit,
+        offset,
+      }
+      const empty = (reason) => res.json({
+        ...base,
+        reason,
+        window: null,
+        summary: null,
+        ...EMPTY_PAGE,
+      })
+
+      if (source.mode === 'none') {
+        return empty('no-brand-assignments')
+      }
+
+      if (!dataCutoff) {
+        return empty('no-sales-data')
+      }
+
+      if (!imports.get(AVAILABILITY_SOURCES.purchases)) {
+        return empty('no-purchase-data')
+      }
+
+      const lines = await loadPendingPurchaseOrderLines(
+        pool,
+        { brandKeys },
+        resolveCostScope(req.authUser),
+      )
+      const arrivals = buildArrivals({ lines, cutoff: dataCutoff })
+
+      return res.json({
+        ...base,
+        window: arrivals.window,
+        summary: arrivals.summary,
+        ...pageRows(arrivals.rows, limit, offset),
+      })
+    } catch (error) {
+      return handleRouteError(res, error, 'No se pudieron consultar las llegadas')
     }
   })
 
