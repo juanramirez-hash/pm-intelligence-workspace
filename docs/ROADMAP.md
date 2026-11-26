@@ -459,6 +459,18 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Alcance `pricing` o `legacy` (o un 403 del servidor): "Mi día no está disponible para tu tipo de acceso".
 - Sin cambios de backend ni migraciones.
 
+## Mi día — MD-003-HOTFIX1
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| MD-003-HOTFIX1 | Ajustes de presentación de "Mi día" encontrados en la validación en producción (26 nov 2026) | Implementado · pendiente de validación funcional y despliegue |
+
+- PO's por llegar: pestañas "Por llegar (N)" (del corte a +14 días, de la más próxima a la más lejana) y "Atrasadas (N)" (antes del corte, de la más reciente a la más antigua), cada una con su paginación. Las 291 atrasadas ya no entierran a las que llegan pronto. Backend: parámetro aditivo `status=upcoming|overdue` en `GET /api/my-day/arrivals` (400 con otro valor); sin él la respuesta es la de MD-002, más el campo `status: 'all'`. `summary` siempre trae los conteos de ambos estatus.
+- Clientes por recuperar: con `basePeriods = 1` una sola columna "Venta del mes base"; con más meses base, "Venta base" y "Prom. mensual". La decisión sale de `basePeriods` de la respuesta. Subtítulo construido desde la ventana: "Compraron en agosto de 2026 y no compraron ni en septiembre ni en octubre de 2026" (con más meses, "entre <inicio> y <fin>").
+- Formato: todo `src/features/my-day` ya pasaba `es-MX` explícito; el "$60.174.004" del celular venía de un navegador sin los datos de es-MX que cae en "es" (España). Los números de "Mi día" usan es-MX solo si el navegador realmente lo formatea como en México (1,234.5) y si no en-US (mismos separadores); el símbolo de moneda se arma aparte ($ para MXN, el código ISO para otras). Prueba en `tests/architecture/myDayLocale.test.ts` que falla con `toLocale*`, `localeCompare` o `Intl.*` sin locale explícito, o con los formateadores compartidos.
+- Selector de periodo: "Noviembre de 2026" (solo la primera letra en mayúscula), sin `capitalize` de CSS.
+- Sin migraciones. Despliegue con reinicio del backend (cambia `server/routes/myDay.js` y `server/services/myDayAvailabilityRules.js`).
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

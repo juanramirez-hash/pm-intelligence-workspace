@@ -7,6 +7,7 @@ import {
 } from 'vitest'
 
 import {
+  ARRIVAL_ROW_STATUSES,
   MY_DAY_AVAILABILITY_RULES,
   buildArrivals,
   buildStockAlerts,
@@ -16,6 +17,7 @@ import {
   resolveArrivalWindow,
   resolveInventoryCoverage,
   resolveSalesWindow,
+  selectArrivalRows,
   sourceFreshness,
 } from '../../server/services/myDayAvailabilityRules.js'
 
@@ -292,6 +294,39 @@ describe('MD-002 arrivals', () => {
       },
     })
     expect(summary.costHidden).toBe(true)
+  })
+})
+
+describe('MD-003-HOTFIX1 arrivals by status', () => {
+  const { rows } = buildArrivals({
+    cutoff: CUTOFF,
+    lines: [
+      line({ purchaseOrderNumber: 'UP-LATER', expectedReceiptDate: '2026-12-05' }),
+      line({ purchaseOrderNumber: 'OLD', expectedReceiptDate: '2026-08-10' }),
+      line({ purchaseOrderNumber: 'UP-SOON', expectedReceiptDate: '2026-11-24' }),
+      line({ purchaseOrderNumber: 'RECENT', expectedReceiptDate: '2026-11-20' }),
+      line({ purchaseOrderNumber: 'MIDDLE', expectedReceiptDate: '2026-10-01' }),
+    ],
+  })
+
+  it('lists upcoming orders soonest first', () => {
+    expect(ARRIVAL_ROW_STATUSES).toEqual(['upcoming', 'overdue'])
+    expect(selectArrivalRows(rows, 'upcoming').map((row) => row.purchaseOrderNumber)).toEqual([
+      'UP-SOON', 'UP-LATER',
+    ])
+  })
+
+  it('lists overdue orders most recent first', () => {
+    expect(selectArrivalRows(rows, 'overdue').map((row) => row.purchaseOrderNumber)).toEqual([
+      'RECENT', 'MIDDLE', 'OLD',
+    ])
+  })
+
+  it('keeps the original order without status', () => {
+    expect(selectArrivalRows(rows).map((row) => row.purchaseOrderNumber)).toEqual([
+      'OLD', 'MIDDLE', 'RECENT', 'UP-SOON', 'UP-LATER',
+    ])
+    expect(selectArrivalRows(rows)).toBe(rows)
   })
 })
 

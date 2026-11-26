@@ -14,6 +14,7 @@ import type {
 
 import {
   formatDate,
+  formatInteger,
 } from '../format/myDayFormat'
 
 import {
@@ -78,7 +79,7 @@ export function MyDayPriorityActions({
               {action.brand_id} · {ACTION_STATUS_LABELS[action.status]} · vence {formatDate(action.due_date)}
               {action.days_overdue > 0 ? (
                 <span className="font-medium text-rose-700">
-                  {` · ${action.days_overdue} ${action.days_overdue === 1 ? 'día' : 'días'} de atraso`}
+                  {` · ${formatInteger(action.days_overdue)} ${action.days_overdue === 1 ? 'día' : 'días'} de atraso`}
                 </span>
               ) : null}
             </p>

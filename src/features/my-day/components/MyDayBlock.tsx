@@ -10,6 +10,10 @@ import {
   RefreshCw,
 } from 'lucide-react'
 
+import {
+  formatInteger,
+} from '../format/myDayFormat'
+
 export type MyDayBlockStatus = 'loading' | 'error' | 'empty' | 'ready'
 
 interface MyDayBlockProps {
@@ -23,6 +27,8 @@ interface MyDayBlockProps {
   errorMessage?: string | null
   emptyMessage?: string | null
   onRetry?: () => void
+  // Shown in every state below the warnings (for example, tabs).
+  toolbar?: ReactNode
   footer?: ReactNode
   className?: string
   children?: ReactNode
@@ -38,6 +44,7 @@ export function MyDayBlock({
   errorMessage,
   emptyMessage,
   onRetry,
+  toolbar,
   footer,
   className = '',
   children,
@@ -88,6 +95,12 @@ export function MyDayBlock({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {toolbar ? (
+        <div className="mt-4">
+          {toolbar}
+        </div>
       ) : null}
 
       <div className="mt-4 min-w-0 flex-1">
@@ -175,8 +188,8 @@ export function Pager({
     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
       <span>
         {typeof total === 'number'
-          ? `${from}–${Math.min(to, total)} de ${total}`
-          : `Desde ${from}`}
+          ? `${formatInteger(from)}–${formatInteger(Math.min(to, total))} de ${formatInteger(total)}`
+          : `Desde ${formatInteger(from)}`}
       </span>
 
       <div className="flex gap-2">

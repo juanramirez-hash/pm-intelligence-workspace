@@ -13,6 +13,7 @@ import type {
   MyDayActionsResponse,
   MyDayArrivalsResponse,
   MyDayBrand,
+  MyDayLostCustomersResponse,
   MyDayPortfolio,
   MyDayStockAlertRow,
   MyDayStockAlertsResponse,
@@ -23,6 +24,7 @@ import { MyDayArrivals } from './MyDayArrivals'
 import { MyDayBrandTable } from './MyDayBrandTable'
 import { MyDayHeader } from './MyDayHeader'
 import { MyDayKpis } from './MyDayKpis'
+import { MyDayLostCustomers } from './MyDayLostCustomers'
 import { MyDayPriorityActions } from './MyDayPriorityActions'
 import { MyDayLowStock, MyDayOutOfStock } from './MyDayStockBlocks'
 
@@ -190,8 +192,10 @@ describe('MD-003 header and indicators', () => {
     expect(text(withAll)).toContain('Todas')
     // Cutoff month and the 11 previous ones.
     expect(withAll.match(/<option /g)).toHaveLength(12)
-    expect(text(withAll)).toContain('noviembre de 2026')
-    expect(text(withAll)).toContain('diciembre de 2025')
+    // MD-003-HOTFIX1: first letter only, and no CSS capitalize.
+    expect(text(withAll)).toContain('Noviembre de 2026')
+    expect(text(withAll)).toContain('Diciembre de 2025')
+    expect(withAll).not.toContain('capitalize')
   })
 
   it('shows quota, pace and gap of the brands with target, with the note', () => {
@@ -250,6 +254,45 @@ describe('MD-003 brand table', () => {
     expect(content).toContain('de —')
     expect(content).toContain('+11.1%')
     expect(content).toContain('Marca con venta en el periodo anterior')
+  })
+})
+
+describe('MD-003-HOTFIX1 customers to recover', () => {
+  const response = (basePeriods: number): MyDayLostCustomersResponse => ({
+    ok: true,
+    period: '2026-11',
+    dataCutoff: '2026-11-24',
+    inactivePeriods: 2,
+    basePeriods,
+    limit: 5,
+    offset: 0,
+    window: basePeriods > 1
+      ? { baseFrom: '2026-06', baseTo: '2026-08', inactiveFrom: '2026-09', inactiveTo: '2026-10' }
+      : { baseFrom: '2026-08', baseTo: '2026-08', inactiveFrom: '2026-09', inactiveTo: '2026-10' },
+    hasMore: false,
+    rows: [{
+      brandKey: 'UNVUNIVIEW', brandLabel: 'UNV (UNIVIEW)', customerId: 'C-1', customerName: 'Cliente Uno',
+      baseRevenue: 90000, baseGrossProfit: 9000, activeMonths: basePeriods, lastSaleDate: '2026-08-20',
+      avgMonthlyRevenue: 90000 / basePeriods,
+    }],
+  })
+
+  it('shows one "Venta del mes base" column with one base month', () => {
+    const content = text(render(<MyDayLostCustomers state={ready(response(1))} view="mine" period={null} />))
+
+    expect(content).toContain('Venta del mes base')
+    expect(content).not.toContain('Prom. mensual')
+    expect(content.match(/\$90,000/g)).toHaveLength(1)
+    expect(content).toContain('Compraron en agosto de 2026 y no compraron ni en septiembre ni en octubre de 2026')
+  })
+
+  it('shows base revenue and the monthly average with more base months', () => {
+    const content = text(render(<MyDayLostCustomers state={ready(response(3))} view="mine" period={null} />))
+
+    expect(content).toContain('Venta base')
+    expect(content).toContain('Prom. mensual')
+    expect(content).toContain('$30,000')
+    expect(content).toContain('Compraron entre junio y agosto de 2026 y no compraron ni en septiembre ni en octubre de 2026')
   })
 })
 
@@ -340,15 +383,51 @@ describe('MD-003 side blocks', () => {
         },
       ],
     }
-    const content = text(render(<MyDayArrivals state={ready(data)} offset={0} onOffsetChange={vi.fn()} />))
+    const html = render(
+      <MyDayArrivals state={ready(data)} tab="upcoming" onTabChange={vi.fn()} offset={0} onOffsetChange={vi.fn()} />,
+    )
+    const content = text(html)
 
     expect(content).toContain("PO's por llegar (14 días)")
-    expect(content).toContain('1 por llegar · 1 atrasadas')
     expect(content).toContain('del 24 nov 2026 al 8 dic 2026')
     expect(content).toContain('Sin acceso a costo')
     expect(content).toContain('$1,500.00')
     expect(content).not.toContain('$0')
     expect(content).toContain('Sí')
+    // MD-003-HOTFIX1: separate tabs with the counts of both statuses.
+    expect(content).toContain('Por llegar (1)')
+    expect(content).toContain('Atrasadas (1)')
+    expect(html).toMatch(/aria-selected="true"[^>]*data-my-day-arrival-tab="upcoming"/)
+    expect(content).toContain('de la más próxima a la más lejana')
+  })
+
+  it('pages the overdue tab on its own, most recent first, with its own empty message', () => {
+    const empty: MyDayArrivalsResponse = {
+      ok: true,
+      view: 'mine',
+      dataCutoff: '2026-11-24',
+      brandSource: 'assigned',
+      sources: { inventory: FRESH, purchases: FRESH, sales: FRESH },
+      status: 'overdue',
+      limit: 20,
+      offset: 0,
+      window: { from: '2026-11-24', to: '2026-12-08', days: 14 },
+      summary: {
+        purchaseOrders: 296, upcoming: 5, overdue: 291, linesWithoutDate: 0,
+        amountsByCurrency: {}, costHidden: false,
+      },
+      total: 291,
+      hasMore: true,
+      rows: [],
+    }
+    const overdue = text(render(
+      <MyDayArrivals state={ready({ ...empty, rows: [] })} tab="overdue" onTabChange={vi.fn()} offset={0} onOffsetChange={vi.fn()} />,
+    ))
+
+    expect(overdue).toContain('Por llegar (5)')
+    expect(overdue).toContain('Atrasadas (291)')
+    expect(overdue).toContain('de la más reciente a la más antigua')
+    expect(overdue).toContain("Sin PO's atrasadas.")
   })
 
   it('keeps a failing block on its own, with the server message and retry', () => {

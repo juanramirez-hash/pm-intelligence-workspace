@@ -16,9 +16,9 @@ import type {
 } from '../api/myDayTypes'
 
 import {
+  describeLostCustomersWindow,
   formatDate,
   formatMoney,
-  formatPeriod,
 } from '../format/myDayFormat'
 
 import {
@@ -47,15 +47,26 @@ import {
 export const LOST_CUSTOMERS_NOTE = 'Compraban la marca y llevan 2 meses sin comprar'
 const PAGE_SIZE = 50
 
-function LostCustomerRows({ rows }: { rows: readonly MyDayLostCustomer[] }) {
+// MD-003-HOTFIX1: with one base month the base revenue and the monthly
+// average are the same number, so only one column is shown; with more base
+// months (basePeriods of the response) both are shown.
+function LostCustomerRows({
+  rows,
+  basePeriods,
+}: {
+  rows: readonly MyDayLostCustomer[]
+  basePeriods: number
+}) {
+  const showAverage = basePeriods > 1
+
   return (
     <MyDayTable minWidth="min-w-[560px]">
       <thead>
         <tr>
           <th className={TH}>Cliente</th>
           <th className={TH}>Marca</th>
-          <th className={`${TH} text-right`}>Venta base</th>
-          <th className={`${TH} text-right`}>Prom. mensual</th>
+          <th className={`${TH} text-right`}>{showAverage ? 'Venta base' : 'Venta del mes base'}</th>
+          {showAverage ? <th className={`${TH} text-right`}>Prom. mensual</th> : null}
           <th className={TH}>Última compra</th>
         </tr>
       </thead>
@@ -67,7 +78,7 @@ function LostCustomerRows({ rows }: { rows: readonly MyDayLostCustomer[] }) {
             </td>
             <td className={TD}>{row.brandLabel}</td>
             <td className={TD_NUMBER}>{formatMoney(row.baseRevenue)}</td>
-            <td className={TD_NUMBER}>{formatMoney(row.avgMonthlyRevenue)}</td>
+            {showAverage ? <td className={TD_NUMBER}>{formatMoney(row.avgMonthlyRevenue)}</td> : null}
             <td className={TD}>{formatDate(row.lastSaleDate)}</td>
           </tr>
         ))}
@@ -89,7 +100,7 @@ function LostCustomersPanel({ view, period }: { view: MyDayView, period: string 
       {state.status === 'error' ? <p className="text-xs text-rose-700">{blockErrorMessage(state.error)}</p> : null}
       {state.data ? (
         <>
-          <LostCustomerRows rows={state.data.rows} />
+          <LostCustomerRows rows={state.data.rows} basePeriods={state.data.basePeriods} />
           <Pager offset={offset} limit={PAGE_SIZE} hasMore={state.data.hasMore} onChange={setOffset} />
         </>
       ) : null}
@@ -110,15 +121,12 @@ export function MyDayLostCustomers({
 }: MyDayLostCustomersProps) {
   const [showAll, setShowAll] = useState(false)
   const data = state.data
-  const window = data?.window
 
   return (
     <MyDayBlock
       title="Clientes por recuperar"
       note={LOST_CUSTOMERS_NOTE}
-      sourceLine={window
-        ? `Compraron en ${formatPeriod(window.baseFrom)} y no en ${formatPeriod(window.inactiveFrom)}–${formatPeriod(window.inactiveTo)}`
-        : null}
+      sourceLine={describeLostCustomersWindow(data?.window)}
       status={blockStatus(state, (value) => value.rows.length === 0)}
       errorMessage={blockErrorMessage(state.error)}
       emptyMessage={reasonMessage(data?.reason) ?? 'Sin clientes por recuperar en el periodo.'}
@@ -133,7 +141,7 @@ export function MyDayLostCustomers({
         </button>
       ) : null}
     >
-      {data ? <LostCustomerRows rows={data.rows} /> : null}
+      {data ? <LostCustomerRows rows={data.rows} basePeriods={data.basePeriods} /> : null}
       {showAll ? <LostCustomersPanel view={view} period={period} /> : null}
     </MyDayBlock>
   )

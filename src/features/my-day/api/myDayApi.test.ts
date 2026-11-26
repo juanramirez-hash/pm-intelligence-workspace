@@ -50,6 +50,7 @@ describe('MD-003 my day API client', () => {
     await loadMyDayStockAlertList('out-of-stock', { view: 'all', limit: 50, offset: 50 })
     await loadMyDayStockAlertList('low-stock', { view: 'mine', limit: 50 })
     await loadMyDayArrivals({ view: 'mine', limit: 20, offset: 0 })
+    await loadMyDayArrivals({ view: 'all', status: 'overdue', limit: 20, offset: 40 })
     await loadMyDayOpenActions()
 
     expect(calledUrls()).toEqual([
@@ -61,6 +62,7 @@ describe('MD-003 my day API client', () => {
       '/api/my-day/stock-alerts/out-of-stock?view=all&limit=50&offset=50',
       '/api/my-day/stock-alerts/low-stock?limit=50',
       '/api/my-day/arrivals?limit=20',
+      '/api/my-day/arrivals?view=all&status=overdue&limit=20&offset=40',
       '/api/actions?status=open%2Cin_progress%2Cblocked&limit=500',
     ])
     expect(calledUrls().some((url) => url.startsWith('/api/data'))).toBe(false)

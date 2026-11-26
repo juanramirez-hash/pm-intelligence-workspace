@@ -553,3 +553,29 @@ export function buildArrivals({ lines, cutoff, rules = MY_DAY_AVAILABILITY_RULES
     },
   }
 }
+
+// MD-003-HOTFIX1: optional status filter of /api/my-day/arrivals.
+export const ARRIVAL_ROW_STATUSES = Object.freeze(['upcoming', 'overdue'])
+
+/**
+ * Rows of one status, so each one pages on its own:
+ * - upcoming: expected between the cutoff and cutoff + 14 days, soonest first;
+ * - overdue: expected before the cutoff, most recent first.
+ * Without status, every row in the original order (unchanged response).
+ */
+export function selectArrivalRows(rows, status = null) {
+  if (status === 'upcoming') {
+    return rows.filter((row) => !row.overdue)
+  }
+
+  if (status === 'overdue') {
+    return rows
+      .filter((row) => row.overdue)
+      .sort((left, right) =>
+        right.expectedReceiptDate.localeCompare(left.expectedReceiptDate) ||
+        compareText(left.purchaseOrderNumber, right.purchaseOrderNumber),
+      )
+  }
+
+  return rows
+}

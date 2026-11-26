@@ -5,6 +5,9 @@ import { describe, expect, it } from 'vitest'
 import {
   EMPTY_VALUE,
   buildPeriodOptions,
+  capitalizeFirst,
+  chooseNumberLocale,
+  describeLostCustomersWindow,
   expectedProgress,
   formatAmountsByCurrency as formatAmounts,
   formatDate,
@@ -53,11 +56,43 @@ describe('MD-003 formats', () => {
     expect(formatPeriod('2026-11')).toBe('noviembre de 2026')
   })
 
+  it('keeps Mexican separators when the browser lacks the es-MX data (MD-003-HOTFIX1)', () => {
+    // A browser with real es-MX data.
+    expect(chooseNumberLocale(() => '1,234.5')).toBe('es-MX')
+    // A mobile browser that falls back to "es" (Spain): 1.234,5.
+    expect(chooseNumberLocale(() => '1.234,5')).toBe('en-US')
+    expect(chooseNumberLocale(() => { throw new RangeError('no data') })).toBe('en-US')
+    // Same separators either way.
+    expect(new Intl.NumberFormat('en-US').format(60174004)).toBe('60,174,004')
+    expect(formatMoney(60174004)).toBe('$60,174,004')
+    expect(formatMoney(-0.4)).toBe('$0')
+  })
+
+  it('describes the lost-customers window in words (MD-003-HOTFIX1)', () => {
+    expect(describeLostCustomersWindow({
+      baseFrom: '2026-08', baseTo: '2026-08', inactiveFrom: '2026-09', inactiveTo: '2026-10',
+    })).toBe('Compraron en agosto de 2026 y no compraron ni en septiembre ni en octubre de 2026')
+    expect(describeLostCustomersWindow({
+      baseFrom: '2025-10', baseTo: '2025-10', inactiveFrom: '2025-11', inactiveTo: '2025-11',
+    })).toBe('Compraron en octubre de 2025 y no compraron en noviembre de 2025')
+    expect(describeLostCustomersWindow({
+      baseFrom: '2025-11', baseTo: '2025-11', inactiveFrom: '2025-12', inactiveTo: '2026-01',
+    })).toBe('Compraron en noviembre de 2025 y no compraron ni en diciembre de 2025 ni en enero de 2026')
+    expect(describeLostCustomersWindow({
+      baseFrom: '2026-04', baseTo: '2026-06', inactiveFrom: '2026-07', inactiveTo: '2026-10',
+    })).toBe('Compraron entre abril y junio de 2026 y no compraron entre julio y octubre de 2026')
+    expect(describeLostCustomersWindow(null)).toBeNull()
+  })
+
+  it('capitalizes only the first letter', () => {
+    expect(capitalizeFirst('noviembre de 2026')).toBe('Noviembre de 2026')
+  })
+
   it('offers the cutoff month and the 11 previous ones, nothing after the cutoff', () => {
     const options = buildPeriodOptions('2026-02-20')
 
     expect(options).toHaveLength(12)
-    expect(options[0]).toEqual({ value: '2026-02', label: 'febrero de 2026' })
+    expect(options[0]).toEqual({ value: '2026-02', label: 'Febrero de 2026' })
     expect(options[1]?.value).toBe('2026-01')
     expect(options[2]?.value).toBe('2025-12')
     expect(options[11]?.value).toBe('2025-03')

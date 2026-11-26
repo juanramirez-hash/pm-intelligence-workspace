@@ -1,8 +1,14 @@
 // MD-003: "PO's por llegar (14 días)" from /api/my-day/arrivals, always at
 // the data cutoff. Amounts by currency, never converted; a hidden cost reads
 // "Sin acceso a costo", never $0.
+//
+// MD-003-HOTFIX1: "Por llegar" (cutoff to cutoff + 14 days, soonest first)
+// and "Atrasadas" (before the cutoff, most recent first) are separate tabs,
+// each one paged by the server (status=upcoming|overdue), so the overdue
+// orders no longer bury the ones arriving soon.
 
 import type {
+  MyDayArrivalTab,
   MyDayArrivalsResponse,
 } from '../api/myDayTypes'
 
@@ -42,33 +48,83 @@ import {
 
 interface MyDayArrivalsProps {
   state: MyDayBlockState<MyDayArrivalsResponse>
+  tab: MyDayArrivalTab
+  onTabChange: (tab: MyDayArrivalTab) => void
   offset: number
   onOffsetChange: (offset: number) => void
 }
 
+const EMPTY_MESSAGES: Record<MyDayArrivalTab, string> = {
+  upcoming: "Sin PO's por llegar en los próximos 14 días.",
+  overdue: "Sin PO's atrasadas.",
+}
+
+function ArrivalTabs({
+  tab,
+  onTabChange,
+  summary,
+}: {
+  tab: MyDayArrivalTab
+  onTabChange: (tab: MyDayArrivalTab) => void
+  summary: MyDayArrivalsResponse['summary'] | undefined
+}) {
+  const count = (value: number | undefined) =>
+    typeof value === 'number' ? ` (${formatInteger(value)})` : ''
+  const tabs: Array<{ value: MyDayArrivalTab, label: string }> = [
+    { value: 'upcoming', label: `Por llegar${count(summary?.upcoming)}` },
+    { value: 'overdue', label: `Atrasadas${count(summary?.overdue)}` },
+  ]
+
+  return (
+    <div role="tablist" aria-label="PO's por estatus" className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+      {tabs.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          role="tab"
+          aria-selected={tab === item.value}
+          data-my-day-arrival-tab={item.value}
+          onClick={() => onTabChange(item.value)}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+            tab === item.value
+              ? item.value === 'overdue' ? 'bg-white text-rose-700 shadow-sm' : 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function MyDayArrivals({
   state,
+  tab,
+  onTabChange,
   offset,
   onOffsetChange,
 }: MyDayArrivalsProps) {
   const data = state.data
-  const summary = data?.summary
 
   return (
     <MyDayBlock
       className="lg:col-span-2"
       title="PO's por llegar (14 días)"
-      subtitle={summary
-        ? `${formatInteger(summary.upcoming)} por llegar · ${formatInteger(summary.overdue)} atrasadas`
-        : undefined}
       sourceLine={data
         ? `${sourceLabel('purchases', data.sources.purchases)} · ${AT_CUTOFF_NOTE}${data.window ? ` · del ${formatDate(data.window.from)} al ${formatDate(data.window.to)}` : ''}`
         : AT_CUTOFF_NOTE}
-      note="Montos por moneda, sin convertir"
+      note={tab === 'overdue'
+        ? 'Fecha estimada anterior al corte · de la más reciente a la más antigua · montos por moneda, sin convertir'
+        : 'Fecha estimada entre el corte y 14 días después · de la más próxima a la más lejana · montos por moneda, sin convertir'}
       warnings={[data ? sourceWarning('purchases', data.sources.purchases) : null]}
+      // Hidden only when the server explains why there is no data.
+      toolbar={data?.reason
+        ? null
+        : <ArrivalTabs tab={tab} onTabChange={onTabChange} summary={data?.summary} />}
       status={blockStatus(state, (value) => value.rows.length === 0)}
       errorMessage={blockErrorMessage(state.error)}
-      emptyMessage={reasonMessage(data?.reason) ?? "Sin PO's por llegar en los próximos 14 días."}
+      emptyMessage={reasonMessage(data?.reason) ?? EMPTY_MESSAGES[tab]}
       onRetry={state.reload}
       footer={data && data.total > data.limit ? (
         <Pager

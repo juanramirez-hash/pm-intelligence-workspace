@@ -11,6 +11,7 @@ import type {
 } from '../api/myDayTypes'
 
 import {
+  capitalizeFirst,
   formatDate,
 } from './myDayFormat'
 
@@ -147,10 +148,9 @@ const STALE_CONSEQUENCES: Record<MyDaySourceName, string> = {
 /** "Inventario al 24 nov 2026". */
 export function sourceLabel(name: MyDaySourceName, source: MyDaySourceFreshness | null | undefined): string {
   const label = SOURCE_NAMES[name]
-  const capitalized = label.charAt(0).toUpperCase() + label.slice(1)
 
   return source?.referenceDate
-    ? `${capitalized} al ${formatDate(source.referenceDate)}`
+    ? `${capitalizeFirst(label)} al ${formatDate(source.referenceDate)}`
     : `Sin datos de ${label}`
 }
 

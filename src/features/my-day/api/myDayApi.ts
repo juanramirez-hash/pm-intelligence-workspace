@@ -8,6 +8,7 @@ import {
 
 import type {
   MyDayActionsResponse,
+  MyDayArrivalTab,
   MyDayArrivalsResponse,
   MyDayLostCustomersResponse,
   MyDayStockAlertKind,
@@ -137,12 +138,13 @@ export function loadMyDayStockAlertList(
 }
 
 export function loadMyDayArrivals(
-  { view, limit, offset = 0 }: MyDayPageRequest,
+  { view, limit, offset = 0, status }: MyDayPageRequest & { status?: MyDayArrivalTab },
   signal?: AbortSignal,
 ): Promise<MyDayArrivalsResponse> {
   return requestJson(
     myDayPath('/api/my-day/arrivals', {
       view: viewParam(view),
+      status,
       limit,
       offset: offset || undefined,
     }),

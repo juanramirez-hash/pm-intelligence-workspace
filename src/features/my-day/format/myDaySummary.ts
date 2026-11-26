@@ -22,6 +22,6 @@ export function targetScopeNote(
 export function sortBrandsByRevenue(brands: readonly MyDayBrand[]): MyDayBrand[] {
   return [...brands].sort((left, right) =>
     right.revenue - left.revenue ||
-    left.brandLabel.localeCompare(right.brandLabel),
+    left.brandLabel.localeCompare(right.brandLabel, 'es-MX'),
   )
 }

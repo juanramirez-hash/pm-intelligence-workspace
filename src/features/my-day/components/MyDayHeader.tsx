@@ -91,7 +91,7 @@ export function MyDayHeader({
             value={selectedPeriod}
             disabled={periodOptions.length === 0}
             onChange={(event) => onPeriodChange(event.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium capitalize text-slate-800 shadow-sm disabled:opacity-50"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm disabled:opacity-50"
           >
             {periodOptions.map((option) => (
               <option key={option.value} value={option.value}>

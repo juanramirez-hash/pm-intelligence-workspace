@@ -6,7 +6,7 @@
 // MD-002 availability:
 // GET /api/my-day/stock-alerts?brand=&limit=&view=
 // GET /api/my-day/stock-alerts/:kind?brand=&limit=&offset=&view=  (out-of-stock | low-stock)
-// GET /api/my-day/arrivals?brand=&limit=&offset=&view=
+// GET /api/my-day/arrivals?brand=&limit=&offset=&view=&status=  (upcoming | overdue)
 //
 // The brands always come from the user's assignments in PostgreSQL
 // (req.authUser.brandIds), never from the client; only the brand filter is
@@ -53,12 +53,14 @@ import {
 } from '../services/metricPeriods.js'
 
 import {
+  ARRIVAL_ROW_STATUSES,
   MY_DAY_AVAILABILITY_RULES,
   buildArrivals,
   buildStockAlerts,
   pageRows,
   resolveInventoryCoverage,
   resolveSalesWindow,
+  selectArrivalRows,
   sourceFreshness,
 } from '../services/myDayAvailabilityRules.js'
 
@@ -76,6 +78,22 @@ import {
 const VALID_SCOPES = new Set(['all', 'assigned'])
 const VALID_VIEWS = new Set(['mine', 'all'])
 const STOCK_ALERT_KINDS = new Set(['out-of-stock', 'low-stock'])
+
+/**
+ * MD-003-HOTFIX1: arrivals status filter. Not sent = every row (the MD-002
+ * response); 'upcoming' or 'overdue'; anything else is 400.
+ */
+export function resolveArrivalStatus(value) {
+  if (value === undefined) {
+    return null
+  }
+
+  if (typeof value !== 'string' || !ARRIVAL_ROW_STATUSES.includes(value)) {
+    throw httpError(400, 'Estatus de llegada inválido')
+  }
+
+  return value
+}
 
 /** view: 'mine' (default) or 'all'; anything else is 400. */
 export function resolveMyDayView(value) {
@@ -534,6 +552,7 @@ export function createMyDayRouter(pool) {
       const view = resolveMyDayView(req.query.view)
       const limit = pageInteger(req.query.limit, 50, 500, 1)
       const offset = pageInteger(req.query.offset, 0, 1000000)
+      const status = resolveArrivalStatus(req.query.status)
       const brandKeys = source.mode === 'none'
         ? []
         : resolveAvailabilityBrandKeys(source, req.query.brand)
@@ -548,6 +567,8 @@ export function createMyDayRouter(pool) {
         brandSource: source.mode,
         rules: MY_DAY_AVAILABILITY_RULES,
         sources: availabilitySources(imports, dataCutoff),
+        // MD-003-HOTFIX1: 'all' when no status was sent.
+        status: status ?? 'all',
         limit,
         offset,
       }
@@ -581,8 +602,9 @@ export function createMyDayRouter(pool) {
       return res.json({
         ...base,
         window: arrivals.window,
+        // Counts of both statuses, whatever status was requested.
         summary: arrivals.summary,
-        ...pageRows(arrivals.rows, limit, offset),
+        ...pageRows(selectArrivalRows(arrivals.rows, status), limit, offset),
       })
     } catch (error) {
       return handleRouteError(res, error, 'No se pudieron consultar las llegadas')

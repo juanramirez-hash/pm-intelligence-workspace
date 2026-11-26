@@ -629,6 +629,71 @@ describe('MD-002 GET /api/my-day/arrivals', () => {
   })
 })
 
+describe('MD-003-HOTFIX1 GET /api/my-day/arrivals?status=', () => {
+  const line = (purchaseOrderNumber: string, expectedReceiptDate: string) => ({
+    itemKey: 'OUT', purchaseOrderNumber, supplierName: 'Proveedor', status: 'Pending Receipt',
+    shipmentStatus: null, expectedReceiptDate, currency: 'USD',
+    brand: 'UNV', brandKey: 'UNV', costVisible: true, amount: 100,
+  })
+
+  beforeEach(() => {
+    // Cutoff 2026-11-20: window until 2026-12-04.
+    availability.loadPendingPurchaseOrderLines.mockResolvedValue([
+      line('OLD', '2026-08-10'),
+      line('RECENT', '2026-11-19'),
+      line('MIDDLE', '2026-10-01'),
+      line('SOON', '2026-11-22'),
+      line('LATER', '2026-12-01'),
+    ])
+  })
+
+  const numbers = (res: ReturnType<typeof buildResponse>) =>
+    (body(res).rows as Array<{ purchaseOrderNumber: string }>).map((row) => row.purchaseOrderNumber)
+
+  it('keeps the MD-002 response when no status is sent', async () => {
+    const res = await invoke('/arrivals', { authUser: { scope: 'assigned', brandIds: ['UNV'] }, query: {} })
+
+    expect(body(res)).toMatchObject({
+      status: 'all', total: 5, summary: { upcoming: 2, overdue: 3 },
+    })
+    expect(numbers(res)).toEqual(['OLD', 'MIDDLE', 'RECENT', 'SOON', 'LATER'])
+  })
+
+  it('pages the upcoming orders on their own, soonest first', async () => {
+    const res = await invoke('/arrivals', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: { status: 'upcoming', limit: '1' },
+    })
+
+    expect(body(res)).toMatchObject({
+      status: 'upcoming', total: 2, hasMore: true, limit: 1, offset: 0,
+      // The counts of both statuses stay in the summary.
+      summary: { upcoming: 2, overdue: 3 },
+    })
+    expect(numbers(res)).toEqual(['SOON'])
+  })
+
+  it('pages the overdue orders on their own, most recent first', async () => {
+    const res = await invoke('/arrivals', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: { status: 'overdue', limit: '2', offset: '1' },
+    })
+
+    expect(body(res)).toMatchObject({ status: 'overdue', total: 3, hasMore: false })
+    expect(numbers(res)).toEqual(['MIDDLE', 'OLD'])
+  })
+
+  it('rejects an unknown status with 400', async () => {
+    const res = await invoke('/arrivals', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: { status: 'atrasadas' },
+    })
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(availability.loadPendingPurchaseOrderLines).not.toHaveBeenCalled()
+  })
+})
+
 describe('MD-001 mounting', () => {
   const read = (path: string) =>
     readFileSync(new URL(path, import.meta.url), 'utf8')

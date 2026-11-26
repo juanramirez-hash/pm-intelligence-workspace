@@ -261,12 +261,16 @@ export interface MyDayArrivalRow {
   costHidden: boolean
 }
 
+// MD-003-HOTFIX1: status filter of /api/my-day/arrivals.
+export type MyDayArrivalTab = 'upcoming' | 'overdue'
+
 export interface MyDayArrivalsResponse {
   ok: true
   view: MyDayView
   dataCutoff: string | null
   brandSource: MyDayBrandSource
   sources: MyDaySources
+  status?: MyDayArrivalTab | 'all'
   limit: number
   offset: number
   reason?: string

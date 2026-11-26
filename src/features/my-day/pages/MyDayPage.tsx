@@ -27,6 +27,7 @@ import {
 } from '../api/myDayApi'
 
 import type {
+  MyDayArrivalTab,
   MyDaySummaryResponse,
   MyDayView,
 } from '../api/myDayTypes'
@@ -160,6 +161,7 @@ export function MyDayPage() {
 
   const [view, setView] = useState<MyDayView>('mine')
   const [period, setPeriod] = useState<string | null>(null)
+  const [arrivalsTab, setArrivalsTab] = useState<MyDayArrivalTab>('upcoming')
   const [arrivalsOffset, setArrivalsOffset] = useState(0)
 
   const key = (...parts: Array<string | number | null>) =>
@@ -181,9 +183,9 @@ export function MyDayPage() {
     (signal) => loadMyDayStockAlerts({ view, limit: MY_DAY_SUMMARY_LIMITS.stockAlerts }, signal),
   )
   const arrivals = useMyDayBlock(
-    key('arrivals', view, arrivalsOffset),
+    key('arrivals', view, arrivalsTab, arrivalsOffset),
     (signal) => loadMyDayArrivals(
-      { view, limit: MY_DAY_SUMMARY_LIMITS.arrivals, offset: arrivalsOffset },
+      { view, status: arrivalsTab, limit: MY_DAY_SUMMARY_LIMITS.arrivals, offset: arrivalsOffset },
       signal,
     ),
   )
@@ -204,6 +206,12 @@ export function MyDayPage() {
 
   const changeView = (next: MyDayView) => {
     setView(next)
+    setArrivalsOffset(0)
+  }
+
+  // Each tab pages on its own, from the first page.
+  const changeArrivalsTab = (next: MyDayArrivalTab) => {
+    setArrivalsTab(next)
     setArrivalsOffset(0)
   }
 
@@ -242,6 +250,8 @@ export function MyDayPage() {
 
         <MyDayArrivals
           state={arrivals}
+          tab={arrivalsTab}
+          onTabChange={changeArrivalsTab}
           offset={arrivalsOffset}
           onOffsetChange={setArrivalsOffset}
         />

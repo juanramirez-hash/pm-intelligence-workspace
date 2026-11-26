@@ -1,3 +1,10 @@
+# 0.57.0-MD-003-HOTFIX1
+
+- Splits "PO's por llegar (14 días)" into "Por llegar (N)", soonest first, and "Atrasadas (N)", most recent first, each paged on its own. Adds the optional `status=upcoming|overdue` parameter to `GET /api/my-day/arrivals` (400 for other values); without it the response is unchanged apart from the new `status: 'all'` field, and `summary` keeps the counts of both statuses.
+- Customers to recover show one "Venta del mes base" column when `basePeriods` is 1 (base revenue and monthly average were the same number) and both columns otherwise; the window reads "Compraron en agosto de 2026 y no compraron ni en septiembre ni en octubre de 2026".
+- Formats every number of "Mi día" with es-MX only when the browser really has its separators, otherwise en-US (same separators), and composes the currency symbol itself, so a mobile browser without es-MX data no longer shows "$60.174.004". Adds a test that fails on any locale-less `toLocale*`, `localeCompare` or `Intl.*` call in `src/features/my-day`.
+- The period selector reads "Noviembre de 2026" instead of the CSS-capitalized "Noviembre De 2026". No migrations; the backend must be restarted.
+
 # 0.57.0-MD-003
 
 - Adds the "Mi día" page at `/my-day` (menu entry above Executive, available to every role): data cutoff, "Mis marcas / Todas" for scope `all`, period selector (cutoff month and the 11 previous ones), four portfolio indicators, the executive brand table with links to the brand page, the 5 priority actions, customers to recover, low-stock and out-of-stock items with their next arrival, and purchase orders arriving in 14 days.

@@ -59,7 +59,7 @@ export function selectPriorityActions(
     )
     .sort((left, right) =>
       (PRIORITY_RANK[left.priority] ?? 9) - (PRIORITY_RANK[right.priority] ?? 9) ||
-      String(left.due_date).localeCompare(String(right.due_date)) ||
+      String(left.due_date).localeCompare(String(right.due_date), 'es-MX') ||
       left.id - right.id,
     )
     .slice(0, limit)
