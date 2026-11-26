@@ -39,6 +39,10 @@ export const REQUIRED_SCHEMA = [
     table: 'inventory_import_staging',
     column: 'last_sale_date',
   },
+  {
+    migration: '039',
+    table: 'inventory_items',
+  },
 ]
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/

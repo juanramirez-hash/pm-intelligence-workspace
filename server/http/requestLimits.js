@@ -10,6 +10,8 @@ export const IMPORT_BODY_LIMIT = '10mb'
 
 const LARGE_IMPORT_PATHS = [
   /^\/api\/data\/[^/]+\/imports\/[^/]+\/chunks\/?$/i,
+  // MD-002-HOTFIX1: inventory item records, in chunks of 500.
+  /^\/api\/data\/inventory\/imports\/[^/]+\/items\/?$/i,
   // Includes /api/data/targets/import.
   /^\/api\/data\/[^/]+\/import\/?$/i,
   /^\/api\/data\/exchange-rates\/?$/i,

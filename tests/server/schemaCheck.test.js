@@ -73,6 +73,11 @@ describe('startup schema check (OPS-001)', () => {
     }
   })
 
+  it('requires the MD-002-HOTFIX1 inventory_items table of migration 039', () => {
+    expect(REQUIRED_SCHEMA).toContainEqual({ migration: '039', table: 'inventory_items' })
+    expect(buildMissingSchemaSql()).toContain("('039', 'inventory_items', NULL::TEXT)")
+  })
+
   it('rejects requirements that are not plain identifiers', () => {
     expect(() =>
       buildMissingSchemaSql([

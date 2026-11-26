@@ -57,6 +57,7 @@ import {
   buildArrivals,
   buildStockAlerts,
   pageRows,
+  resolveInventoryCoverage,
   resolveSalesWindow,
   sourceFreshness,
 } from '../services/myDayAvailabilityRules.js'
@@ -64,7 +65,8 @@ import {
 import {
   AVAILABILITY_SOURCES,
   groupLinesByItem,
-  inventoryHasCatalogStatus,
+  loadInventoryCoverage,
+  loadInventoryItemRecords,
   loadInventoryItems,
   loadItemSales,
   loadLatestImports,
@@ -214,6 +216,7 @@ async function loadStockAlerts(pool, req) {
     salesWindow,
     rules: MY_DAY_AVAILABILITY_RULES,
     sources: availabilitySources(imports, dataCutoff),
+    inventoryCoverage: null,
   }
   const inventoryImport = imports.get(AVAILABILITY_SOURCES.inventory)
 
@@ -229,11 +232,23 @@ async function loadStockAlerts(pool, req) {
     return { base, reason: 'no-sales-data' }
   }
 
-  if (!(await inventoryHasCatalogStatus(pool, inventoryImport.importId))) {
+  // MD-002-HOTFIX1: item records when the import has them (every article,
+  // with or without quantities); otherwise the positions, flagged.
+  const { coverage, hasCatalogStatus } = resolveInventoryCoverage(
+    await loadInventoryCoverage(pool, inventoryImport.importId),
+  )
+
+  base.inventoryCoverage = coverage
+
+  if (!hasCatalogStatus) {
     return { base, reason: 'catalog-status-missing' }
   }
 
-  const items = await loadInventoryItems(
+  const items = await (
+    coverage.source === 'items'
+      ? loadInventoryItemRecords
+      : loadInventoryItems
+  )(
     pool,
     inventoryImport.importId,
     brandKeys,
@@ -457,11 +472,13 @@ export function createMyDayRouter(pool) {
         })
       }
 
+      const complete = base.inventoryCoverage.complete
+
       return res.json({
         ...base,
         limit,
-        outOfStock: pageRows(alerts.outOfStock, limit),
-        lowStock: pageRows(alerts.lowStock, limit),
+        outOfStock: { ...pageRows(alerts.outOfStock, limit), complete },
+        lowStock: { ...pageRows(alerts.lowStock, limit), complete },
         dataQuality: alerts.dataQuality,
       })
     } catch (error) {
@@ -503,6 +520,7 @@ export function createMyDayRouter(pool) {
           limit,
           offset,
         ),
+        complete: base.inventoryCoverage.complete,
         dataQuality: alerts.dataQuality,
       })
     } catch (error) {

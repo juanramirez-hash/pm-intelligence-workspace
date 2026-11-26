@@ -945,6 +945,7 @@ export const useDataCenterStore =
                   normalizedRows: result.normalizedRows,
                   lastImportedFile: metadata.fileName,
                   lastImportedAt: importedAt,
+                  items: result.inventoryItems,
                 })
                 .then(() => {
                   set({

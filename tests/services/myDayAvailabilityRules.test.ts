@@ -14,6 +14,7 @@ import {
   pageRows,
   resolveArrival,
   resolveArrivalWindow,
+  resolveInventoryCoverage,
   resolveSalesWindow,
   sourceFreshness,
 } from '../../server/services/myDayAvailabilityRules.js'
@@ -291,6 +292,51 @@ describe('MD-002 arrivals', () => {
       },
     })
     expect(summary.costHidden).toBe(true)
+  })
+})
+
+describe('MD-002-HOTFIX1 inventory coverage', () => {
+  it('uses the item records when the import has them', () => {
+    expect(resolveInventoryCoverage({
+      itemRecords: 4682, itemRecordsWithPositions: 2098, itemRecordsWithStatus: 4682,
+      positionArticles: 2098, positionsHaveStatus: true,
+    })).toEqual({
+      coverage: {
+        complete: true, source: 'items', articles: 4682, articlesWithPositions: 2098, reason: null,
+      },
+      hasCatalogStatus: true,
+    })
+  })
+
+  it('falls back to the positions of an older load, flagged as incomplete', () => {
+    expect(resolveInventoryCoverage({
+      itemRecords: 0, itemRecordsWithPositions: 0, itemRecordsWithStatus: 0,
+      positionArticles: 2098, positionsHaveStatus: false,
+    })).toEqual({
+      coverage: {
+        complete: false,
+        source: 'positions',
+        articles: null,
+        articlesWithPositions: 2098,
+        reason: 'inventory-loaded-before-item-records',
+      },
+      hasCatalogStatus: false,
+    })
+  })
+
+  it('keeps the position count of each alert row, null without item records', () => {
+    const { outOfStock } = buildStockAlerts({
+      items: [item({ itemKey: 'EMPTY', positions: 0 }), item({ itemKey: 'OLD', itemCode: 'OLD' })],
+      salesByItem: new Map(),
+      linesByItem: new Map(),
+      window: WINDOW,
+      cutoff: CUTOFF,
+    })
+
+    expect(outOfStock.map((row) => [row.itemKey, row.positions])).toEqual([
+      ['EMPTY', 0],
+      ['OLD', null],
+    ])
   })
 })
 

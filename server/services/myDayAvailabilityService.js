@@ -76,17 +76,85 @@ export async function loadLatestImports(
   )
 }
 
-/** Whether the inventory import carries any catalog status (migration 038). */
-export async function inventoryHasCatalogStatus(pool, importId) {
+/**
+ * What the inventory import has (MD-002-HOTFIX1): item records
+ * (inventory_items, every article of the file) and positions
+ * (inventory_snapshots, only articles with some quantity), and whether
+ * either carries a catalog status (migration 038).
+ */
+export async function loadInventoryCoverage(pool, importId) {
   const result = await pool.query(
-    `SELECT EXISTS (
-       SELECT 1 FROM inventory_snapshots
-        WHERE import_id = $1 AND catalog_status IS NOT NULL
-     ) AS has_status`,
+    `SELECT
+       (SELECT COUNT(*) FROM inventory_items
+         WHERE import_id = $1)::INTEGER AS item_records,
+       (SELECT COUNT(*) FROM inventory_items
+         WHERE import_id = $1 AND positions > 0)::INTEGER AS item_records_with_positions,
+       (SELECT COUNT(*) FROM inventory_items
+         WHERE import_id = $1 AND catalog_status IS NOT NULL)::INTEGER AS item_records_with_status,
+       (SELECT COUNT(DISTINCT ${itemKeySql('product_name')}) FROM inventory_snapshots
+         WHERE import_id = $1)::INTEGER AS position_articles,
+       EXISTS (
+         SELECT 1 FROM inventory_snapshots
+          WHERE import_id = $1 AND catalog_status IS NOT NULL
+       ) AS positions_have_status`,
     [importId],
   )
+  const row = result.rows[0] ?? {}
 
-  return result.rows[0]?.has_status === true
+  return {
+    itemRecords: Number(row.item_records ?? 0),
+    itemRecordsWithPositions: Number(row.item_records_with_positions ?? 0),
+    itemRecordsWithStatus: Number(row.item_records_with_status ?? 0),
+    positionArticles: Number(row.position_articles ?? 0),
+    positionsHaveStatus: row.positions_have_status === true,
+  }
+}
+
+/**
+ * One row per article of the import from inventory_items (MD-002-HOTFIX1),
+ * articles without any quantity included. Same shape and brand filter as
+ * loadInventoryItems. No costs: the table has none.
+ */
+export async function loadInventoryItemRecords(pool, importId, brandKeys) {
+  const params = [importId]
+  let brandFilter = ''
+
+  if (brandKeys) {
+    params.push(brandKeys)
+    brandFilter = `WHERE brand_key(items.brand) = ANY($${params.length}::TEXT[])`
+  }
+
+  const result = await pool.query(
+    `SELECT items.*, brand_key(items.brand) AS brand_key
+       FROM (
+         SELECT ${itemKeySql('item_code')} AS item_key,
+                MIN(item_code) AS item_code,
+                MAX(brand) AS brand,
+                MAX(UPPER(BTRIM(catalog_status))) AS catalog_status,
+                MAX(last_sale_date)::TEXT AS last_sale_date,
+                SUM(on_hand) AS on_hand,
+                SUM(on_order) AS on_order,
+                SUM(positions) AS positions
+           FROM inventory_items
+          WHERE import_id = $1
+          GROUP BY 1
+       ) AS items
+     ${brandFilter}
+     ORDER BY items.item_key`,
+    params,
+  )
+
+  return result.rows.map((row) => ({
+    itemKey: row.item_key,
+    itemCode: row.item_code,
+    brand: row.brand ?? null,
+    brandKey: row.brand_key ?? null,
+    catalogStatus: row.catalog_status ?? null,
+    lastSaleDate: toDateKey(row.last_sale_date),
+    onHand: toNumber(row.on_hand) ?? 0,
+    pendingReceiptUnits: toNumber(row.on_order) ?? 0,
+    positions: toNumber(row.positions) ?? 0,
+  }))
 }
 
 /**

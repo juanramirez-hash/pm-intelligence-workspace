@@ -12,10 +12,31 @@ import {
 
 import {
   appendInventoryChunk,
+  appendInventoryItems,
   cancelInventoryChunkImport,
   finalizeInventoryChunkImport,
   startInventoryChunkImport,
 } from '../services/inventoryChunkImportService.js'
+
+// MD-002-HOTFIX1: errors with a status code (400, 404, 409, 422) carry a
+// message meant for the user; anything else stays a generic 500.
+function sendImportError(res, error, fallback) {
+  if (Number.isInteger(error?.statusCode)) {
+    return res
+      .status(error.statusCode)
+      .json({
+        ok: false,
+        error: error.message,
+      })
+  }
+
+  return res
+    .status(500)
+    .json({
+      ok: false,
+      error: fallback,
+    })
+}
 
 export function createInventoryRouter(
   pool,
@@ -255,6 +276,80 @@ export function createInventoryRouter(
   )
 
   router.post(
+    '/imports/:importId/items',
+    async (req, res) => {
+      try {
+        const importId =
+          Number(
+            req.params.importId,
+          )
+
+        const {
+          chunkIndex,
+          items,
+        } = req.body ?? {}
+
+        if (
+          !Number.isInteger(
+            importId,
+          ) ||
+          importId <= 0
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'Inventory importId is invalid',
+            })
+        }
+
+        if (
+          !Number.isInteger(
+            chunkIndex,
+          ) ||
+          chunkIndex < 0
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'Inventory chunkIndex is invalid',
+            })
+        }
+
+        const result =
+          await appendInventoryItems(
+            pool,
+            {
+              importId,
+              items,
+            },
+          )
+
+        return res.json({
+          ok: true,
+          dataset: 'inventory',
+          chunkIndex,
+          ...result,
+        })
+      } catch (error) {
+        console.error(
+          'Inventory items append failed:',
+          error,
+        )
+
+        return sendImportError(
+          res,
+          error,
+          'Inventory items append failed',
+        )
+      }
+    },
+  )
+
+  router.post(
     '/imports/:importId/cancel',
     async (req, res) => {
       try {
@@ -340,6 +435,7 @@ export function createInventoryRouter(
 
         const {
           ignoredRows = 0,
+          expectedItemCount = null,
         } = req.body ?? {}
 
         if (
@@ -357,12 +453,31 @@ export function createInventoryRouter(
             })
         }
 
+        if (
+          expectedItemCount !== null &&
+          (
+            !Number.isInteger(
+              expectedItemCount,
+            ) ||
+            expectedItemCount < 0
+          )
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'Inventory expectedItemCount is invalid',
+            })
+        }
+
         const result =
           await finalizeInventoryChunkImport(
             pool,
             {
               importId,
               ignoredRows,
+              expectedItemCount,
             },
           )
 
@@ -377,13 +492,11 @@ export function createInventoryRouter(
           error,
         )
 
-        return res
-          .status(500)
-          .json({
-            ok: false,
-            error:
-              'Inventory chunk finalize failed',
-          })
+        return sendImportError(
+          res,
+          error,
+          'Inventory chunk finalize failed',
+        )
       }
     },
   )

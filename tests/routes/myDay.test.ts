@@ -29,7 +29,8 @@ vi.mock('../../server/services/myDayService.js', async (importOriginal) => ({
 
 const availability = vi.hoisted(() => ({
   loadLatestImports: vi.fn(),
-  inventoryHasCatalogStatus: vi.fn(),
+  loadInventoryCoverage: vi.fn(),
+  loadInventoryItemRecords: vi.fn(),
   loadInventoryItems: vi.fn(),
   loadItemSales: vi.fn(),
   loadPendingPurchaseOrderLines: vi.fn(),
@@ -110,7 +111,11 @@ beforeEach(() => {
     ['purchases', { importId: 42, uploadedAt: '2026-11-21T16:00:00.000Z' }],
     ['sales', { importId: 43, uploadedAt: '2026-11-21T14:00:00.000Z' }],
   ]))
-  availability.inventoryHasCatalogStatus.mockResolvedValue(true)
+  // MD-002 load (before HOTFIX1): positions only.
+  availability.loadInventoryCoverage.mockResolvedValue({
+    itemRecords: 0, itemRecordsWithPositions: 0, itemRecordsWithStatus: 0,
+    positionArticles: 3, positionsHaveStatus: true,
+  })
   availability.loadInventoryItems.mockResolvedValue([
     {
       itemKey: 'OUT', itemCode: 'OUT', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'DE LINEA',
@@ -387,7 +392,10 @@ describe('MD-002 GET /api/my-day/stock-alerts', () => {
   })
 
   it('reports a missing catalog status instead of inferring it', async () => {
-    availability.inventoryHasCatalogStatus.mockResolvedValue(false)
+    availability.loadInventoryCoverage.mockResolvedValue({
+      itemRecords: 0, itemRecordsWithPositions: 0, itemRecordsWithStatus: 0,
+      positionArticles: 3, positionsHaveStatus: false,
+    })
 
     const res = await invoke('/stock-alerts', { authUser: { scope: 'assigned', brandIds: ['UNV'] }, query: {} })
 
@@ -449,6 +457,116 @@ describe('MD-002 GET /api/my-day/stock-alerts', () => {
     })
 
     expect(bad.status).toHaveBeenCalledWith(400)
+  })
+})
+
+describe('MD-002-HOTFIX1 inventory coverage', () => {
+  const ITEM_RECORDS = {
+    itemRecords: 4, itemRecordsWithPositions: 2, itemRecordsWithStatus: 4,
+    positionArticles: 2, positionsHaveStatus: true,
+  }
+
+  beforeEach(() => {
+    availability.loadInventoryCoverage.mockResolvedValue(ITEM_RECORDS)
+    availability.loadInventoryItemRecords.mockResolvedValue([
+      {
+        itemKey: 'OUT', itemCode: 'OUT', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'DE LINEA',
+        onHand: 0, pendingReceiptUnits: 10, lastSaleDate: '2026-11-18', positions: 1,
+      },
+      // No quantity in any branch: not in the positions, still out of stock.
+      {
+        itemKey: 'EMPTY', itemCode: 'EMPTY', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'DE LINEA',
+        onHand: 0, pendingReceiptUnits: 0, lastSaleDate: '2025-02-06', positions: 0,
+      },
+      {
+        itemKey: 'LOW', itemCode: 'LOW', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'DE LINEA',
+        onHand: 9, pendingReceiptUnits: 0, lastSaleDate: '2026-11-19', positions: 1,
+      },
+      {
+        itemKey: 'ORDER', itemCode: 'ORDER', brand: 'UNV', brandKey: 'UNV', catalogStatus: 'SOBRE PEDIDO',
+        onHand: 0, pendingReceiptUnits: 0, lastSaleDate: null, positions: 0,
+      },
+    ])
+  })
+
+  it('reads every article from the item records and flags the coverage as complete', async () => {
+    const res = await invoke('/stock-alerts', { authUser: { scope: 'all', brandIds: [] }, query: { view: 'all' } })
+
+    expect(availability.loadInventoryItemRecords).toHaveBeenCalledWith(expect.anything(), 41, null)
+    expect(availability.loadInventoryItems).not.toHaveBeenCalled()
+    expect(availability.loadItemSales).toHaveBeenCalledWith(
+      expect.anything(), ['OUT', 'EMPTY', 'LOW'], expect.anything(),
+    )
+    expect(body(res)).toMatchObject({
+      inventoryCoverage: {
+        complete: true, source: 'items', articles: 4, articlesWithPositions: 2, reason: null,
+      },
+      outOfStock: {
+        total: 2,
+        complete: true,
+        rows: [
+          { itemCode: 'OUT', positions: 1 },
+          { itemCode: 'EMPTY', positions: 0, onHand: 0, lastSaleDate: '2025-02-06', arrivalStatus: 'no-po' },
+        ],
+      },
+      lowStock: { total: 1, complete: true, rows: [{ itemCode: 'LOW', coverageDays: 9 }] },
+    })
+  })
+
+  it('pages the full lists from the item records', async () => {
+    const res = await invoke('/stock-alerts/:kind', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: { limit: '1', offset: '1' },
+      params: { kind: 'out-of-stock' },
+    })
+
+    expect(availability.loadInventoryItemRecords).toHaveBeenCalledWith(expect.anything(), 41, ['UNV'])
+    expect(body(res)).toMatchObject({
+      complete: true, total: 2, hasMore: false, rows: [{ itemCode: 'EMPTY' }],
+    })
+  })
+
+  it('flags an MD-002 load (positions only) as incomplete', async () => {
+    availability.loadInventoryCoverage.mockResolvedValue({
+      itemRecords: 0, itemRecordsWithPositions: 0, itemRecordsWithStatus: 0,
+      positionArticles: 2098, positionsHaveStatus: true,
+    })
+
+    const res = await invoke('/stock-alerts', { authUser: { scope: 'assigned', brandIds: ['UNV'] }, query: {} })
+
+    expect(availability.loadInventoryItemRecords).not.toHaveBeenCalled()
+    expect(availability.loadInventoryItems).toHaveBeenCalledWith(expect.anything(), 41, ['UNV'])
+    expect(body(res)).toMatchObject({
+      inventoryCoverage: {
+        complete: false,
+        source: 'positions',
+        articles: null,
+        articlesWithPositions: 2098,
+        reason: 'inventory-loaded-before-item-records',
+      },
+      outOfStock: { complete: false, rows: [{ itemCode: 'OUT', positions: null }] },
+      lowStock: { complete: false },
+    })
+
+    const kind = await invoke('/stock-alerts/:kind', {
+      authUser: { scope: 'assigned', brandIds: ['UNV'] },
+      query: {},
+      params: { kind: 'low-stock' },
+    })
+
+    expect(body(kind)).toMatchObject({ complete: false })
+  })
+
+  it('reports a missing catalog status in the item records', async () => {
+    availability.loadInventoryCoverage.mockResolvedValue({ ...ITEM_RECORDS, itemRecordsWithStatus: 0 })
+
+    const res = await invoke('/stock-alerts', { authUser: { scope: 'assigned', brandIds: ['UNV'] }, query: {} })
+
+    expect(body(res)).toMatchObject({
+      reason: 'catalog-status-missing',
+      inventoryCoverage: { complete: true, source: 'items' },
+    })
+    expect(availability.loadInventoryItemRecords).not.toHaveBeenCalled()
   })
 })
 

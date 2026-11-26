@@ -428,6 +428,20 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - DC-001: la fuente "TS - Lista de PO con Item" (búsqueda guardada 3582, exportada a Excel) queda configurada para Órdenes de compra.
 - Pendiente fuera de MD-002: el export de PO's solo trae PO con fecha del 1 oct al 25 nov 2026; hasta ampliar el filtro a todas las abiertas, habrá artículos con `no-po-data`.
 
+## Mi día — MD-002-HOTFIX1
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| MD-002-HOTFIX1 | Agotados completos: un registro por artículo de la última carga de inventario (`inventory_items`, migración 039), incluidos los artículos sin ninguna cantidad, y bandera de cobertura en "Mi día" | Implementado · pendiente de validación funcional y despliegue |
+
+- Causa: el export crudo de NetSuite deja vacías las celdas en cero aunque traiga "Show Zeros". Desde IW-001 (importación por sucursal, 30 jul 2026) el normalizador solo genera posiciones con alguna cantidad, así que un artículo sin ninguna cantidad no llega a `inventory_snapshots`. Con el export del 26 nov 2026 se perdían 2,584 de 4,682 artículos, entre ellos 321 de los 649 `DE LINEA` agotados.
+- Las posiciones no cambian: `inventory_snapshots`, `/api/data/inventory`, su ETag, el Inventory Workspace y la regresión V1 quedan igual.
+- `buildInventoryItems` (frontend) arma un registro por artículo con los totales de todas las sucursales (celda vacía = 0), sin la fila "Inventory Item" ni las columnas "Total", a partir de las mismas posiciones normalizadas. Se sube en lotes de 500 a `POST /api/data/inventory/imports/:id/items`. Sin costos: si algún día se necesitan, se agregan pasando por `cost_access`.
+- Al cerrar la carga, el servidor exige que los registros sean exactamente `expectedItemCount` y que la suma de En Mano, de en orden y de posiciones cuadre con las posiciones de la misma carga (tolerancia 0.0001). Si no cuadra, responde 422 con el detalle, revierte la carga y conserva la anterior. Solo se guardan los registros de la última carga.
+- "Mi día" lee agotados y por agotarse de `inventory_items` cuando la carga tiene registros (`inventoryCoverage.complete: true`, `source: 'items'`). Una carga anterior solo tiene posiciones: usa las posiciones y responde `complete: false` con `reason: 'inventory-loaded-before-item-records'`, también en `outOfStock.complete` y `lowStock.complete`. Cada fila trae `positions` (0 = artículo sin ninguna cantidad).
+- Migración 039: tabla `inventory_items` (llave `import_id`, `item_code`), creada como `postgres` con `GRANT SELECT, INSERT, DELETE` a `pm_intelligence`; rollback sin `CASCADE`; requisito en `REQUIRED_SCHEMA`; no sube `data_cache_version`. La ruta `items` usa el límite de cuerpo de importación (10 MB) después de la autenticación y el permiso de importación.
+- Despliegue: backend antes que frontend (el frontend nuevo llama a la ruta `items`). Hasta recargar el inventario, "Mi día" marca la cobertura como incompleta.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

@@ -114,6 +114,14 @@ describe('request body limits (SEC-004)', () => {
     expect(isLargeImportRequest(request('GET', '/api/data/sales/import'))).toBe(false)
   })
 
+  it('treats the inventory item records as a large import step (MD-002-HOTFIX1)', () => {
+    const request = (method, originalUrl) => ({ method, originalUrl })
+
+    expect(isLargeImportRequest(request('POST', '/api/data/inventory/imports/42/items'))).toBe(true)
+    expect(isLargeImportRequest(request('POST', '/api/data/sales/imports/42/items'))).toBe(false)
+    expect(isLargeImportRequest(request('POST', '/api/data/inventory/imports/42/finalize'))).toBe(false)
+  })
+
   it('answers 413 JSON for a 200 kb body on a normal route', async () => {
     running = await startTestApp(buildApp())
 

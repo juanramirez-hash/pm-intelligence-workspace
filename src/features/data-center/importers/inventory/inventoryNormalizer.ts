@@ -1,6 +1,7 @@
 import type { NormalizationResult } from '../../engine/importPlugin'
 import type { InventoryField } from './inventoryColumnAliases'
 import type {
+  InventoryItemRecord,
   NormalizedInventoryRow,
   RawInventoryRow,
 } from './inventoryTypes'
@@ -382,4 +383,98 @@ export function normalizeInventoryRows(
   return validation.sourceLayout === 'wide_by_location'
     ? normalizeWideInventoryRows(rows, validation)
     : normalizeLongInventoryRows(rows, validation)
+}
+
+const roundQuantity = (value: number): number =>
+  Math.round(value * 10_000) / 10_000
+
+/**
+ * MD-002-HOTFIX1: one record per article. Totals come from the same
+ * normalized positions that go to inventory_snapshots (so they always
+ * match); in the wide NetSuite export, articles whose cells are all empty
+ * produce no position and are added here with zero totals. Grouping rows
+ * ("Inventory Item") and the Total columns are excluded exactly as in the
+ * positions. Duplicated item codes are summed into one record.
+ */
+export function buildInventoryItems(
+  rows: RawInventoryRow[],
+  validation: InventoryValidationResult,
+  positions: readonly NormalizedInventoryRow[] =
+    normalizeInventoryRows(rows, validation).rows,
+): InventoryItemRecord[] {
+  const items = new Map<string, InventoryItemRecord>()
+
+  const ensure = (itemCode: string): InventoryItemRecord => {
+    const existing = items.get(itemCode)
+
+    if (existing) {
+      return existing
+    }
+
+    const created: InventoryItemRecord = {
+      itemCode,
+      brand: null,
+      catalogStatus: null,
+      lastSaleDate: null,
+      onHand: 0,
+      committed: 0,
+      available: 0,
+      inTransit: 0,
+      onOrder: 0,
+      positions: 0,
+    }
+
+    items.set(itemCode, created)
+
+    return created
+  }
+
+  const fill = (
+    item: InventoryItemRecord,
+    brand: string | null,
+    fields: Pick<NormalizedInventoryRow, 'catalogStatus' | 'lastSaleDate'>,
+  ) => {
+    item.brand = item.brand ?? brand
+    item.catalogStatus = item.catalogStatus ?? fields.catalogStatus ?? null
+    item.lastSaleDate = item.lastSaleDate ?? fields.lastSaleDate ?? null
+  }
+
+  if (validation.sourceLayout === 'wide_by_location') {
+    for (const row of rows) {
+      const itemCode = identifier(
+        getValue(row, validation, 'productName'),
+      )
+
+      if (!itemCode || isGroupingRow(row, validation)) {
+        continue
+      }
+
+      fill(
+        ensure(itemCode),
+        text(getValue(row, validation, 'brand')),
+        itemFields(row, validation),
+      )
+    }
+  }
+
+  for (const position of positions) {
+    const item = ensure(position.productName)
+
+    fill(item, position.brand, position)
+    item.onHand += position.onHand
+    item.committed += position.committed ?? 0
+    item.available += position.available ?? 0
+    item.inTransit += position.inTransit ?? 0
+    item.onOrder += position.onOrder ?? 0
+    item.positions += 1
+  }
+
+  return [...items.values()].map((item) => ({
+    ...item,
+    onHand: roundQuantity(item.onHand),
+    committed: roundQuantity(item.committed),
+    available: roundQuantity(item.available),
+    inTransit: roundQuantity(item.inTransit),
+    onOrder: roundQuantity(item.onOrder),
+  }))
 }

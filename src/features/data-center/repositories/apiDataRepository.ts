@@ -605,6 +605,40 @@ async saveInventoryDataset(
       )
     }
 
+    // MD-002-HOTFIX1: one record per article, including the articles
+    // without any quantity. The server checks the count and the totals
+    // against the positions on finalize.
+    const items = dataset.items
+
+    if (items) {
+      for (
+        let offset = 0;
+        offset < items.length;
+        offset += chunkSize
+      ) {
+        await requestJson(
+          `/api/data/inventory/imports/${importId}/items`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              chunkIndex:
+                Math.floor(
+                  offset / chunkSize,
+                ),
+              items: items.slice(
+                offset,
+                offset + chunkSize,
+              ),
+            }),
+          },
+        )
+      }
+    }
+
     await requestJson(
       `/api/data/inventory/imports/${importId}/finalize`,
       {
@@ -617,6 +651,9 @@ async saveInventoryDataset(
           ignoredRows:
             dataset.summary
               .ignoredRows,
+          ...(items
+            ? { expectedItemCount: items.length }
+            : {}),
         }),
       },
     )

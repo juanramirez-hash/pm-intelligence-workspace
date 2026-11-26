@@ -260,6 +260,330 @@ export async function appendInventoryChunk(
   }
 }
 
+// MD-002-HOTFIX1: one record per article of the file (inventory_items,
+// migration 039). No costs are accepted.
+
+export const INVENTORY_ITEMS_MAX_PER_CHUNK = 1000
+
+// Positions and item totals must match within this tolerance on finalize.
+export const INVENTORY_ITEMS_TOTAL_TOLERANCE = 0.0001
+
+const ITEM_QUANTITY_FIELDS = [
+  'onHand',
+  'committed',
+  'available',
+  'inTransit',
+  'onOrder',
+]
+
+function inventoryHttpError(statusCode, message) {
+  return Object.assign(new Error(message), { statusCode })
+}
+
+function optionalText(value, field, index) {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (typeof value !== 'string' || value.length > 500) {
+    throw inventoryHttpError(
+      400,
+      `Inventory item ${index}: ${field} is invalid`,
+    )
+  }
+
+  const trimmed = value.trim()
+
+  return trimmed === '' ? null : trimmed
+}
+
+/** Validates and normalizes one chunk of item records (400 on error). */
+export function validateInventoryItems(items) {
+  if (!Array.isArray(items)) {
+    throw inventoryHttpError(400, 'Inventory items must be an array')
+  }
+
+  if (items.length > INVENTORY_ITEMS_MAX_PER_CHUNK) {
+    throw inventoryHttpError(
+      400,
+      `Inventory items chunk exceeds ${INVENTORY_ITEMS_MAX_PER_CHUNK} records`,
+    )
+  }
+
+  return items.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw inventoryHttpError(400, `Inventory item ${index} is invalid`)
+    }
+
+    const itemCode = optionalText(item.itemCode, 'itemCode', index)
+
+    if (!itemCode) {
+      throw inventoryHttpError(400, `Inventory item ${index}: itemCode is required`)
+    }
+
+    const lastSaleDate = item.lastSaleDate ?? null
+
+    if (
+      lastSaleDate !== null &&
+      (typeof lastSaleDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(lastSaleDate))
+    ) {
+      throw inventoryHttpError(400, `Inventory item ${index}: lastSaleDate is invalid`)
+    }
+
+    const quantities = {}
+
+    for (const field of ITEM_QUANTITY_FIELDS) {
+      const value = item[field] ?? 0
+
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw inventoryHttpError(400, `Inventory item ${index}: ${field} is invalid`)
+      }
+
+      quantities[field] = value
+    }
+
+    const positions = item.positions ?? 0
+
+    if (!Number.isInteger(positions) || positions < 0) {
+      throw inventoryHttpError(400, `Inventory item ${index}: positions is invalid`)
+    }
+
+    return {
+      itemCode,
+      brand: optionalText(item.brand, 'brand', index),
+      catalogStatus: optionalText(item.catalogStatus, 'catalogStatus', index),
+      lastSaleDate,
+      ...quantities,
+      positions,
+    }
+  })
+}
+
+/**
+ * Stores one chunk of item records of a processing inventory import.
+ * Re-sending the same chunk is harmless (ON CONFLICT DO NOTHING); the count
+ * is checked on finalize.
+ */
+export async function appendInventoryItems(
+  pool,
+  {
+    importId,
+    items,
+  },
+) {
+  const records = validateInventoryItems(items)
+  const client =
+    await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    const importResult =
+      await client.query(
+        `
+          SELECT
+            id,
+            dataset_type,
+            status
+          FROM data_imports
+          WHERE id = $1
+          FOR UPDATE
+        `,
+        [importId],
+      )
+
+    const importRecord =
+      importResult.rows[0]
+
+    if (!importRecord) {
+      throw inventoryHttpError(404, 'Inventory import not found')
+    }
+
+    if (importRecord.dataset_type !== 'inventory') {
+      throw inventoryHttpError(409, 'Import does not belong to inventory')
+    }
+
+    if (importRecord.status !== 'processing') {
+      throw inventoryHttpError(409, 'Inventory import is not processing')
+    }
+
+    let insertedItems = 0
+
+    if (records.length > 0) {
+      const column = (field) => records.map((record) => record[field])
+      const insertResult =
+        await client.query(
+          `
+            INSERT INTO inventory_items (
+              import_id,
+              item_code,
+              brand,
+              catalog_status,
+              last_sale_date,
+              on_hand,
+              committed,
+              available,
+              in_transit,
+              on_order,
+              positions
+            )
+            SELECT
+              $1,
+              item.item_code,
+              item.brand,
+              item.catalog_status,
+              item.last_sale_date,
+              item.on_hand,
+              item.committed,
+              item.available,
+              item.in_transit,
+              item.on_order,
+              item.positions
+            FROM UNNEST(
+              $2::TEXT[],
+              $3::TEXT[],
+              $4::TEXT[],
+              $5::DATE[],
+              $6::NUMERIC[],
+              $7::NUMERIC[],
+              $8::NUMERIC[],
+              $9::NUMERIC[],
+              $10::NUMERIC[],
+              $11::INTEGER[]
+            ) AS item (
+              item_code,
+              brand,
+              catalog_status,
+              last_sale_date,
+              on_hand,
+              committed,
+              available,
+              in_transit,
+              on_order,
+              positions
+            )
+            ON CONFLICT (import_id, item_code) DO NOTHING
+          `,
+          [
+            importId,
+            column('itemCode'),
+            column('brand'),
+            column('catalogStatus'),
+            column('lastSaleDate'),
+            column('onHand'),
+            column('committed'),
+            column('available'),
+            column('inTransit'),
+            column('onOrder'),
+            column('positions'),
+          ],
+        )
+
+      insertedItems = insertResult.rowCount ?? 0
+    }
+
+    await client.query('COMMIT')
+
+    return {
+      receivedItems: records.length,
+      insertedItems,
+    }
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK')
+    } catch (rollbackError) {
+      console.error(
+        'Inventory items rollback failed:',
+        rollbackError,
+      )
+    }
+
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+/**
+ * Finalize check: the item records of the import must be exactly
+ * expectedItemCount and their totals must match the positions of the same
+ * import. Throws a 422 error with a clear message otherwise.
+ */
+export async function verifyInventoryItems(
+  client,
+  importId,
+  expectedItemCount,
+) {
+  const result = await client.query(
+    `
+      SELECT
+        items.item_count,
+        items.positions AS item_positions,
+        items.on_hand AS item_on_hand,
+        items.on_order AS item_on_order,
+        snapshots.positions AS snapshot_positions,
+        snapshots.on_hand AS snapshot_on_hand,
+        snapshots.on_order AS snapshot_on_order
+      FROM (
+        SELECT
+          COUNT(*)::INTEGER AS item_count,
+          COALESCE(SUM(positions), 0)::BIGINT AS positions,
+          COALESCE(SUM(on_hand), 0) AS on_hand,
+          COALESCE(SUM(on_order), 0) AS on_order
+        FROM inventory_items
+        WHERE import_id = $1
+      ) AS items
+      CROSS JOIN (
+        SELECT
+          COUNT(*)::BIGINT AS positions,
+          COALESCE(SUM(on_hand), 0) AS on_hand,
+          COALESCE(SUM(COALESCE(on_order, 0)), 0) AS on_order
+        FROM inventory_snapshots
+        WHERE import_id = $1
+      ) AS snapshots
+    `,
+    [importId],
+  )
+  const row = result.rows[0] ?? {}
+  const itemCount = Number(row.item_count ?? 0)
+  const problems = []
+
+  if (itemCount !== expectedItemCount) {
+    problems.push(
+      `artículos esperados ${expectedItemCount}, recibidos ${itemCount}`,
+    )
+  }
+
+  if (Number(row.item_positions ?? 0) !== Number(row.snapshot_positions ?? 0)) {
+    problems.push(
+      `posiciones según artículos ${row.item_positions}, posiciones importadas ${row.snapshot_positions}`,
+    )
+  }
+
+  for (const [label, itemValue, snapshotValue] of [
+    ['En Mano', row.item_on_hand, row.snapshot_on_hand],
+    ['en orden', row.item_on_order, row.snapshot_on_order],
+  ]) {
+    if (
+      Math.abs(Number(itemValue ?? 0) - Number(snapshotValue ?? 0)) >
+      INVENTORY_ITEMS_TOTAL_TOLERANCE
+    ) {
+      problems.push(
+        `${label}: artículos ${itemValue}, posiciones ${snapshotValue}`,
+      )
+    }
+  }
+
+  if (problems.length > 0) {
+    throw inventoryHttpError(
+      422,
+      `La carga de inventario no cuadra y no se aplicó (se conserva la carga anterior): ${problems.join('; ')}`,
+    )
+  }
+
+  return itemCount
+}
+
 export async function cancelInventoryChunkImport(
   pool,
   {
@@ -335,6 +659,16 @@ export async function cancelInventoryChunkImport(
         [importId],
       )
 
+    const itemsResult =
+      await client.query(
+        `
+          DELETE
+          FROM inventory_items
+          WHERE import_id = $1
+        `,
+        [importId],
+      )
+
     const cancelled =
       await cancelDataImport(
         client,
@@ -356,6 +690,8 @@ export async function cancelInventoryChunkImport(
         stagingResult.rowCount ?? 0,
       deletedChunks:
         chunksResult.rowCount ?? 0,
+      deletedItems:
+        itemsResult.rowCount ?? 0,
     }
   } catch (error) {
     try {
@@ -378,6 +714,8 @@ export async function finalizeInventoryChunkImport(
   {
     importId,
     ignoredRows = 0,
+    // MD-002-HOTFIX1: null for clients that do not send item records.
+    expectedItemCount = null,
   },
 ) {
   const client =
@@ -578,6 +916,27 @@ export async function finalizeInventoryChunkImport(
         insertResult.rowCount ?? 0
     }
 
+    // MD-002-HOTFIX1: the item records must match the positions of this
+    // import; a mismatch rolls everything back (the previous import stays).
+    const itemCount =
+      expectedItemCount === null
+        ? null
+        : await verifyInventoryItems(
+          client,
+          importId,
+          expectedItemCount,
+        )
+
+    // Only the item records of the latest import are kept.
+    await client.query(
+      `
+        DELETE
+        FROM inventory_items
+        WHERE import_id <> $1
+      `,
+      [importId],
+    )
+
     await client.query(
       `
         UPDATE data_imports
@@ -590,7 +949,9 @@ export async function finalizeInventoryChunkImport(
               'snapshotDates',
               $4::date[],
               'containsNullSnapshot',
-              $5::boolean
+              $5::boolean,
+              'itemCount',
+              $6::integer
             )
         WHERE id = $1
       `,
@@ -604,6 +965,7 @@ export async function finalizeInventoryChunkImport(
         staging
           ?.contains_null_snapshot ===
           true,
+        itemCount,
       ],
     )
 
@@ -645,6 +1007,7 @@ export async function finalizeInventoryChunkImport(
       snapshotDates,
       insertedRows,
       replacedRows,
+      itemCount,
     }
   } catch (error) {
     try {
@@ -668,6 +1031,23 @@ export async function finalizeInventoryChunkImport(
       console.error(
         'Inventory finalize audit update failed:',
         auditError,
+      )
+    }
+
+    // The item records of a failed import are never read; drop them.
+    try {
+      await client.query(
+        `
+          DELETE
+          FROM inventory_items
+          WHERE import_id = $1
+        `,
+        [importId],
+      )
+    } catch (cleanupError) {
+      console.error(
+        'Inventory finalize item cleanup failed:',
+        cleanupError,
       )
     }
 

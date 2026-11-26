@@ -43,8 +43,41 @@ export const MY_DAY_AVAILABILITY_RULES = freezeDeep({
       'PO pendientes (Pending Receipt o Pending Bill, con cualquier estatus de embarque), solo líneas de producto. Montos por moneda, sin conversión.',
     arrivalStatus:
       'scheduled: PO pendiente con fecha estimada >= corte; overdue: solo PO con fecha estimada < corte; no-date: PO pendiente sin fecha estimada; no-po-data: en orden > 0 sin PO pendiente cargada; no-po: en orden = 0 (aunque haya PO pendiente, que se cuenta en dataQuality.purchaseOrdersWithoutOnOrder).',
+    inventoryCoverage:
+      'complete: true cuando el último inventario tiene un registro por artículo (inventory_items), incluidos los artículos sin ninguna cantidad, que NetSuite exporta con celdas vacías. Una carga anterior a MD-002-HOTFIX1 solo tiene posiciones: complete: false, y faltan los artículos sin ninguna cantidad (agotados sin PO); hay que recargar el inventario.',
   },
 })
+
+/**
+ * Source of the items of the availability blocks (MD-002-HOTFIX1): the item
+ * records when the import has them; otherwise the positions, flagged as
+ * incomplete.
+ */
+export function resolveInventoryCoverage(summary) {
+  if (summary.itemRecords > 0) {
+    return {
+      coverage: {
+        complete: true,
+        source: 'items',
+        articles: summary.itemRecords,
+        articlesWithPositions: summary.itemRecordsWithPositions,
+        reason: null,
+      },
+      hasCatalogStatus: summary.itemRecordsWithStatus > 0,
+    }
+  }
+
+  return {
+    coverage: {
+      complete: false,
+      source: 'positions',
+      articles: null,
+      articlesWithPositions: summary.positionArticles,
+      reason: 'inventory-loaded-before-item-records',
+    },
+    hasCatalogStatus: summary.positionsHaveStatus,
+  }
+}
 
 const NO_CURRENCY = 'SIN_MONEDA'
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -347,6 +380,9 @@ export function buildStockAlerts({
       catalogStatus: item.catalogStatus,
       onHand: item.onHand,
       pendingReceiptUnits: item.pendingReceiptUnits,
+      // Branch positions of the article; 0 = no quantity in any branch.
+      // null when read from positions (MD-002 loads).
+      positions: item.positions ?? null,
       netUnits: sales.netUnits,
       avgMonthlyUnits: sales.avgMonthlyUnits,
       lastSaleDate: item.lastSaleDate ?? null,

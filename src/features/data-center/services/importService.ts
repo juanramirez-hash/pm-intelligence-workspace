@@ -30,7 +30,9 @@ import type {
 import type {
   NormalizedInventoryRow,
   InventoryDatasetSummary,
+  InventoryItemRecord,
 } from '../importers/inventory/inventoryTypes'
+import type { InventoryValidationResult } from '../importers/inventory/inventoryValidator'
 
 import type {
   NormalizedPurchaseOrderRow,
@@ -72,6 +74,7 @@ import { targetImportPlugin } from '../importers/targets/targetPlugin'
 import { productMasterImportPlugin } from '../importers/products/productMasterPlugin'
 import { customerMasterImportPlugin } from '../importers/customers/customerMasterPlugin'
 import { inventoryImportPlugin } from '../importers/inventory/inventoryPlugin'
+import { buildInventoryItems } from '../importers/inventory/inventoryNormalizer'
 
 import {
   purchaseOrderImportPlugin,
@@ -117,7 +120,11 @@ export type InventoryImportResult = ImportEngineResult<
   InventoryDatasetSummary,
   NormalizedInventoryRow,
   InventoryBusinessModel
-> & { reportType: 'inventory' }
+> & {
+  reportType: 'inventory'
+  // MD-002-HOTFIX1: every article of the file, with or without positions.
+  inventoryItems: InventoryItemRecord[]
+}
 
 export type PurchaseOrderImportResult =
   ImportEngineResult<
@@ -289,12 +296,24 @@ export function runDataCenterImport(
         headers,
       ) as CustomerMasterImportResult
 
-    case 'inventory':
-      return runImportEngine(
+    case 'inventory': {
+      const result = runImportEngine(
         inventoryImportPlugin,
         rows,
         headers,
-      ) as InventoryImportResult
+      )
+
+      return {
+        ...result,
+        inventoryItems: result.valid
+          ? buildInventoryItems(
+            rows,
+            result.validation as InventoryValidationResult,
+            result.normalizedRows,
+          )
+          : [],
+      } as InventoryImportResult
+    }
 
     case 'purchases':
       return runImportEngine(

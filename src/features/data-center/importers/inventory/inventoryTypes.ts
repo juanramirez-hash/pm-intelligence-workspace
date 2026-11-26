@@ -26,6 +26,25 @@ export interface NormalizedInventoryRow {
   lastSaleDate?: string | null
 }
 
+/**
+ * MD-002-HOTFIX1: one record per article of the file, including the
+ * articles without any quantity (NetSuite leaves those cells empty, so they
+ * produce no position). Totals of every branch, empty cells as 0. No costs.
+ */
+export interface InventoryItemRecord {
+  itemCode: string
+  brand: string | null
+  catalogStatus: string | null
+  lastSaleDate: string | null
+  onHand: number
+  committed: number
+  available: number
+  inTransit: number
+  onOrder: number
+  // Positions this article produced in the normalized rows (0 = none).
+  positions: number
+}
+
 export interface InventoryDatasetSummary {
   periodStart: string | null
   periodEnd: string | null

@@ -14,6 +14,7 @@ import type {
 } from '../importers/products/productMasterTypes'
 import type {
   InventoryDatasetSummary,
+  InventoryItemRecord,
   NormalizedInventoryRow,
 } from '../importers/inventory/inventoryTypes'
 import type {
@@ -72,6 +73,8 @@ export interface PersistedInventoryDataset {
   normalizedRows: NormalizedInventoryRow[]
   lastImportedFile: string
   lastImportedAt: string
+  // MD-002-HOTFIX1: uploaded on save only; not read back.
+  items?: InventoryItemRecord[]
 }
 
 export interface PersistedPurchaseOrderDataset {

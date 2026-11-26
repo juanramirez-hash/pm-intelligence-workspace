@@ -9,7 +9,8 @@ import {
 
 import {
   groupLinesByItem,
-  inventoryHasCatalogStatus,
+  loadInventoryCoverage,
+  loadInventoryItemRecords,
   loadInventoryItems,
   loadItemSales,
   loadLatestImports,
@@ -46,12 +47,61 @@ describe('MD-002 availability service', () => {
     expect(imports.has('purchases')).toBe(false)
   })
 
-  it('checks whether the import carries any catalog status', async () => {
-    const { pool, sql, params } = fakePool([{ has_status: false }])
+  it('summarizes the item records and the positions of the import (MD-002-HOTFIX1)', async () => {
+    const { pool, sql, params } = fakePool([{
+      item_records: '4682', item_records_with_positions: '2098', item_records_with_status: '4682',
+      position_articles: '2098', positions_have_status: true,
+    }])
 
-    expect(await inventoryHasCatalogStatus(pool, 41)).toBe(false)
+    expect(await loadInventoryCoverage(pool, 41)).toEqual({
+      itemRecords: 4682,
+      itemRecordsWithPositions: 2098,
+      itemRecordsWithStatus: 4682,
+      positionArticles: 2098,
+      positionsHaveStatus: true,
+    })
+    expect(sql()).toContain('FROM inventory_items')
+    expect(sql()).toContain('positions > 0')
     expect(sql()).toContain('catalog_status IS NOT NULL')
+    expect(sql()).toContain(`COUNT(DISTINCT ${ITEM_KEY}) FROM inventory_snapshots`)
     expect(params()).toEqual([41])
+
+    const empty = fakePool([])
+
+    expect(await loadInventoryCoverage(empty.pool, 41)).toMatchObject({
+      itemRecords: 0, positionsHaveStatus: false,
+    })
+  })
+
+  it('reads every article of the item records, without costs (MD-002-HOTFIX1)', async () => {
+    const { pool, sql, params } = fakePool([
+      {
+        item_key: 'AH041UNI01', item_code: 'AH041UNI01', brand: '- Unassigned -',
+        brand_key: 'UNASSIGNED', catalog_status: 'DE LINEA', last_sale_date: null,
+        on_hand: '0.0000', on_order: '0.0000', positions: '0',
+      },
+    ])
+
+    const items = await loadInventoryItemRecords(pool, 41, ['UNASSIGNED'])
+
+    expect(sql()).toContain('FROM inventory_items')
+    expect(sql()).toContain("UPPER(BTRIM(REGEXP_REPLACE(item_code, '\\s+', ' ', 'g')))")
+    expect(sql()).toContain('WHERE import_id = $1')
+    expect(sql()).toContain('brand_key(items.brand) = ANY($2::TEXT[])')
+    expect(sql()).not.toMatch(/unit_cost|inventory_value/)
+    expect(params()).toEqual([41, ['UNASSIGNED']])
+    expect(items).toEqual([{
+      itemKey: 'AH041UNI01', itemCode: 'AH041UNI01', brand: '- Unassigned -',
+      brandKey: 'UNASSIGNED', catalogStatus: 'DE LINEA', lastSaleDate: null,
+      onHand: 0, pendingReceiptUnits: 0, positions: 0,
+    }])
+
+    const all = fakePool()
+
+    await loadInventoryItemRecords(all.pool, 41, null)
+
+    expect(all.sql()).not.toContain('brand_key(items.brand) = ANY')
+    expect(all.params()).toEqual([41])
   })
 
   it('sums stock and on order of every branch of the latest import, by item code', async () => {

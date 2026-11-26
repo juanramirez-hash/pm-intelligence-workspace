@@ -1,3 +1,11 @@
+# 0.57.0-MD-002-HOTFIX1
+
+- Fixes the out-of-stock list of "Mi día": the raw NetSuite inventory export leaves zero cells empty even with "Show Zeros", so articles without any quantity produced no position and never reached the database (2,584 of 4,682 articles in the 26 Nov 2026 export, including 321 of the 649 `DE LINEA` items out of stock).
+- Adds one record per article of the latest inventory import (`inventory_items`, migration 039), built in the frontend from the same normalized positions plus the articles without any quantity, uploaded in chunks to `POST /api/data/inventory/imports/:id/items`. No costs are stored.
+- On finalize the server requires exactly `expectedItemCount` records and the same On Hand, On Order and position totals as the positions of the import (tolerance 0.0001); otherwise it answers 422 with the details, rolls the import back and keeps the previous one. Only the latest import's records are kept.
+- `GET /api/my-day/stock-alerts` and `/stock-alerts/:kind` read out-of-stock and low-stock items from those records and return `inventoryCoverage`; an import loaded before this fix falls back to the positions with `complete: false` (`inventory-loaded-before-item-records`). Each row has `positions` (0 = no quantity in any branch).
+- Positions, `/api/data/inventory`, its ETag, the Inventory Workspace and the V1 regression baselines are unchanged. Migration 039 includes rollback, grants for `pm_intelligence` and the startup schema requirement; it does not bump `data_cache_version`.
+
 # 0.57.0-MD-002
 
 - Adds `GET /api/my-day/stock-alerts` and `GET /api/my-day/stock-alerts/:kind` (`out-of-stock`, `low-stock`): `DE LINEA` items of the user's brands with zero total stock, and those with stock and 30 days of coverage or less over the last 3 months of sales, from the latest inventory import. Each row has the pending receipt from NetSuite "Cantidad Actual en Orden", the average monthly sales, the last sale date and the next purchase order arrival with its status (`scheduled`, `overdue`, `no-date`, `no-po-data`, `no-po`).
