@@ -166,7 +166,7 @@ function normalizeText(
   return normalizedValue || null
 }
 
-function normalizeBrandIdentifier(
+export function normalizeBrandIdentifier(
   value: string | null,
 ): string | null {
   const normalized =

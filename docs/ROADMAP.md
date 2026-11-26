@@ -442,6 +442,23 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Migración 039: tabla `inventory_items` (llave `import_id`, `item_code`), creada como `postgres` con `GRANT SELECT, INSERT, DELETE` a `pm_intelligence`; rollback sin `CASCADE`; requisito en `REQUIRED_SCHEMA`; no sube `data_cache_version`. La ruta `items` usa el límite de cuerpo de importación (10 MB) después de la autenticación y el permiso de importación.
 - Despliegue: backend antes que frontend (el frontend nuevo llama a la ruta `items`). Hasta recargar el inventario, "Mi día" marca la cobertura como incompleta.
 
+## Mi día — MD-003
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| MD-003 | Página "Mi día" (`/my-day`): indicadores, detalle de marcas, acciones prioritarias, clientes por recuperar, por agotarse, agotados y PO's por llegar, solo con `/api/my-day/*` y `/api/actions`; carga de datasets movida a `DataHydrationGate` | Implementado · pendiente de validación funcional y despliegue |
+
+- Ruta `/my-day`, workspace `my-day` para todos los roles (incluido engineering) y entrada "Mi día" en el menú arriba de Executive. `/` sigue siendo Executive; el cambio de página de inicio queda para NAV-001.
+- La página solo llama a `/api/auth/me`, `/api/my-day/*` y `/api/actions` con `authenticatedFetch` (una sesión expirada regresa al login). No descarga ningún `/api/data/*`. Cada bloque carga, falla y se reintenta por separado.
+- `DataHydrationGate`: `main.tsx` ya no espera `hydratePersistedData()` antes de dibujar. Todas las rutas existentes quedan dentro del gate, que carga los datasets una vez por sesión y muestra "Cargando datos…" hasta tenerlos; `/my-day` queda fuera. La pantalla de login ya no descarga datasets. Eliminar la descarga global sigue siendo C-001.
+- Encabezado: "Datos al corte", "Mis marcas / Todas" solo con alcance `all` y selector de periodo (mes de corte y los 11 anteriores). El periodo cambia indicadores, marcas y clientes por recuperar; inventario, por agotarse, agotados y PO's siempre van al corte, y cada bloque lo indica.
+- Indicadores: venta (con cuota), avance contra el esperado (días hábiles transcurridos / totales), cierre por ritmo (`projectedRevenueWithTarget` con `projectedAttainment`, y el de todas las marcas como texto secundario) y brecha diaria. Nota: "Cuota, avance, ritmo y brecha consideran solo marcas con meta (N de M)". Colores del cierre por ritmo en un solo lugar (`PACE_THRESHOLDS`): verde ≥ 100 %, ámbar 90 a 99.9 %, rojo < 90 %.
+- Detalle de marcas ordenado por venta, con enlace a la ficha de marca (mismo identificador que el modelo de negocio, prueba de paridad), estado y tendencia en español; `null` se muestra como "—" y la venta puede ser negativa.
+- Acciones prioritarias: `status=open,in_progress,blocked&limit=500`, filtradas por las marcas del usuario con "Mis marcas" y ordenadas en el cliente por prioridad y vencimiento.
+- Agotados con su total y "Ver todos" paginado; por agotarse con cobertura; próxima llegada con `arrivalStatus` en español (Programada, Atrasada, Sin fecha, Sin PO cargada, Sin PO). PO's por llegar con montos por moneda sin convertir y "Sin acceso a costo" en lugar de $0. Avisos de fuente atrasada y de inventario cargado antes de MD-002-HOTFIX1.
+- Alcance `pricing` o `legacy` (o un 403 del servidor): "Mi día no está disponible para tu tipo de acceso".
+- Sin cambios de backend ni migraciones.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

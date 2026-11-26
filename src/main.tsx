@@ -6,16 +6,11 @@ import {
 import App from './app/App'
 import './index.css'
 
-import {
-  useDataCenterStore,
-} from './features/data-center/store/dataCenterStore'
-
+// MD-003: the datasets are no longer loaded before rendering;
+// DataHydrationGate (src/app/router.tsx) loads them for the routes that
+// need them.
 async function bootstrapApplication():
   Promise<void> {
-  await useDataCenterStore
-    .getState()
-    .hydratePersistedData()
-
   const rootElement =
     document.getElementById(
       'root',

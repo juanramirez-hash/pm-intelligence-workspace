@@ -54,7 +54,7 @@ describe('workspace access', () => {
       getAccessibleWorkspaces(
         user,
       ),
-    ).toHaveLength(13)
+    ).toHaveLength(14)
 
     expect(
       canAccessWorkspace(
@@ -165,6 +165,7 @@ describe('workspace access', () => {
         user,
       ),
     ).toEqual([
+      'my-day',
       'sales',
       'brands',
       'customers',
@@ -229,5 +230,25 @@ describe('workspace access', () => {
         'data-center',
       ),
     ).toBe(false)
+  })
+
+  it('opens "Mi día" to every role (MD-003)', () => {
+    for (
+      const role of [
+        'admin',
+        'manager',
+        'pm',
+        'engineering',
+        'analyst',
+        'viewer',
+      ] as const
+    ) {
+      expect(
+        canAccessWorkspace(
+          buildUser(role),
+          'my-day',
+        ),
+      ).toBe(true)
+    }
   })
 })

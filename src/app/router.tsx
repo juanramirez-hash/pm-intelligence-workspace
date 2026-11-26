@@ -1,5 +1,6 @@
 import {
   createBrowserRouter,
+  type RouteObject,
 } from 'react-router-dom'
 
 import {
@@ -9,6 +10,22 @@ import {
 import {
   AppShell,
 } from '../layouts/AppShell'
+
+import {
+  DataHydrationGate,
+} from './DataHydrationGate'
+
+const loadMyDay = async () => {
+  const module =
+    await import(
+      '../features/my-day/pages/MyDayPage'
+    )
+
+  return {
+    Component:
+      module.MyDayPage,
+  }
+}
 
 const loadExecutiveWorkspace = async () => {
   const module =
@@ -214,8 +231,10 @@ const loadSettings = async () => {
   }
 }
 
-export const router =
-  createBrowserRouter([
+// Routes that need the /api/data/* datasets; withDataHydrationGate wraps
+// them in DataHydrationGate.
+const workspaceRoutes: RouteObject[] =
+  [
     {
       path: '/',
       element: <AppShell />,
@@ -441,4 +460,46 @@ export const router =
         },
       ],
     },
-  ])
+  ]
+
+// MD-003: "Mi día" reads only /api/my-day/* and /api/actions, so it stays
+// outside DataHydrationGate and never downloads the datasets.
+const myDayRoute: RouteObject = {
+  element: (
+    <WorkspaceRouteGuard
+      workspaceId="my-day"
+    />
+  ),
+  children: [
+    {
+      path: 'my-day',
+      lazy:
+        loadMyDay,
+    },
+  ],
+}
+
+/**
+ * Keeps every existing workspace route inside DataHydrationGate (they need
+ * the datasets, as before) and adds "Mi día" outside of it.
+ */
+export function withDataHydrationGate(
+  routes: RouteObject[],
+): RouteObject[] {
+  return routes.map((root) => ({
+    ...root,
+    children: [
+      myDayRoute,
+      {
+        element: <DataHydrationGate />,
+        children: root.children ?? [],
+      },
+    ],
+  }) as RouteObject)
+}
+
+export const appRoutes =
+  withDataHydrationGate(workspaceRoutes)
+
+export const router =
+  createBrowserRouter(appRoutes)

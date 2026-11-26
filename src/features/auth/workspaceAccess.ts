@@ -4,6 +4,7 @@ import type {
 } from './authTypes'
 
 export type WorkspaceAccessId =
+  | 'my-day'
   | 'executive'
   | 'sales'
   | 'brands'
@@ -24,6 +25,7 @@ const ROLE_WORKSPACE_ACCESS:
     readonly WorkspaceAccessId[]
   > = {
     admin: [
+      'my-day',
       'executive',
       'sales',
       'brands',
@@ -40,6 +42,7 @@ const ROLE_WORKSPACE_ACCESS:
     ],
 
     manager: [
+      'my-day',
       'executive',
       'sales',
       'brands',
@@ -55,6 +58,7 @@ const ROLE_WORKSPACE_ACCESS:
     ],
 
     pm: [
+      'my-day',
       'executive',
       'sales',
       'brands',
@@ -68,6 +72,7 @@ const ROLE_WORKSPACE_ACCESS:
     ],
 
     engineering: [
+      'my-day',
       'sales',
       'brands',
       'customers',
@@ -77,6 +82,7 @@ const ROLE_WORKSPACE_ACCESS:
     ],
 
     analyst: [
+      'my-day',
       'executive',
       'sales',
       'brands',
@@ -90,6 +96,7 @@ const ROLE_WORKSPACE_ACCESS:
     ],
 
     viewer: [
+      'my-day',
       'executive',
       'sales',
       'brands',

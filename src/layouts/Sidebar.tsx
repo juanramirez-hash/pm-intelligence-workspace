@@ -19,6 +19,7 @@ import {
   Settings,
   ShieldCheck,
   ShoppingCart,
+  Sun,
   Users,
   X,
 } from 'lucide-react'
@@ -42,6 +43,12 @@ const workspaceNavigation: {
   icon: typeof Gauge
   workspaceId: WorkspaceAccessId
 }[] = [
+  {
+    label: 'Mi día',
+    path: '/my-day',
+    icon: Sun,
+    workspaceId: 'my-day',
+  },
   {
     label: 'Executive Workspace',
     path: '/',

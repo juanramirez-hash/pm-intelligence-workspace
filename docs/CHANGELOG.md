@@ -1,3 +1,10 @@
+# 0.57.0-MD-003
+
+- Adds the "Mi día" page at `/my-day` (menu entry above Executive, available to every role): data cutoff, "Mis marcas / Todas" for scope `all`, period selector (cutoff month and the 11 previous ones), four portfolio indicators, the executive brand table with links to the brand page, the 5 priority actions, customers to recover, low-stock and out-of-stock items with their next arrival, and purchase orders arriving in 14 days.
+- Reads only `/api/my-day/*` and `/api/actions` through `authenticatedFetch`; it never downloads the `/api/data/*` datasets. Each block loads, fails and retries on its own; source dates, stale sources and incomplete inventory are shown in each block; hidden costs read "Sin acceso a costo", never $0.
+- Moves the dataset download out of `main.tsx` into `DataHydrationGate`, which wraps every existing route: those workspaces render after the datasets load, as before, while `/my-day` and the login screen no longer download them.
+- Pace colors (green ≥ 100 %, amber 90 to 99.9 %, red < 90 %) live in one constant. No backend changes or migrations.
+
 # 0.57.0-MD-002-HOTFIX1
 
 - Fixes the out-of-stock list of "Mi día": the raw NetSuite inventory export leaves zero cells empty even with "Show Zeros", so articles without any quantity produced no position and never reached the database (2,584 of 4,682 articles in the 26 Nov 2026 export, including 321 of the 649 `DE LINEA` items out of stock).
