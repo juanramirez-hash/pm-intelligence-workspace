@@ -9,7 +9,6 @@
 import {
   Boxes,
   Building2,
-  ChartNoAxesCombined,
   Crosshair,
   Database,
   DollarSign,
@@ -92,7 +91,6 @@ export const NAVIGATION: readonly NavigationSection[] = [
     id: 'analysis',
     label: 'Análisis',
     items: [
-      { id: 'sales', label: 'Ventas', path: '/sales', icon: ChartNoAxesCombined, workspaceId: 'sales', temporary: true },
       { id: 'forecast', label: 'Pronóstico', path: '/forecast', icon: Crosshair, workspaceId: 'forecast', temporary: true },
       { id: 'inventory', label: 'Inventario', path: '/inventory', icon: PackageSearch, workspaceId: 'inventory', temporary: true },
     ],

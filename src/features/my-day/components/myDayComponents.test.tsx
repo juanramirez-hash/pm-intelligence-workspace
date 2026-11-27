@@ -481,7 +481,7 @@ describe('MD-003 page', () => {
 
     expect(content).toContain('Puedes abrir:')
 
-    for (const path of ['/brands', '/customers', '/products', '/actions', '/sales', '/inventory']) {
+    for (const path of ['/brands', '/customers', '/products', '/actions', '/inventory']) {
       expect(html).toContain(`href="${path}"`)
     }
 

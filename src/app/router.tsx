@@ -16,8 +16,10 @@ import {
 } from './DataHydrationGate'
 
 import {
+  BrandIndexRedirect,
   LegacyAttentionRedirect,
   MyDayRedirect,
+  SalesRedirect,
 } from './legacyRedirects'
 
 const loadMyDay = async () => {
@@ -56,39 +58,79 @@ const loadExecutiveAttentionQueue = async () => {
   }
 }
 
-const loadSalesWorkspace = async () => {
+// MB-001: the brand page. Directory and the Ventas, Clientes and Productos
+// tabs read only /api/brands/* and stay outside DataHydrationGate.
+const loadBrandsDirectory = async () => {
   const module =
     await import(
-      '../features/sales-workspace/pages/SalesWorkspacePage'
+      '../features/brands/pages/BrandsDirectoryPage'
     )
 
   return {
     Component:
-      module.SalesWorkspacePage,
+      module.BrandsDirectoryPage,
   }
 }
 
-const loadBrandWorkspace = async () => {
+const loadBrandTabsLayout = async () => {
   const module =
     await import(
-      '../features/brand-workspace/pages/BrandWorkspacePage'
+      '../features/brands/pages/BrandPages'
     )
 
   return {
     Component:
-      module.BrandWorkspacePage,
+      module.BrandTabsLayout,
   }
 }
 
-const loadBrandIntelligence = async () => {
+const loadBrandSales = async () => {
   const module =
     await import(
-      '../features/brand-intelligence/pages/BrandIntelligencePage'
+      '../features/brands/pages/BrandPages'
     )
 
   return {
     Component:
-      module.BrandIntelligencePage,
+      module.BrandSalesPage,
+  }
+}
+
+const loadBrandCustomers = async () => {
+  const module =
+    await import(
+      '../features/brands/pages/BrandPages'
+    )
+
+  return {
+    Component:
+      module.BrandCustomersPage,
+  }
+}
+
+const loadBrandProducts = async () => {
+  const module =
+    await import(
+      '../features/brands/pages/BrandPages'
+    )
+
+  return {
+    Component:
+      module.BrandProductsPage,
+  }
+}
+
+// MB-001: Inteligencia keeps the browser calculation (Decision Core), so its
+// route stays inside DataHydrationGate.
+const loadBrandIntelligenceTab = async () => {
+  const module =
+    await import(
+      '../features/brands/pages/BrandIntelligenceRoute'
+    )
+
+  return {
+    Component:
+      module.BrandIntelligenceRoute,
   }
 }
 
@@ -269,35 +311,15 @@ const workspaceRoutes: RouteObject[] =
         {
           element: (
             <WorkspaceRouteGuard
-              workspaceId="sales"
-            />
-          ),
-          children: [
-            {
-              path: 'sales',
-              lazy:
-                loadSalesWorkspace,
-            },
-          ],
-        },
-
-        {
-          element: (
-            <WorkspaceRouteGuard
               workspaceId="brands"
             />
           ),
           children: [
             {
-              path: 'brands',
-              lazy:
-                loadBrandWorkspace,
-            },
-            {
               path:
-                'brands/:brandId',
+                'brands/:brandId/inteligencia',
               lazy:
-                loadBrandIntelligence,
+                loadBrandIntelligenceTab,
             },
           ],
         },
@@ -486,6 +508,49 @@ const myDayRoute: RouteObject = {
   ],
 }
 
+// MB-001: /brands and the Ventas, Clientes and Productos tabs read only
+// /api/brands/*: outside DataHydrationGate, so no dataset is downloaded.
+const brandsRoute: RouteObject = {
+  element: (
+    <WorkspaceRouteGuard
+      workspaceId="brands"
+    />
+  ),
+  children: [
+    {
+      path: 'brands',
+      lazy:
+        loadBrandsDirectory,
+    },
+    {
+      path: 'brands/:brandId',
+      lazy:
+        loadBrandTabsLayout,
+      children: [
+        {
+          index: true,
+          element: <BrandIndexRedirect />,
+        },
+        {
+          path: 'ventas',
+          lazy:
+            loadBrandSales,
+        },
+        {
+          path: 'clientes',
+          lazy:
+            loadBrandCustomers,
+        },
+        {
+          path: 'productos',
+          lazy:
+            loadBrandProducts,
+        },
+      ],
+    },
+  ],
+}
+
 // NAV-001: old addresses keep working (bookmarks). Outside the gate: a
 // redirect never downloads the datasets.
 const legacyRedirects: RouteObject[] = [
@@ -496,6 +561,11 @@ const legacyRedirects: RouteObject[] = [
   {
     path: 'attention/:domain',
     element: <LegacyAttentionRedirect />,
+  },
+  {
+    // MB-001: the Ventas workspace is replaced by the brand page.
+    path: 'sales',
+    element: <SalesRedirect />,
   },
 ]
 
@@ -510,6 +580,7 @@ export function withDataHydrationGate(
     ...root,
     children: [
       myDayRoute,
+      brandsRoute,
       ...legacyRedirects,
       {
         element: <DataHydrationGate />,

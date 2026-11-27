@@ -56,7 +56,7 @@ describe('NAV-001 menu by role', () => {
     expect(menu('admin')).toEqual({
       Inicio: ['Mi día'],
       'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
-      'Análisis': ['Ventas', 'Pronóstico', 'Inventario'],
+      'Análisis': ['Pronóstico', 'Inventario'],
       Gerencia: ['Panorama ejecutivo', 'Pricing Lab', 'Compras'],
       'Administración': ['Centro de datos', 'Calidad de producto', 'Configuración'],
     })
@@ -66,7 +66,7 @@ describe('NAV-001 menu by role', () => {
     expect(menu('manager')).toEqual({
       Inicio: ['Mi día'],
       'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
-      'Análisis': ['Ventas', 'Pronóstico', 'Inventario'],
+      'Análisis': ['Pronóstico', 'Inventario'],
       Gerencia: ['Panorama ejecutivo', 'Pricing Lab', 'Compras'],
       'Administración': ['Centro de datos', 'Calidad de producto'],
     })
@@ -76,7 +76,7 @@ describe('NAV-001 menu by role', () => {
     expect(menu('pm')).toEqual({
       Inicio: ['Mi día'],
       'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
-      'Análisis': ['Ventas', 'Pronóstico', 'Inventario'],
+      'Análisis': ['Pronóstico', 'Inventario'],
     })
 
     // Permissions unchanged in NAV-001: still reachable by URL.
@@ -89,7 +89,7 @@ describe('NAV-001 menu by role', () => {
     expect(menu('engineering')).toEqual({
       Inicio: ['Mi día'],
       'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
-      'Análisis': ['Ventas', 'Inventario'],
+      'Análisis': ['Inventario'],
     })
   })
 
@@ -98,7 +98,7 @@ describe('NAV-001 menu by role', () => {
     expect(menu('assistant')).toEqual({
       Inicio: ['Mi día'],
       'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
-      'Análisis': ['Ventas', 'Pronóstico', 'Inventario'],
+      'Análisis': ['Pronóstico', 'Inventario'],
     })
 
     // Unlike a PM, no URL access to Gerencia or Administración either.
@@ -107,7 +107,7 @@ describe('NAV-001 menu by role', () => {
     }
 
     expect(accessibleScreens(user('assistant')).map((item) => item.id)).toEqual([
-      'my-day', 'brands', 'customers', 'products', 'actions', 'sales', 'forecast', 'inventory',
+      'my-day', 'brands', 'customers', 'products', 'actions', 'forecast', 'inventory',
     ])
   })
 
@@ -125,7 +125,7 @@ describe('NAV-001 menu by role', () => {
     const items = NAVIGATION.flatMap((section) => section.items)
 
     expect(items.filter((item) => item.temporary).map((item) => item.id)).toEqual([
-      'sales', 'forecast', 'inventory',
+      'forecast', 'inventory',
     ])
     expect(items.find((item) => item.id === 'projects')).toMatchObject({ reserved: true })
     expect(accessibleScreens(user('admin')).some((item) => item.id === 'projects')).toBe(false)
@@ -133,7 +133,7 @@ describe('NAV-001 menu by role', () => {
 
   it('lists for a PM every screen it can open, Gerencia included', () => {
     expect(accessibleScreens(user('pm')).map((item) => item.id)).toEqual([
-      'my-day', 'brands', 'customers', 'products', 'actions', 'sales', 'forecast',
+      'my-day', 'brands', 'customers', 'products', 'actions', 'forecast',
       'inventory', 'executive', 'pricing', 'purchasing',
     ])
   })
@@ -144,12 +144,12 @@ describe('NAV-001 screen titles', () => {
     expect([
       '/', '/executive', '/executive/attention/brands', '/brands', '/brands/UNV',
       '/customers', '/customers/C-1', '/products', '/products/P-1', '/actions',
-      '/sales', '/forecast', '/inventory', '/pricing', '/purchasing', '/data-center',
+      '/forecast', '/inventory', '/pricing', '/purchasing', '/data-center',
       '/data-quality/products', '/settings', '/desconocida',
     ].map(screenTitle)).toEqual([
       'Mi día', 'Panorama ejecutivo', 'Cola de atención', 'Marcas', 'Ficha de marca',
       'Clientes', 'Ficha de cliente', 'Productos', 'Ficha de producto', 'Acciones',
-      'Ventas', 'Pronóstico', 'Inventario', 'Pricing Lab', 'Compras', 'Centro de datos',
+      'Pronóstico', 'Inventario', 'Pricing Lab', 'Compras', 'Centro de datos',
       'Calidad de producto', 'Configuración', 'PM Intelligence',
     ])
   })

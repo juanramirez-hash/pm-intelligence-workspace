@@ -529,7 +529,8 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 
 | Entrega | Alcance | Estado |
 |---|---|---|
-| MB-001 · 2A | Ficha de marca servida desde el servidor (`/api/brands`): directorio, encabezado, Ventas, Clientes y Productos | Implementado · pendiente de aplicar la migración 042, medir de nuevo y confirmar la 2B (pantalla) |
+| MB-001 · 2A | Ficha de marca servida desde el servidor (`/api/brands`): directorio, encabezado, Ventas, Clientes y Productos | Desplegada con la migración 042 (comparativo anual 94-290 ms) |
+| MB-001 · 2B | Pantalla de la ficha de marca (`src/features/brands/`) | Implementada · pendiente de validación funcional y despliegue |
 
 - Endpoints (solo lectura, alcance = marcas efectivas, auxiliares incluidos; fuera de alcance → 403): `GET /api/brands`, `/:brand`, `/:brand/sales` (`sections=comparison,yoy,series,documents`), `/:brand/sales/export`, `/:brand/customers` (`filter=activos|por-recuperar|suben|bajan`), `/:brand/products` (`filter=vendidos|por-recuperar|agotados`).
 - La marca se identifica por `brand_key` y la URL acepta el nombre de ventas, el normalizado o la llave (`UNV (UNIVIEW)`, `unv (uniview)`, `UNVUNIVIEW`). Marca sin ventas en el periodo → 200 con ceros y faltantes; marca desconocida → 404.
@@ -538,7 +539,9 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Migración 042 (`idx_sales_facts_brand_key_sale_date` sobre `sales_facts (brand_key(brand), sale_date)`): en producción el comparativo anual tardaba 1.1-1.4 s porque `brand_key()` se evaluaba sobre ~500 mil filas. Transacción propia, sin `CONCURRENTLY` (bloquea escrituras de `sales_facts` mientras se crea: aplicar fuera de horario y fuera de una importación), con rollback, sin subir `data_cache_version` y fuera de `REQUIRED_SCHEMA`. Si una migración futura cambia `brand_key()`, debe hacer `REINDEX` en la misma migración. Sin cambios en `/api/data/*`. Reglas en `server/services/brandRules.js`, SQL en `brandsService.js`, rutas en `server/routes/brands.js`.
 - Medición: `node server/scripts/explainBrandQueries.js --cutoff=YYYY-MM-DD BELDEN <marca-top>` imprime un script de solo lectura para `psql`. La migración 042 solo se propone si alguna consulta pasa de ~500 ms.
 - Despliegue: solo backend (`git pull` y reinicio). Rollback: `git revert` local del commit.
-- Pendiente: entrega 2B (pantalla en `src/features/brands/`), MB-001B (limpieza de código viejo), MB-002 (Pronóstico), MB-003 (Inteligencia en servidor).
+- 2B (pantalla): `/brands` (directorio con búsqueda, filtro con/sin venta, orden y periodo) y `/brands/:brandId/(ventas|clientes|productos)` fuera de `DataHydrationGate`; `/brands/:brandId` redirige a `/ventas` conservando el periodo; `/brands/:brandId/inteligencia` dentro del gate con la página de inteligencia actual (Decision Core en el navegador). Ventas: 4 indicadores, acciones abiertas, mes contra mes, año contra año (Mes equivalente, Acumulado YTD, Cierre anual con "N de 12 meses" si la cuota está incompleta), serie de 24 meses, documentos paginados y "Exportar detalle" (Excel con SheetJS; avisa si viene `truncated`). Clientes (activos, por recuperar, suben, bajan) y Productos (vendidos, por recuperar, agotados, con existencia y estatus de catálogo). Sin acceso a costos: "—" y una nota, nunca $0. 403 con el mensaje del servidor y 404 "Marca no encontrada". `/sales` redirige a `/brands`; "Ventas" sale del menú; Pronóstico enlaza a `/forecast` marcado MB-002.
+- Código viejo sin uso desde la 2B (no se borró; MB-001B): `src/features/sales-workspace/`, `src/features/brand-workspace/` (directorio viejo, usado solo por su propia ruta anterior) y su store/hook. `BrandIntelligencePage` sigue en uso dentro de la pestaña Inteligencia.
+- Pendiente: MB-001B (limpieza de código viejo), MB-002 (Pronóstico), MB-003 (Inteligencia en servidor).
 
 ## Pendientes de seguridad
 

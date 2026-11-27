@@ -42,7 +42,18 @@ function collect(routes: RouteObject[], parent = '', gated = false, workspaceId:
 const routes = collect(appRoutes)
 
 // NAV-001: old addresses, redirected outside the gate.
-const REDIRECTS = ['/my-day', '/attention/:domain']
+// MB-001: /sales is replaced by the brand page.
+const REDIRECTS = ['/my-day', '/attention/:domain', '/sales']
+
+// MB-001: the brand directory and the Ventas, Clientes and Productos tabs read
+// only /api/brands/*: outside the gate. Inteligencia stays inside.
+const BRANDS_OUTSIDE_GATE = [
+  '/brands',
+  '/brands/:brandId',
+  '/brands/:brandId/ventas',
+  '/brands/:brandId/clientes',
+  '/brands/:brandId/productos',
+]
 
 describe('MD-003 / NAV-001 routes and DataHydrationGate', () => {
   it('keeps "Mi día" at / outside the gate, guarded by the my-day workspace', () => {
@@ -59,15 +70,27 @@ describe('MD-003 / NAV-001 routes and DataHydrationGate', () => {
     }
   })
 
+  it('keeps the brand directory and its Ventas, Clientes and Productos tabs outside the gate (MB-001)', () => {
+    const brands = routes.filter((route) => BRANDS_OUTSIDE_GATE.includes(route.path))
+
+    expect([...new Set(brands.map((route) => route.path))]).toEqual(BRANDS_OUTSIDE_GATE)
+    expect(brands.every((route) => !route.gated && route.workspaceId === 'brands')).toBe(true)
+    // Inteligencia keeps the browser calculation, so it needs the datasets.
+    expect(routes.find((route) => route.path === '/brands/:brandId/inteligencia')).toEqual({
+      path: '/brands/:brandId/inteligencia',
+      gated: true,
+      workspaceId: 'brands',
+    })
+  })
+
   it('keeps every other route inside the gate, the Panorama ejecutivo at /executive', () => {
-    const others = routes.filter((route) => route.path !== '/' && !REDIRECTS.includes(route.path))
+    const others = routes.filter((route) =>
+      route.path !== '/' && !REDIRECTS.includes(route.path) && !BRANDS_OUTSIDE_GATE.includes(route.path))
 
     expect(others.map((route) => route.path)).toEqual([
       '/executive',
       '/executive/attention/:domain',
-      '/sales',
-      '/brands',
-      '/brands/:brandId',
+      '/brands/:brandId/inteligencia',
       '/customers',
       '/customers/:customerId',
       '/products',

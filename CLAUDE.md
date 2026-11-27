@@ -92,7 +92,7 @@ Capa de servidor (en curso en la rama v0.57.0, "production platform foundation")
 Navegación del frontend (NAV-001):
 
 - "Mi día" es la página de inicio (`/`) y donde todos aterrizan después del login; el Panorama ejecutivo vive en `/executive` y su cola de atención en `/executive/attention/:domain`. `/my-day` y `/attention/:domain` redirigen a las rutas nuevas conservando los parámetros (`src/app/legacyRedirects.tsx`).
-- `DataHydrationGate` (`src/app/router.tsx`) descarga los datasets de `/api/data/*` solo para las rutas que los necesitan; "Mi día" y las redirecciones quedan fuera.
+- `DataHydrationGate` (`src/app/router.tsx`) descarga los datasets de `/api/data/*` solo para las rutas que los necesitan; "Mi día", las redirecciones y la ficha de marca (directorio y pestañas Ventas, Clientes y Productos, MB-001) quedan fuera.
 - El menú sale de `src/layouts/navigation/navigationConfig.ts` (secciones Inicio, Mi trabajo, Análisis temporal, Gerencia y Administración). Mostrar u ocultar una entrada no cambia permisos: los permisos siguen en `src/features/auth/workspaceAccess.ts`.
 - Los títulos de pantalla de la barra superior y de la pestaña también salen de `navigationConfig.ts`. Menú, títulos, encabezados (h1 y eyebrow), breadcrumbs y botones "Volver" van en español (prueba `tests/architecture/navigationSpanish.test.ts`).
 
@@ -112,8 +112,8 @@ Estado verificado contra el código el 29 oct 2026: `package.json` en **0.56.0**
 | Dominio | Ruta | Estado |
 |---|---|---|
 | Executive Workspace | `/` (+ `attention/:domain`) | Cerrado (EW-001 + HOTFIX1) |
-| Sales Workspace | `/sales` | Cerrado (SW-001 a SW-006); analítica migrando a SQL (SQL-002) |
-| Brand Workspace | `/brands` (+ `:brandId`) | Operativo |
+| Sales Workspace | `/sales` | Reemplazado por la ficha de marca (MB-001): `/sales` redirige a `/brands`; el código sigue en el repo hasta MB-001B |
+| Brand Workspace | `/brands`, `/brands/:brandId/(ventas|clientes|productos|inteligencia)` | MB-001: directorio y pestañas Ventas, Clientes y Productos servidos por `/api/brands/*` fuera de `DataHydrationGate`; Inteligencia sigue calculándose en el navegador (dentro del gate) hasta MB-003; Pronóstico enlaza a `/forecast` (MB-002) |
 | Customer Intelligence | `/customers` | Migrado a BusinessRepository / `customerPeriods` |
 | Product Workspace | `/products` | Operativo |
 | Pricing Laboratory | `/pricing` | PL-001 a PL-015 completados |
