@@ -52,7 +52,7 @@ export function CustomerDirectoryPage() {
         <WorkspaceHeader
           connected={Boolean(context.repository)}
           description="Selecciona un cliente y analiza su relación consolidada o específica por marca."
-          eyebrow="Customer Intelligence"
+          eyebrow="Clientes"
           icon={Users}
           title="Directorio inteligente de clientes"
           tone="violet"

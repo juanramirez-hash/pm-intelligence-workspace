@@ -21,9 +21,9 @@ export type ExecutiveAttentionSignal =
 
 const DOMAIN_PATHS:
   Record<ExecutiveAttentionDomain, string> = {
-    products: '/attention/products',
-    brands: '/attention/brands',
-    customers: '/attention/customers',
+    products: '/executive/attention/products',
+    brands: '/executive/attention/brands',
+    customers: '/executive/attention/customers',
   }
 
 const VALID_PRESETS = new Set<ExecutivePeriodPreset>([

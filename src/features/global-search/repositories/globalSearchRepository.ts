@@ -1,3 +1,7 @@
+import {
+  authenticatedFetch,
+} from '../../../shared/http/authenticatedFetch'
+
 export type GlobalSearchResultType =
   | 'brand'
   | 'customer'
@@ -66,8 +70,9 @@ async function requestGlobalSearch(
       q: query,
     })
 
+  // NAV-001: an expired session goes back to the login.
   const response =
-    await fetch(
+    await authenticatedFetch(
       `/api/search?${params.toString()}`,
       {
         method: 'GET',

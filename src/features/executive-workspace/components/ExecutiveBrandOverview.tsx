@@ -232,7 +232,7 @@ export function ExecutiveBrandOverview({
             className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-violet-700 hover:text-violet-800"
             to="/brands"
           >
-            Abrir Brand Workspace
+            Abrir Marcas
 
             <ArrowRight size={15} />
           </Link>
@@ -288,7 +288,7 @@ export function ExecutiveBrandOverview({
             className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
             to="/brands"
           >
-            Abrir Brand Workspace
+            Abrir Marcas
 
             <ArrowRight size={14} />
           </Link>

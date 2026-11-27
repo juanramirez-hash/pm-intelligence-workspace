@@ -186,9 +186,9 @@ export function ProductIdentityQualityPage() {
     return (
       <div className="space-y-8">
         <PageHeader
-          eyebrow="Data Quality"
-          title="Product Identity Quality Gate"
-          description="Valida la vinculacion entre ventas y Product Master antes de habilitar Inventory Workspace."
+          eyebrow="Administración"
+          title="Calidad de producto"
+          description="Valida la vinculación entre ventas y Product Master antes de habilitar Inventario."
         />
         <AtlasCard className="p-8 text-center">
           <Database className="mx-auto text-slate-400" size={34} />
@@ -220,8 +220,8 @@ export function ProductIdentityQualityPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Data Quality"
-        title="Product Identity Quality Gate"
+        eyebrow="Administración"
+        title="Calidad de producto"
         description="Cobertura por filas, valor de venta y excepciones clasificadas antes de integrar inventario."
       />
 

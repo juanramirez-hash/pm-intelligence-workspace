@@ -11,8 +11,20 @@ import {
 } from 'lucide-react'
 
 import {
+  Link,
+} from 'react-router-dom'
+
+import {
   useAuth,
 } from '../../auth/useAuth'
+
+import type {
+  AuthenticatedUser,
+} from '../../auth/authTypes'
+
+import {
+  accessibleScreens,
+} from '../../../layouts/navigation/navigationConfig'
 
 import {
   resolveActionBrandKeys,
@@ -90,13 +102,37 @@ import {
   isAccessDenied,
 } from '../components/blockState'
 
-function NotAvailableForAccess() {
+// NAV-001: until NAV-002 (assistant role), users without commercial scope
+// land here after the login; they get links to the screens they can open.
+function NotAvailableForAccess({ user }: { user: AuthenticatedUser }) {
+  const screens = accessibleScreens(user).filter((screen) => screen.id !== 'my-day')
+
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center">
       <ShieldAlert aria-hidden="true" className="text-amber-500" size={44} strokeWidth={1.8} />
       <p className="mt-4 text-lg font-semibold text-slate-900">
         {NOT_AVAILABLE_FOR_ACCESS}
       </p>
+
+      {screens.length > 0 ? (
+        <>
+          <p className="mt-2 text-sm text-slate-500">
+            Puedes abrir:
+          </p>
+          <ul data-my-day-allowed-screens="true" className="mt-3 flex max-w-xl flex-wrap justify-center gap-2">
+            {screens.map((screen) => (
+              <li key={screen.id}>
+                <Link
+                  to={screen.path}
+                  className="inline-flex rounded-xl border border-blue-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                >
+                  {screen.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
     </div>
   )
 }
@@ -195,7 +231,7 @@ export function MyDayPage() {
   )
 
   if (!hasCommercialScope || isAccessDenied(summary.error)) {
-    return <NotAvailableForAccess />
+    return <NotAvailableForAccess user={user} />
   }
 
   const dataCutoff =

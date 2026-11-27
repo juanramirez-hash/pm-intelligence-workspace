@@ -1,4 +1,5 @@
 // TECNO-TOP-MENU-20260917
+// NAV-001: menu by sections and role, from navigation/navigationConfig.ts.
 
 import {
   useEffect,
@@ -6,21 +7,6 @@ import {
 } from 'react'
 
 import {
-  Boxes,
-  Building2,
-  ChartNoAxesCombined,
-  Crosshair,
-  Database,
-  DollarSign,
-  Gauge,
-  ListTodo,
-  Package,
-  PackageSearch,
-  Settings,
-  ShieldCheck,
-  ShoppingCart,
-  Sun,
-  Users,
   X,
 } from 'lucide-react'
 
@@ -33,83 +19,10 @@ import {
 } from '../features/auth/useAuth'
 
 import {
-  canAccessWorkspace,
-  type WorkspaceAccessId,
-} from '../features/auth/workspaceAccess'
-
-const workspaceNavigation: {
-  label: string
-  path: string
-  icon: typeof Gauge
-  workspaceId: WorkspaceAccessId
-}[] = [
-  {
-    label: 'Mi día',
-    path: '/my-day',
-    icon: Sun,
-    workspaceId: 'my-day',
-  },
-  {
-    label: 'Executive Workspace',
-    path: '/',
-    icon: Gauge,
-    workspaceId: 'executive',
-  },
-  {
-    label: 'Sales Workspace',
-    path: '/sales',
-    icon: ChartNoAxesCombined,
-    workspaceId: 'sales',
-  },
-  {
-    label: 'Brand Workspace',
-    path: '/brands',
-    icon: Building2,
-    workspaceId: 'brands',
-  },
-  {
-    label: 'Customer Workspace',
-    path: '/customers',
-    icon: Users,
-    workspaceId: 'customers',
-  },
-  {
-    label: 'Product Workspace',
-    path: '/products',
-    icon: Package,
-    workspaceId: 'products',
-  },
-  {
-    label: 'Pricing Laboratory',
-    path: '/pricing',
-    icon: DollarSign,
-    workspaceId: 'pricing',
-  },
-  {
-    label: 'Forecast Workspace',
-    path: '/forecast',
-    icon: Crosshair,
-    workspaceId: 'forecast',
-  },
-  {
-    label: 'Inventory Workspace',
-    path: '/inventory',
-    icon: PackageSearch,
-    workspaceId: 'inventory',
-  },
-  {
-    label: 'Purchasing Workspace',
-    path: '/purchasing',
-    icon: ShoppingCart,
-    workspaceId: 'purchasing',
-  },
-  {
-    label: 'Centro de Acciones',
-    path: '/actions',
-    icon: ListTodo,
-    workspaceId: 'actions',
-  },
-]
+  NAVIGATION_BRAND,
+  buildNavigation,
+  type NavigationItem,
+} from './navigation/navigationConfig'
 
 interface SidebarProps {
   mobileOpen?: boolean
@@ -117,6 +30,45 @@ interface SidebarProps {
 }
 
 const noop = () => {}
+
+function navLinkClasses(isActive: boolean, child = false): string {
+  return [
+    'flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
+    child ? 'pl-9 pr-3' : 'px-3',
+    isActive
+      ? 'bg-[#F58220] text-blue-950 shadow-sm'
+      : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
+  ].join(' ')
+}
+
+function SidebarLink({
+  item,
+  onNavigate,
+}: {
+  item: NavigationItem
+  onNavigate: () => void
+}) {
+  const Icon = item.icon
+
+  return (
+    <NavLink
+      onClick={onNavigate}
+      to={item.path}
+      end={item.end}
+      data-navigation-item={item.id}
+      className={({ isActive }) => navLinkClasses(isActive, item.child)}
+    >
+      <Icon
+        size={item.child ? 17 : 19}
+        strokeWidth={1.9}
+      />
+
+      <span className="min-w-0">
+        {item.label}
+      </span>
+    </NavLink>
+  )
+}
 
 export function Sidebar({
   mobileOpen = false,
@@ -161,42 +113,14 @@ export function Sidebar({
     user,
   } = useAuth()
 
-  const visibleWorkspaceNavigation =
-    workspaceNavigation.filter(
-      (item) =>
-        canAccessWorkspace(
-          user,
-          item.workspaceId,
-        ),
-    )
-
-  const canAccessDataCenter =
-    canAccessWorkspace(
-      user,
-      'data-center',
-    )
-
-  const canAccessProductQuality =
-    canAccessWorkspace(
-      user,
-      'product-quality',
-    )
-
-  const canAccessSettings =
-    canAccessWorkspace(
-      user,
-      'settings',
-    )
-
-  const hasAdministrationAccess =
-    canAccessDataCenter ||
-    canAccessProductQuality
+  const sections = buildNavigation(user)
+  const BrandIcon = NAVIGATION_BRAND.icon
 
   const content = (
     <>
       <div className="flex h-20 shrink-0 items-center gap-3 border-b border-blue-100 px-4">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-          <Boxes
+          <BrandIcon
             size={21}
             strokeWidth={2.2}
           />
@@ -204,11 +128,11 @@ export function Sidebar({
 
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold tracking-tight text-blue-950">
-            PM Intelligence
+            {NAVIGATION_BRAND.name}
           </p>
 
           <p className="truncate text-xs text-blue-700">
-            Business Operating System
+            {NAVIGATION_BRAND.tagline}
           </p>
         </div>
 
@@ -223,137 +147,37 @@ export function Sidebar({
       </div>
 
       <nav
-        aria-label="Workspaces y administración"
+        aria-label="Menú principal"
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          Workspaces
-        </p>
+        {sections.map((section, index) => (
+          <div
+            key={section.id}
+            data-navigation-section={section.id}
+          >
+            {index > 0 ? (
+              <div className="my-4 border-t border-blue-100" />
+            ) : null}
 
-        <div className="space-y-1">
-          {visibleWorkspaceNavigation.map(
-            ({
-              label,
-              path,
-              icon: Icon,
-            }) => (
-              <NavLink
-                onClick={onMobileClose}
-                key={path}
-                to={path}
-                end={path === '/'}
-                className={({
-                  isActive,
-                }) =>
-                  [
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
-                    isActive
-                      ? 'bg-[#F58220] text-blue-950 shadow-sm'
-                      : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
-                  ].join(' ')
-                }
-              >
-                <Icon
-                  size={19}
-                  strokeWidth={1.9}
-                />
-
-                <span className="min-w-0">
-                  {label}
-                </span>
-              </NavLink>
-            ),
-          )}
-        </div>
-
-        {hasAdministrationAccess && (
-          <>
-            <div className="my-5 border-t border-blue-100" />
-
-            <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Administración
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {section.label}
             </p>
 
-            {canAccessDataCenter && (
-              <NavLink
-                onClick={onMobileClose}
-                to="/data-center"
-                className={({
-                  isActive,
-                }) =>
-                  [
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
-                    isActive
-                      ? 'bg-[#F58220] text-blue-950 shadow-sm'
-                      : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
-                  ].join(' ')
-                }
-              >
-                <Database
-                  size={19}
-                  strokeWidth={1.9}
+            <div className="space-y-1">
+              {section.items.map((item) => (
+                <SidebarLink
+                  key={item.id}
+                  item={item}
+                  onNavigate={onMobileClose}
                 />
-
-                <span>
-                  Data Center
-                </span>
-              </NavLink>
-            )}
-
-            {canAccessProductQuality && (
-              <NavLink
-                onClick={onMobileClose}
-                to="/data-quality/products"
-                className={({
-                  isActive,
-                }) =>
-                  [
-                    'mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
-                    isActive
-                      ? 'bg-[#F58220] text-blue-950 shadow-sm'
-                      : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
-                  ].join(' ')
-                }
-              >
-                <ShieldCheck
-                  size={19}
-                  strokeWidth={1.9}
-                />
-
-                <span>
-                  Calidad de producto
-                </span>
-              </NavLink>
-            )}
-          </>
-        )}
+              ))}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="shrink-0 border-t border-blue-100 p-3">
-        {canAccessSettings && (
-          <NavLink
-            onClick={onMobileClose}
-            to="/settings"
-            className={({
-              isActive,
-            }) =>
-              [
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-blue-600',
-                isActive
-                  ? 'bg-[#F58220] text-blue-950 shadow-sm'
-                  : 'text-blue-800 hover:bg-blue-50 hover:text-blue-950',
-              ].join(' ')
-            }
-          >
-            <Settings size={19} />
-
-            <span>
-              Settings
-            </span>
-          </NavLink>
-        )}
-
-        <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50 p-3">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3">
           <p className="truncate text-sm font-medium text-blue-950">
             {user.name ?? user.email}
           </p>

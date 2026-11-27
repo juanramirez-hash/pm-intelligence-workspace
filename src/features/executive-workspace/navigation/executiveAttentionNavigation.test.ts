@@ -73,7 +73,7 @@ describe(
           selection,
         ),
       ).toBe(
-        '/attention/customers?view=attention&preset=month&anchor=2026-07',
+        '/executive/attention/customers?view=attention&preset=month&anchor=2026-07',
       )
     })
 

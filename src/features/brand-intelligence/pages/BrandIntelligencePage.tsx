@@ -116,7 +116,7 @@ export function BrandIntelligencePage() {
             to="/brands"
           >
             <ArrowLeft size={17} />
-            Volver a Brand Workspace
+            Volver a Marcas
           </Link>
         </div>
       </main>
@@ -128,7 +128,7 @@ export function BrandIntelligencePage() {
       <main className="min-h-screen bg-slate-50">
         <div className="mx-auto flex max-w-3xl flex-col items-center px-6 py-20 text-center">
           <h1 className="text-3xl font-bold text-slate-900">
-            Brand Intelligence no disponible
+            Ficha de marca no disponible
           </h1>
 
           <p className="mt-3 text-slate-500">
@@ -160,8 +160,8 @@ export function BrandIntelligencePage() {
         <WorkspaceHeader
           connected
           connectedLabel="Decision Core conectado"
-          description="Workspace ejecutivo construido desde Business Repository y Decision Engines, sin lógica comercial en React."
-          eyebrow="Brand Intelligence Workspace"
+          description="Diagnóstico de la marca: venta, cuota, clientes, productos y señales de atención."
+          eyebrow="Ficha de marca"
           icon={Building2}
           metadata={(
             <p className="text-xs font-medium text-slate-400">

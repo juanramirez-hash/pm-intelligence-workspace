@@ -88,7 +88,7 @@ const DOMAIN_CONFIGURATION:
       label: 'producto',
       labelPlural: 'productos',
       description:
-        'Productos en caída, inactivos o perdidos dentro del periodo seleccionado en el Executive Workspace.',
+        'Productos en caída, inactivos o perdidos dentro del periodo seleccionado en el Panorama ejecutivo.',
       basePath: '/products',
       icon: PackageSearch,
       tone: 'amber',
@@ -360,7 +360,7 @@ function ExecutiveAttentionQueueContent({
           connected={Boolean(context.repository)}
           connectedLabel="Filtro ejecutivo aplicado"
           description={configuration.description}
-          eyebrow="Executive Attention Queue"
+          eyebrow="Cola de atención"
           icon={configuration.icon}
           metadata={(
             <span className="text-sm font-medium text-slate-500">
@@ -436,7 +436,7 @@ function ExecutiveAttentionQueueContent({
                 No hay resultados para este filtro
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Ajusta la búsqueda o vuelve al Executive Workspace para seleccionar otro periodo.
+                Ajusta la búsqueda o vuelve al Panorama ejecutivo para seleccionar otro periodo.
               </p>
             </div>
           )}
@@ -492,9 +492,9 @@ export function ExecutiveAttentionQueuePage() {
           </h1>
           <Link
             className="mt-5 inline-flex rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-            to="/"
+            to="/executive"
           >
-            Volver al Executive Workspace
+            Volver al Panorama ejecutivo
           </Link>
         </div>
       </main>

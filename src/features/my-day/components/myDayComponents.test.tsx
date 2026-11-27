@@ -451,6 +451,24 @@ describe('MD-003 page', () => {
     }
   })
 
+  it('links the screens the role can open while NAV-002 is pending (NAV-001)', () => {
+    const html = render(
+      <AuthProvider user={{ ...USER, role: 'analyst', scope: 'legacy', brandIds: [] }}>
+        <MyDayPage />
+      </AuthProvider>,
+    )
+    const content = text(html)
+
+    expect(content).toContain('Puedes abrir:')
+
+    for (const path of ['/brands', '/customers', '/products', '/actions', '/sales', '/executive', '/pricing']) {
+      expect(html).toContain(`href="${path}"`)
+    }
+
+    expect(html).not.toContain('href="/"')
+    expect(html).not.toContain('href="/settings"')
+  })
+
   it('renders every block, loading on its own, and the "al corte" note', () => {
     const content = page(USER)
 

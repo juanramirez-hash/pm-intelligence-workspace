@@ -2,7 +2,7 @@
 // routes that need them. It used to run in main.tsx before rendering, so
 // every page, the login screen included, downloaded every dataset. The
 // existing workspaces render exactly as before: only after the store is
-// hydrated. "Mi día" (/my-day) lives outside this gate. Removing the global
+// hydrated. "Mi día" ("/", NAV-001) lives outside this gate. Removing the global
 // download for good is C-001.
 
 import {

@@ -291,7 +291,7 @@ export function PricingLaboratoryPage() {
               icon: <Home size={14} />,
             },
             {
-              label: 'Pricing Laboratory',
+              label: 'Pricing Lab',
             },
           ]}
         />
@@ -355,7 +355,7 @@ export function PricingLaboratoryPage() {
           description={sourceMode === 'catalog'
             ? 'Evalúa precios, descuentos, margen, GP y factores mediante escenarios temporales. Ningún resultado se guarda, aprueba o publica como precio comercial.'
             : 'Diseña precio de lista, factor y precio neto desde el costo de productos o marcas que todavía no existen en catálogo.'}
-          eyebrow="Price Engineering"
+          eyebrow="Pricing Lab"
           icon={<FlaskConical size={22} />}
           metadata={(
             <>

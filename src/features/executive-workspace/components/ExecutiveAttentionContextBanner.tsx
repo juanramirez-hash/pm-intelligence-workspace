@@ -41,7 +41,7 @@ export function ExecutiveAttentionContextBanner({
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-              Filtro del Executive Workspace
+              Filtro del Panorama ejecutivo
             </p>
 
             <h2 className="mt-1 text-lg font-semibold text-slate-950">
@@ -57,10 +57,10 @@ export function ExecutiveAttentionContextBanner({
         <div className="flex flex-wrap gap-2">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
-            to="/"
+            to="/executive"
           >
             <ArrowLeft size={15} />
-            Volver al Executive
+            Volver al Panorama ejecutivo
           </Link>
 
           <Link

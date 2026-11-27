@@ -127,15 +127,15 @@ describe(
       )
 
       expect(markup).toContain(
-        'href="/attention/brands?view=attention&amp;preset=month&amp;anchor=2026-07"',
+        'href="/executive/attention/brands?view=attention&amp;preset=month&amp;anchor=2026-07"',
       )
 
       expect(markup).toContain(
-        'href="/attention/customers?view=attention&amp;preset=month&amp;anchor=2026-07"',
+        'href="/executive/attention/customers?view=attention&amp;preset=month&amp;anchor=2026-07"',
       )
 
       expect(markup).toContain(
-        'href="/attention/products?view=attention&amp;preset=month&amp;anchor=2026-07"',
+        'href="/executive/attention/products?view=attention&amp;preset=month&amp;anchor=2026-07"',
       )
     })
   },

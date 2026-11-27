@@ -222,7 +222,7 @@ export function DataCenterImportPanel({
   return (
     <AtlasCard className="p-6">
       <SectionHeader
-        title="Importar al Data Center"
+        title="Importar al Centro de datos"
         description={
           getStatusDescription(
             importStatus,

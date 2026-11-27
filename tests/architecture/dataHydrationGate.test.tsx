@@ -41,21 +41,30 @@ function collect(routes: RouteObject[], parent = '', gated = false, workspaceId:
 
 const routes = collect(appRoutes)
 
-describe('MD-003 routes and DataHydrationGate', () => {
-  it('keeps /my-day outside the gate, guarded by the my-day workspace', () => {
-    expect(routes.find((route) => route.path === '/my-day')).toEqual({
-      path: '/my-day',
+// NAV-001: old addresses, redirected outside the gate.
+const REDIRECTS = ['/my-day', '/attention/:domain']
+
+describe('MD-003 / NAV-001 routes and DataHydrationGate', () => {
+  it('keeps "Mi día" at / outside the gate, guarded by the my-day workspace', () => {
+    expect(routes.find((route) => route.path === '/')).toEqual({
+      path: '/',
       gated: false,
       workspaceId: 'my-day',
     })
   })
 
-  it('keeps every other route inside the gate, Executive still at /', () => {
-    const others = routes.filter((route) => route.path !== '/my-day')
+  it('redirects the old addresses outside the gate', () => {
+    for (const path of REDIRECTS) {
+      expect(routes.find((route) => route.path === path)).toMatchObject({ path, gated: false })
+    }
+  })
+
+  it('keeps every other route inside the gate, the Panorama ejecutivo at /executive', () => {
+    const others = routes.filter((route) => route.path !== '/' && !REDIRECTS.includes(route.path))
 
     expect(others.map((route) => route.path)).toEqual([
-      '/',
-      '/attention/:domain',
+      '/executive',
+      '/executive/attention/:domain',
       '/sales',
       '/brands',
       '/brands/:brandId',
@@ -73,7 +82,8 @@ describe('MD-003 routes and DataHydrationGate', () => {
       '/settings',
     ])
     expect(others.every((route) => route.gated)).toBe(true)
-    expect(others.find((route) => route.path === '/')?.workspaceId).toBe('executive')
+    expect(others.find((route) => route.path === '/executive')?.workspaceId).toBe('executive')
+    expect(others.find((route) => route.path === '/executive/attention/:domain')?.workspaceId).toBe('executive')
   })
 
   it('no longer loads the datasets before rendering', () => {

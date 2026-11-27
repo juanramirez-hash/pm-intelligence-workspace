@@ -513,7 +513,7 @@ export function ActionsWorkspacePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Execution Management"
+        eyebrow="Seguimiento"
         title="Centro de Acciones"
         description="Seguimiento operativo de compromisos comerciales, responsables, prioridades, fechas límite y cumplimiento."
       />

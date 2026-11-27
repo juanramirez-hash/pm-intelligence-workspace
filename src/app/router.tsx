@@ -15,6 +15,11 @@ import {
   DataHydrationGate,
 } from './DataHydrationGate'
 
+import {
+  LegacyAttentionRedirect,
+  MyDayRedirect,
+} from './legacyRedirects'
+
 const loadMyDay = async () => {
   const module =
     await import(
@@ -247,13 +252,14 @@ const workspaceRoutes: RouteObject[] =
           ),
           children: [
             {
-              index: true,
+              // NAV-001: "/" is "Mi día"; the Panorama ejecutivo moves here.
+              path: 'executive',
               lazy:
                 loadExecutiveWorkspace,
             },
             {
               path:
-                'attention/:domain',
+                'executive/attention/:domain',
               lazy:
                 loadExecutiveAttentionQueue,
             },
@@ -464,6 +470,7 @@ const workspaceRoutes: RouteObject[] =
 
 // MD-003: "Mi día" reads only /api/my-day/* and /api/actions, so it stays
 // outside DataHydrationGate and never downloads the datasets.
+// NAV-001: it is the home page ("/"), where everyone lands after the login.
 const myDayRoute: RouteObject = {
   element: (
     <WorkspaceRouteGuard
@@ -472,16 +479,29 @@ const myDayRoute: RouteObject = {
   ),
   children: [
     {
-      path: 'my-day',
+      index: true,
       lazy:
         loadMyDay,
     },
   ],
 }
 
+// NAV-001: old addresses keep working (bookmarks). Outside the gate: a
+// redirect never downloads the datasets.
+const legacyRedirects: RouteObject[] = [
+  {
+    path: 'my-day',
+    element: <MyDayRedirect />,
+  },
+  {
+    path: 'attention/:domain',
+    element: <LegacyAttentionRedirect />,
+  },
+]
+
 /**
  * Keeps every existing workspace route inside DataHydrationGate (they need
- * the datasets, as before) and adds "Mi día" outside of it.
+ * the datasets, as before) and adds "Mi día" and the redirects outside of it.
  */
 export function withDataHydrationGate(
   routes: RouteObject[],
@@ -490,6 +510,7 @@ export function withDataHydrationGate(
     ...root,
     children: [
       myDayRoute,
+      ...legacyRedirects,
       {
         element: <DataHydrationGate />,
         children: root.children ?? [],

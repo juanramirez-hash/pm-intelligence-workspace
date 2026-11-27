@@ -114,7 +114,7 @@ export function ProductIntelligencePage() {
   if (!workspace) {
     return (
       <main className="min-h-screen bg-slate-50 p-10">
-        <h1 className="text-3xl font-bold text-slate-950">Product Intelligence no disponible</h1>
+        <h1 className="text-3xl font-bold text-slate-950">Ficha de producto no disponible</h1>
         <p className="mt-3 text-slate-500">No se encontró información para {productId ?? 'el producto seleccionado'}.</p>
         <Link className="mt-6 inline-block font-semibold text-emerald-700" to="/products">Volver al directorio de productos</Link>
       </main>
@@ -129,7 +129,7 @@ export function ProductIntelligencePage() {
       breadcrumbs={(
         <ExecutiveBreadcrumbs items={[
           { label: 'Inicio', href: '/', icon: <Home size={14} /> },
-          { label: 'Product Intelligence', href: '/products' },
+          { label: 'Productos', href: '/products' },
           { label: workspace.header.productId },
         ]} />
       )}
@@ -141,7 +141,7 @@ export function ProductIntelligencePage() {
             </Link>
           )}
           description="Expediente inteligente del SKU para decidir si proteger, desarrollar, recuperar, sustituir o acelerar su adopción comercial."
-          eyebrow="Product Decision Intelligence"
+          eyebrow="Ficha de producto"
           icon={<PackageSearch size={22} />}
           metadata={<><span>Marca: {workspace.header.brandName}</span><span>Periodo actual: {workspace.header.currentPeriodId}</span></>}
           metricFooter={catalogReplacement ? (

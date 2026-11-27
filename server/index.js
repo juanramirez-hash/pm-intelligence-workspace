@@ -293,6 +293,11 @@ app.use(
   createApiRateLimit(),
 )
 
+app.use(
+  '/api/status',
+  createApiRateLimit(),
+)
+
 registerBusinessRoutes(app, pool)
 
 app.use(

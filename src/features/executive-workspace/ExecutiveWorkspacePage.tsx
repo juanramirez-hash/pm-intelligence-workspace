@@ -134,7 +134,7 @@ export function ExecutiveWorkspacePage() {
           </div>
 
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-            Executive Workspace
+            Panorama ejecutivo
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">

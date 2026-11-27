@@ -1836,9 +1836,9 @@ export function SettingsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Platform Administration"
-        title="Settings"
-        description="Administra la configuración general, usuarios, permisos y parámetros operativos de PM Intelligence Workspace."
+        eyebrow="Administración"
+        title="Configuración"
+        description="Administra la configuración general, usuarios, permisos y parámetros operativos de PM Intelligence."
       />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">

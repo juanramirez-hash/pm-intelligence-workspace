@@ -33,7 +33,7 @@ export function ProductDirectoryPage() {
         <WorkspaceHeader
           connected={Boolean(context.repository)}
           description="Selecciona un producto para analizar desempeño, clientes, riesgo y potencial de recuperación."
-          eyebrow="Product Intelligence"
+          eyebrow="Productos"
           icon={PackageSearch}
           title="Directorio inteligente de productos"
           tone="amber"

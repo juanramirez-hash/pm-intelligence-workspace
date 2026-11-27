@@ -32,6 +32,22 @@ import type {
   GlobalSearchResultType,
 } from '../features/global-search/repositories/globalSearchRepository'
 
+import {
+  searchShortcutLabel,
+  useSearchShortcut,
+} from '../features/global-search/searchShortcut'
+
+import {
+  NAVIGATION_BRAND,
+  screenTitle,
+} from './navigation/navigationConfig'
+
+import {
+  DataCutoffBadge,
+} from './dataCutoff/DataCutoffBadge'
+
+const SEARCH_PLACEHOLDER = 'Buscar cliente, modelo o marca'
+
 interface TopbarUser {
   email: string
   name: string | null
@@ -44,22 +60,6 @@ interface TopbarProps {
   navigationOpen: boolean
 }
 
-const workspaceTitles: Record<string, string> = {
-  '/': 'Executive Workspace',
-  '/sales': 'Sales Workspace',
-  '/actions': 'Centro de Acciones',
-  '/brands': 'Brand Workspace',
-  '/customers': 'Customer Workspace',
-  '/products': 'Product Workspace',
-  '/pricing': 'Pricing Laboratory',
-  '/forecast': 'Forecast Workspace',
-  '/inventory': 'Inventory Workspace',
-  '/purchasing': 'Purchasing Workspace',
-  '/data-center': 'Data Center',
-  '/settings': 'Settings',
-  '/data-quality/products': 'Calidad de producto',
-}
-
 const searchTypeLabels: Record<
   GlobalSearchResultType,
   string
@@ -67,35 +67,6 @@ const searchTypeLabels: Record<
   brand: 'Marca',
   customer: 'Cliente',
   product: 'Producto',
-}
-
-function getWorkspaceTitle(
-  pathname: string,
-): string {
-  const exact =
-    workspaceTitles[pathname]
-
-  if (exact) {
-    return exact
-  }
-
-  if (pathname.startsWith('/brands/')) {
-    return 'Brand Workspace'
-  }
-
-  if (pathname.startsWith('/customers/')) {
-    return 'Customer Workspace'
-  }
-
-  if (pathname.startsWith('/products/')) {
-    return 'Product Workspace'
-  }
-
-  if (pathname.startsWith('/actions/')) {
-    return 'Centro de Acciones'
-  }
-
-  return 'PM Intelligence'
 }
 
 function getUserInitials(
@@ -154,10 +125,31 @@ export function Topbar({
       null,
     )
 
+  // NAV-001: Ctrl+K / Cmd+K focuses the search from any screen.
+  const searchInputRef =
+    useRef<HTMLInputElement | null>(
+      null,
+    )
+
+  useSearchShortcut(searchInputRef)
+
+  const shortcutLabel =
+    searchShortcutLabel(
+      typeof navigator === 'undefined'
+        ? ''
+        : navigator.platform,
+    )
+
   const workspaceTitle =
-    getWorkspaceTitle(
+    screenTitle(
       location.pathname,
     )
+
+  // NAV-001: the browser tab shows the screen in Spanish.
+  useEffect(() => {
+    document.title =
+      `${workspaceTitle} · ${NAVIGATION_BRAND.name}`
+  }, [workspaceTitle])
 
   const initials =
     getUserInitials(
@@ -349,9 +341,7 @@ const {
           </button>
 
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-600 sm:text-xs">
-              Workspace
-            </p>
+            <DataCutoffBadge />
             <h1
               className="truncate text-sm font-semibold text-blue-950 sm:text-lg"
               title={workspaceTitle}
@@ -364,7 +354,7 @@ const {
         <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           <div
             ref={searchRootRef}
-            className="relative hidden xl:block xl:w-80 2xl:w-[30rem]"
+            className="relative hidden md:block md:w-64 lg:w-72 xl:w-80 2xl:w-[30rem]"
           >
             <div
               className={[
@@ -380,6 +370,7 @@ const {
               />
 
               <input
+                ref={searchInputRef}
                 type="search"
                 value={searchQuery}
                 onChange={(
@@ -399,9 +390,10 @@ const {
                placeholder={
                 searchLoading
                   ? 'Buscando...'
-                  : 'Buscar marcas, productos o clientes'
+                  : SEARCH_PLACEHOLDER
               }
-                aria-label="Buscar marcas, productos o clientes"
+                aria-label={SEARCH_PLACEHOLDER}
+                aria-keyshortcuts="Control+K Meta+K"
                 aria-expanded={
                   searchOpen
                 }
@@ -409,6 +401,14 @@ const {
                 aria-autocomplete="list"
                 className="min-w-0 flex-1 bg-transparent text-sm text-blue-950 outline-none placeholder:text-blue-500 disabled:cursor-not-allowed"
               />
+
+              <kbd
+                data-search-shortcut="true"
+                title={`Atajo: ${shortcutLabel}`}
+                className="hidden shrink-0 rounded-md border border-blue-200 bg-white px-1.5 py-0.5 font-sans text-[11px] font-semibold text-blue-600 lg:inline"
+              >
+                {shortcutLabel}
+              </kbd>
             </div>
 
             {searchOpen && (

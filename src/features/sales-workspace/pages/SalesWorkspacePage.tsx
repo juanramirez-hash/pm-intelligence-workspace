@@ -600,7 +600,7 @@ export function SalesWorkspacePage() {
               icon: <Home size={14} />,
             },
             {
-              label: 'Sales Workspace',
+              label: 'Ventas',
             },
           ]}
           />
@@ -670,7 +670,7 @@ export function SalesWorkspacePage() {
             </div>
           }
           description="Concentra el desempeño comercial mensual, sus variaciones y los principales impulsores por marca, cliente y producto."
-          eyebrow="Sales Intelligence"
+          eyebrow="Ventas"
           icon={<BadgeDollarSign size={22} />}
           metadata={
             <>

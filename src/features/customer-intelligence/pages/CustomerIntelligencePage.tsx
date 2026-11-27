@@ -60,7 +60,7 @@ export function CustomerIntelligencePage() {
     return (
       <main className="min-h-screen bg-slate-50 p-10">
         <h1 className="text-3xl font-bold text-slate-950">
-          Customer Intelligence no disponible
+          Ficha de cliente no disponible
         </h1>
         <p className="mt-3 text-slate-500">
           No se encontró información para {customerId ?? 'el cliente seleccionado'}.
@@ -82,7 +82,7 @@ export function CustomerIntelligencePage() {
         <ExecutiveBreadcrumbs
           items={[
             { label: 'Inicio', href: '/', icon: <Home size={14} /> },
-            { label: 'Customer Intelligence', href: '/customers' },
+            { label: 'Clientes', href: '/customers' },
             { label: workspace.header.customerId },
           ]}
         />
@@ -120,7 +120,7 @@ export function CustomerIntelligencePage() {
             </div>
           )}
           description="Expediente comercial inteligente para identificar riesgo, recuperación, crecimiento y acciones concretas por cliente."
-          eyebrow="Customer Decision Intelligence"
+          eyebrow="Ficha de cliente"
           icon={<Users size={22} />}
           metadata={(
             <>

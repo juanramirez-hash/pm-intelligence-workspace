@@ -7,6 +7,7 @@ import { loadAuthenticatedUser } from './middleware/loadAuthenticatedUser.js'
 import { createActionsRouter } from './routes/actions.js'
 import { createMetricsRouter } from './routes/metrics.js'
 import { createMyDayRouter } from './routes/myDay.js'
+import { createDataStatusRouter } from './routes/dataStatus.js'
 import { createSearchRouter } from './routes/search.js'
 import { createImportBodyParser } from './http/requestLimits.js'
 
@@ -85,5 +86,14 @@ export function registerBusinessRoutes(app, pool) {
     requireAuth,
     authenticatedUser,
     createSearchRouter(pool),
+  )
+
+  // NAV-001: "Datos al corte" of the top bar. Session only, no brand scope
+  // (dates only). Rate limited in index.js (createApiRateLimit, SEC-004).
+  app.use(
+    '/api/status',
+    requireAuth,
+    authenticatedUser,
+    createDataStatusRouter(pool),
   )
 }

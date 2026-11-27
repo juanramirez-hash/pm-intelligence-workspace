@@ -82,10 +82,17 @@ Fuentes operativas (archivos Excel/CSV)
 
 Capa de servidor (en curso en la rama v0.57.0, "production platform foundation"):
 
-- `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, myDay, settingsUsers, settingsRoles).
+- `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, myDay, dataStatus, settingsUsers, settingsRoles). `dataStatus` (`GET /api/status/data-cutoff`) solo pide sesión y devuelve fechas: el corte de ventas y la última carga de ventas, inventario y compras.
 - `server/services/`: importación por chunks con tablas staging, agregados de negocio (`refresh_business_aggregates`), analítica de ventas en SQL, búsqueda global y conciliación de facturación de proyectos.
 - `server/middleware/`: `requireAuth`, `requireAdmin`, `requireBrandScope`, `requireWriteAccess` (usuarios, roles y asignación de marcas por PM).
-- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `037`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
+- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `039`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
+
+Navegación del frontend (NAV-001):
+
+- "Mi día" es la página de inicio (`/`) y donde todos aterrizan después del login; el Panorama ejecutivo vive en `/executive` y su cola de atención en `/executive/attention/:domain`. `/my-day` y `/attention/:domain` redirigen a las rutas nuevas conservando los parámetros (`src/app/legacyRedirects.tsx`).
+- `DataHydrationGate` (`src/app/router.tsx`) descarga los datasets de `/api/data/*` solo para las rutas que los necesitan; "Mi día" y las redirecciones quedan fuera.
+- El menú sale de `src/layouts/navigation/navigationConfig.ts` (secciones Inicio, Mi trabajo, Análisis temporal, Gerencia y Administración). Mostrar u ocultar una entrada no cambia permisos: los permisos siguen en `src/features/auth/workspaceAccess.ts`.
+- Los títulos de pantalla de la barra superior y de la pestaña también salen de `navigationConfig.ts`. Menú, títulos, encabezados (h1 y eyebrow), breadcrumbs y botones "Volver" van en español (prueba `tests/architecture/navigationSpanish.test.ts`).
 
 Reglas de arquitectura:
 

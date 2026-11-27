@@ -317,7 +317,7 @@ export function ForecastWorkspacePage() {
                 icon: <Home size={14} />,
               },
               {
-                label: 'Forecast Workspace',
+                label: 'Pronóstico',
               },
             ]}
           />
@@ -372,7 +372,7 @@ export function ForecastWorkspacePage() {
             </div>
           )}
           description="Separa venta transaccional, facturación real de proyectos y pipeline maduro para proyectar el cierre sin doble conteo y con trazabilidad completa."
-          eyebrow="Project-Aware Forecast Intelligence"
+          eyebrow="Pronóstico"
           icon={<Crosshair size={22} />}
           metadata={(
             <>

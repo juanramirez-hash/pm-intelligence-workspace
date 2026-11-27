@@ -471,6 +471,21 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Selector de periodo: "Noviembre de 2026" (solo la primera letra en mayúscula), sin `capitalize` de CSS.
 - Sin migraciones. Despliegue con reinicio del backend (cambia `server/routes/myDay.js` y `server/services/myDayAvailabilityRules.js`).
 
+## Navegación — NAV-001
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| NAV-001 | Menú por rol, "Mi día" como inicio, Panorama ejecutivo en `/executive`, navegación en español, buscador con Ctrl+K y "Datos al corte" en la barra superior | Implementado · pendiente de validación funcional y despliegue |
+| NAV-002 | Rol de auxiliar vinculado a sus PMs (R3 de la auditoría) y retiro de los roles `legacy` | Pendiente |
+
+- Menú (`src/layouts/navigation/navigationConfig.ts`): Inicio (Mi día), Mi trabajo (Marcas, Clientes, Productos, Acciones), Análisis temporal (Ventas, Pronóstico, Inventario, marcados `temporary` para MB-001 y PR-001), Gerencia solo para admin y manager (Panorama ejecutivo, Pricing Lab, Compras; "Proyectos" reservado sin mostrarse) y Administración (Centro de datos con Calidad de producto debajo, Configuración). Los permisos no cambian: un PM puede seguir abriendo Panorama ejecutivo, Pricing Lab o Compras por URL o enlaces internos.
+- Rutas: "Mi día" en `/` (todos aterrizan ahí después del login, sin descargar datasets); Panorama ejecutivo en `/executive` y cola de atención en `/executive/attention/:domain`. `/my-day` y `/attention/:domain` redirigen conservando parámetros.
+- Español: menú, título de la barra superior y de la pestaña, h1, eyebrow, breadcrumbs y botones "Volver" de todas las pantallas, subtítulo de la marca ("Inteligencia comercial"). Los títulos de secciones internas (Executive Brief, Executive Score, AI Commercial Intelligence, Product Radar, Lost Customers, etc.) quedan para MB-001 y PR-001.
+- Buscador: Ctrl+K / Cmd+K desde cualquier pantalla, con indicación visible; visible desde pantallas medianas; texto "Buscar cliente, modelo o marca"; el cliente usa `authenticatedFetch`. No descarga datasets.
+- "Datos al corte" en la barra superior con `GET /api/status/data-cutoff` (solo sesión, sin alcance de marcas, con límite de solicitudes): fecha de corte de ventas, punto ámbar si alguna fuente tiene más de 7 días y fechas de ventas, inventario y compras al pasar el cursor. Se vuelve a consultar al regresar a la pestaña.
+- Mientras sale NAV-002, "Mi día no está disponible para tu tipo de acceso" muestra enlaces a las pantallas que ese rol puede abrir.
+- Sin migraciones. Despliegue con reinicio del backend (endpoint nuevo).
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

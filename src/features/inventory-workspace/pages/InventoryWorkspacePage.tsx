@@ -242,7 +242,7 @@ export function InventoryWorkspacePage() {
           connectedLabel="Inventario conectado"
           description="Supervisa existencias, disponibilidad, compromisos, valor, riesgos y oportunidades por marca, producto y ubicación."
           disconnectedLabel="Carga un inventario en Data Center"
-          eyebrow="Inventory Intelligence"
+          eyebrow="Inventario"
           icon={Warehouse}
           metadata={analytics?.snapshotDate ? (
             <p className="text-xs font-medium text-slate-400">

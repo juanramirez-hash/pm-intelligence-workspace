@@ -319,7 +319,7 @@ export function PurchasingWorkspacePage() {
           connectedLabel="Compras conectadas"
           description="Supervisa órdenes de compra, solicitudes, proveedores, compradores, vencimientos y vinculación SC → PO."
           disconnectedLabel="Carga órdenes y solicitudes de compra en Data Center"
-          eyebrow="Purchasing Intelligence"
+          eyebrow="Compras"
           icon={ShoppingCart}
           metadata={(
             <p className="text-xs font-medium text-slate-400">

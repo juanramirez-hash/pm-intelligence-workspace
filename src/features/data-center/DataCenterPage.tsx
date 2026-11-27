@@ -290,8 +290,8 @@ export function DataCenterPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Data Operations"
-        title="Data Center"
+        eyebrow="Administración"
+        title="Centro de datos"
         description="Administra, carga y valida las fuentes de información de PM Intelligence."
       />
 

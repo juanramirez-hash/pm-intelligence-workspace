@@ -1,3 +1,12 @@
+# 0.57.0-NAV-001
+
+- Makes "Mi día" the home page (`/`), where everyone lands after the login without downloading the datasets, and moves the executive overview to `/executive` and its attention queue to `/executive/attention/:domain`; `/my-day` and `/attention/:domain` redirect keeping their parameters.
+- Rebuilds the menu by role from `navigationConfig.ts`: Inicio, Mi trabajo, a temporary Análisis section, Gerencia (admin and manager only) and Administración. Permissions are unchanged.
+- Translates the menu, the top bar and browser tab titles, page headers, breadcrumbs and back links to Spanish, with a test that fails on the English names.
+- Adds Ctrl+K / Cmd+K to focus the global search from any screen, shows the search box from medium screens and sends it through `authenticatedFetch`.
+- Adds `GET /api/status/data-cutoff` (session only, dates only, rate limited) and shows "Datos al corte" in the top bar with a stale-source mark and the source dates in its tooltip.
+- Lists the screens a role can open when "Mi día" is not available for its access. No migrations; the backend must be restarted.
+
 # 0.57.0-MD-003-HOTFIX1
 
 - Splits "PO's por llegar (14 días)" into "Por llegar (N)", soonest first, and "Atrasadas (N)", most recent first, each paged on its own. Adds the optional `status=upcoming|overdue` parameter to `GET /api/my-day/arrivals` (400 for other values); without it the response is unchanged apart from the new `status: 'all'` field, and `summary` keeps the counts of both statuses.

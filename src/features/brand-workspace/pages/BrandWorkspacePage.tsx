@@ -326,7 +326,7 @@ export function BrandWorkspacePage() {
               icon: <Home size={14} />,
             },
             {
-              label: 'Brand Intelligence',
+              label: 'Marcas',
             },
           ]}
         />
@@ -357,7 +357,7 @@ export function BrandWorkspacePage() {
             </ShellActions>
           }
           description="Analiza desempeño, crecimiento, rentabilidad, concentración y prioridades comerciales por marca."
-          eyebrow="Brand Intelligence"
+          eyebrow="Marcas"
           icon={<Building2 size={22} />}
           metadata={
             <span>

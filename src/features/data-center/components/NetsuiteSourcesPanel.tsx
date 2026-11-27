@@ -146,7 +146,7 @@ export function NetsuiteSourcesPanel() {
     <AtlasCard className="p-6">
       <SectionHeader
         title="Fuentes de NetSuite"
-        description="Datos atrasados y reporte de NetSuite de cada carga semanal: exporta el archivo y arrástralo al Data Center."
+        description="Datos atrasados y reporte de NetSuite de cada carga semanal: exporta el archivo y arrástralo al Centro de datos."
       />
 
       <div className="mt-6 overflow-x-auto">
