@@ -88,7 +88,7 @@ const DOMAIN_PRESENTATION:
 
 const DOMAIN_ROUTES:
   Record<ExecutiveDomainId, string> = {
-  sales: '/sales',
+  sales: '/brands',
   inventory: '/inventory',
   forecast: '/forecast',
   pricing: '/pricing',

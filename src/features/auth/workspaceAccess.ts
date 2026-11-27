@@ -6,7 +6,6 @@ import type {
 export type WorkspaceAccessId =
   | 'my-day'
   | 'executive'
-  | 'sales'
   | 'brands'
   | 'customers'
   | 'products'
@@ -27,7 +26,6 @@ const ROLE_WORKSPACE_ACCESS:
     admin: [
       'my-day',
       'executive',
-      'sales',
       'brands',
       'customers',
       'products',
@@ -44,7 +42,6 @@ const ROLE_WORKSPACE_ACCESS:
     manager: [
       'my-day',
       'executive',
-      'sales',
       'brands',
       'customers',
       'products',
@@ -60,7 +57,6 @@ const ROLE_WORKSPACE_ACCESS:
     pm: [
       'my-day',
       'executive',
-      'sales',
       'brands',
       'customers',
       'products',
@@ -75,7 +71,6 @@ const ROLE_WORKSPACE_ACCESS:
     // Gerencia (Panorama ejecutivo, Pricing Lab, Compras) nor Administración.
     assistant: [
       'my-day',
-      'sales',
       'brands',
       'customers',
       'products',
@@ -86,7 +81,6 @@ const ROLE_WORKSPACE_ACCESS:
 
     engineering: [
       'my-day',
-      'sales',
       'brands',
       'customers',
       'products',

@@ -178,7 +178,6 @@ const SCREEN_TITLES: ReadonlyArray<[prefix: string, title: string]> = [
   ['/products/', 'Ficha de producto'],
   ['/products', 'Productos'],
   ['/actions', 'Acciones'],
-  ['/sales', 'Ventas'],
   ['/forecast', 'Pronóstico'],
   ['/inventory', 'Inventario'],
   ['/pricing', 'Pricing Lab'],

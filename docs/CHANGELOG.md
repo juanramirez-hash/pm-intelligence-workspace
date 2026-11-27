@@ -1,3 +1,9 @@
+# 0.57.0-MB-001B
+
+- Removes the code the brand page replaced: `src/features/sales-workspace/` (44 files), `src/features/brand-workspace/` (5), `src/atlas/widgets/brandDirectory/`, `src/features/auth/brandIntelligenceAccess.ts` and `BrandCommercialComparisonPanel.tsx` (55 files, `git rm`). 37 tests went with them; all of them tested only the removed code.
+- The Inteligencia tab is embedded in the brand frame (no `<main>`, no "Volver", no brand header or period of its own; access and unavailable states inside the frame). It shows Executive Score, AI Commercial Intelligence, Executive Action Center, Executive Brief, Prioridad comercial, Why, Riesgos, Oportunidades and Recommended Actions. The KPI row, Forecast de cierre, Daily Pace, Gap Analysis, the commercial comparison, Lost Customers and Lost Products are gone (they live in Ventas, Clientes and Productos) and the hook no longer builds the commercial comparison in the browser. The commercial plans point to the Clientes and Productos tabs, filter Por recuperar.
+- Executive links to `/sales` go to `/brands` ("Abrir Marcas"); the `sales` workspace access id and the `/sales` screen title are removed; `/sales` still redirects to `/brands`. `brandCommercialComparison.ts` stays until MB-003. No server changes; the unused `sales/analytics` and `/api/metrics/brands*` endpoints are pending C-001.
+
 # 0.57.0-MB-001C
 
 - Adds the "Año contra año de la cartera" panel to the Marcas directory (`/brands`): the same Mes equivalente / Acumulado YTD / Cierre anual comparison of the Ventas tab, for the brands of the existing "Mis marcas / Todas" selector and the same period. Mis marcas opens by default; Todas (about 2 s in production after the rewrite) starts collapsed with a "Ver comparativo" button and calls the endpoint only on click ("Calculando comparativo de toda la cartera…" while it loads, reload when the period changes, collapsed again after leaving and returning). Own call, loading and error.

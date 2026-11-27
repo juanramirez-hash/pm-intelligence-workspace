@@ -40,7 +40,7 @@ const DOMAIN_DEFINITIONS:
   readonly ExecutiveDomainDefinition[] = [
   {
     id: 'sales',
-    label: 'Sales Workspace',
+    label: 'Marcas',
     requiredDatasets: [
       'sales',
       'salesTargets',

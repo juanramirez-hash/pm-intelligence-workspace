@@ -1,3 +1,0 @@
-export {
-  useSalesWorkspace,
-} from './useSalesWorkspace'

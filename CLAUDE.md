@@ -112,8 +112,8 @@ Estado verificado contra el código el 29 oct 2026: `package.json` en **0.56.0**
 | Dominio | Ruta | Estado |
 |---|---|---|
 | Executive Workspace | `/` (+ `attention/:domain`) | Cerrado (EW-001 + HOTFIX1) |
-| Sales Workspace | `/sales` | Reemplazado por la ficha de marca (MB-001): `/sales` redirige a `/brands`; el código sigue en el repo hasta MB-001B |
-| Brand Workspace | `/brands`, `/brands/:brandId/(ventas|clientes|productos|inteligencia)` | MB-001: directorio y pestañas Ventas, Clientes y Productos servidos por `/api/brands/*` fuera de `DataHydrationGate`; Inteligencia sigue calculándose en el navegador (dentro del gate) hasta MB-003; Pronóstico enlaza a `/forecast` (MB-002) |
+| Sales Workspace | `/sales` | Retirado (MB-001 / MB-001B): `/sales` redirige a `/brands`; su código se borró en MB-001B |
+| Brand Workspace | `/brands`, `/brands/:brandId/(ventas|clientes|productos|inteligencia)` | MB-001: directorio y pestañas Ventas, Clientes y Productos servidos por `/api/brands/*` fuera de `DataHydrationGate`; Inteligencia sigue calculándose en el navegador (dentro del gate, embebida en el marco de la ficha) hasta MB-003; Pronóstico enlaza a `/forecast` (MB-002) |
 | Customer Intelligence | `/customers` | Migrado a BusinessRepository / `customerPeriods` |
 | Product Workspace | `/products` | Operativo |
 | Pricing Laboratory | `/pricing` | PL-001 a PL-015 completados |

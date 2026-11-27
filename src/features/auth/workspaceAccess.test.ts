@@ -54,7 +54,7 @@ describe('workspace access', () => {
       getAccessibleWorkspaces(
         user,
       ),
-    ).toHaveLength(14)
+    ).toHaveLength(13)
 
     expect(
       canAccessWorkspace(
@@ -165,7 +165,6 @@ describe('workspace access', () => {
       ),
     ).toEqual([
       'my-day',
-      'sales',
       'brands',
       'customers',
       'products',
@@ -199,7 +198,7 @@ describe('workspace access', () => {
   it('has no access entry for the removed legacy roles', () => {
     expect(
       getAccessibleWorkspaces(buildUser('admin')),
-    ).toHaveLength(14)
+    ).toHaveLength(13)
 
     // A role without an entry has no access and does not break the app.
     for (const role of ['analyst', 'viewer']) {
@@ -241,7 +240,6 @@ describe('workspace access', () => {
       ),
     ).toEqual([
       'my-day',
-      'sales',
       'brands',
       'customers',
       'products',

@@ -1,25 +1,16 @@
 import { BrandCommercialPlan } from '../components/BrandCommercialPlan'
-import { BrandCommercialComparisonPanel } from '../components/BrandCommercialComparisonPanel'
 
 import {
   AlertTriangle,
-  ArrowLeft,
-  BadgeDollarSign,
-  BarChart3,
   BrainCircuit,
-  Building2,
   CircleHelp,
   ClipboardList,
   CircleDollarSign,
   Lightbulb,
-  PackageSearch,
-  Gauge,
-  CalendarDays,
   TrendingUp,
   ShieldAlert,
   Sparkles,
   Target,
-  Users,
 } from 'lucide-react'
 
 import {
@@ -27,65 +18,22 @@ import {
 } from 'react-router-dom'
 
 import {
-  KpiCard,
-} from '../../../components/business/kpi'
-
-import {
-  WorkspaceGrid,
-} from '../../../components/workspace/grid'
-
-import {
-  WorkspaceHeader,
-} from '../../../components/workspace/header'
-
-import {
   WorkspaceSection,
 } from '../../../components/workspace/section'
-
-import type {
-  BrandWorkspaceCard,
-} from '../../../core/decision'
 
 import {
   useBrandIntelligenceWorkspace,
 } from '../hooks/useBrandIntelligenceWorkspace'
 
-const cardIcons = {
-  revenue: BarChart3,
-  'gross-profit': BadgeDollarSign,
-  'gross-margin': Target,
-  customers: Users,
-  products: PackageSearch,
-} as const
-
-const cardTones = {
-  positive: 'emerald',
-  neutral: 'slate',
-  attention: 'amber',
-  critical: 'rose',
-} as const
-
-function BrandKpiCard({
-  card,
-}: {
-  card: BrandWorkspaceCard
-}) {
-  const Icon =
-    cardIcons[
-      card.id as keyof typeof cardIcons
-    ] ?? BarChart3
-
-  return (
-    <KpiCard
-      icon={Icon}
-      subtitle={card.helper}
-      title={card.label}
-      tone={cardTones[card.status]}
-      value={card.value}
-    />
-  )
-}
-
+/**
+ * MB-001B: Inteligencia tab. It is rendered inside BrandFrame (title, team,
+ * period and tabs), so it has no page shell, no back link and no brand header
+ * of its own. It shows the Decision Core diagnosis: Executive Score, AI Commercial
+ * Intelligence, Executive Action Center, Executive Brief, Prioridad comercial,
+ * Why, Riesgos, Oportunidades and Recommended Actions. The forecast, pace,
+ * gap, KPI row, commercial comparison and lost customers / products live in
+ * the Ventas, Clientes and Productos tabs (served by the server).
+ */
 export function BrandIntelligencePage() {
   const {
     accessDenied,
@@ -95,84 +43,48 @@ export function BrandIntelligencePage() {
 
   if (accessDenied) {
     return (
-      <main className="min-h-screen bg-slate-50">
-        <div className="mx-auto flex max-w-3xl flex-col items-center px-6 py-20 text-center">
-          <ShieldAlert
-            className="text-amber-500"
-            size={48}
-            strokeWidth={1.8}
-          />
+      <div
+        data-brand-intelligence-state="access-denied"
+        className="flex flex-col items-center py-12 text-center"
+      >
+        <ShieldAlert
+          className="text-amber-500"
+          size={40}
+          strokeWidth={1.8}
+        />
 
-          <h1 className="mt-6 text-3xl font-bold text-slate-900">
-            Acceso restringido
-          </h1>
+        <h2 className="mt-4 text-xl font-semibold text-slate-900">
+          Acceso restringido
+        </h2>
 
-          <p className="mt-3 max-w-xl text-slate-500">
-            La marca {brandId ?? 'seleccionada'} no está asignada a tu usuario.
-          </p>
-
-          <Link
-            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            to="/brands"
-          >
-            <ArrowLeft size={17} />
-            Volver a Marcas
-          </Link>
-        </div>
-      </main>
+        <p className="mt-2 max-w-xl text-sm text-slate-500">
+          La marca {brandId ?? 'seleccionada'} no está asignada a tu usuario.
+        </p>
+      </div>
     )
   }
 
   if (!workspace) {
     return (
-      <main className="min-h-screen bg-slate-50">
-        <div className="mx-auto flex max-w-3xl flex-col items-center px-6 py-20 text-center">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Ficha de marca no disponible
-          </h1>
+      <div
+        data-brand-intelligence-state="unavailable"
+        className="flex flex-col items-center py-12 text-center"
+      >
+        <h2 className="text-xl font-semibold text-slate-900">
+          Inteligencia de la marca no disponible
+        </h2>
 
-          <p className="mt-3 text-slate-500">
-            No fue posible construir el Workspace para la marca “{brandId ?? 'sin identificar'}”. Verifica que exista información comercial importada para el periodo actual.
-          </p>
-
-          <Link
-            className="mt-8 rounded-xl bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-700"
-            to="/brands"
-          >
-            Volver al directorio
-          </Link>
-        </div>
-      </main>
+        <p className="mt-2 max-w-xl text-sm text-slate-500">
+          No fue posible construir el diagnóstico de la marca “{brandId ?? 'sin identificar'}”. Verifica que exista información comercial importada para el periodo actual.
+        </p>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto w-full max-w-[1600px] px-5 py-8 sm:px-8 lg:px-10">
-        <Link
-          className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-violet-700"
-          to="/brands"
-        >
-          <ArrowLeft size={17} />
-          Volver al directorio de marcas
-        </Link>
-
-        <WorkspaceHeader
-          connected
-          connectedLabel="Decision Core conectado"
-          description="Diagnóstico de la marca: venta, cuota, clientes, productos y señales de atención."
-          eyebrow="Ficha de marca"
-          icon={Building2}
-          metadata={(
-            <p className="text-xs font-medium text-slate-400">
-              Periodo actual {workspace.header.currentPeriodId} · Comparativo {workspace.header.previousPeriodId} · Salud {workspace.header.healthLabel}
-            </p>
-          )}
-          title={workspace.header.brandName}
-          tone="violet"
-        />
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_2fr]">
+    <div data-brand-intelligence="embedded">
+      <div>
+        <div className="grid gap-6 xl:grid-cols-[1fr_2fr]">
           <WorkspaceSection
             icon={BrainCircuit}
             subtitle={`Confianza ${workspace.executiveIntelligence.confidenceLabel}`}
@@ -221,64 +133,6 @@ export function BrandIntelligencePage() {
                 <p className="mt-2 text-sm leading-6 text-slate-700">{workspace.executiveIntelligence.nextStep}</p>
                 <BrandCommercialPlan workspace={workspace} request={workspace.prioritizedActions[0] ?? { title: 'Siguiente paso comercial', description: workspace.executiveIntelligence.nextStep }} />
               </article>
-            </div>
-          </WorkspaceSection>
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-3">
-          <WorkspaceSection
-            icon={Gauge}
-            subtitle={`Confianza ${workspace.forecast.confidenceLabel}`}
-            title="Forecast de cierre"
-            tone={workspace.forecast.status === 'critical' ? 'rose' : workspace.forecast.status === 'at-risk' ? 'amber' : 'emerald'}
-          >
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="text-3xl font-semibold text-slate-950">{workspace.forecast.projectedRevenueLabel}</p>
-                <p className="mt-2 text-sm font-semibold text-slate-500">Proyección · {workspace.forecast.statusLabel}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-100 px-4 py-3 text-right">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Cumplimiento esperado</p>
-                <p className="mt-1 font-semibold text-slate-800">{workspace.forecast.projectedAttainmentLabel}</p>
-              </div>
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-xl bg-slate-50 p-3"><p className="text-slate-400">Objetivo</p><strong>{workspace.forecast.revenueTargetLabel}</strong></div>
-              <div className="rounded-xl bg-slate-50 p-3"><p className="text-slate-400">Probabilidad</p><strong>{workspace.forecast.achievementProbabilityLabel}</strong></div>
-            </div>
-          </WorkspaceSection>
-
-          <WorkspaceSection
-            icon={CalendarDays}
-            subtitle="Avance contra calendario laboral"
-            title="Daily Pace"
-            tone="blue"
-          >
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Laborables</p><strong>{workspace.forecast.workingDaysLabel}</strong></div>
-              <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Transcurridos</p><strong>{workspace.forecast.elapsedWorkingDaysLabel}</strong></div>
-              <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Restantes</p><strong>{workspace.forecast.remainingWorkingDaysLabel}</strong></div>
-            </div>
-            <div className="mt-4 space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-slate-500">Avance esperado</span><strong>{workspace.forecast.expectedProgressLabel}</strong></div>
-              <div className="flex justify-between"><span className="text-slate-500">Avance real</span><strong>{workspace.forecast.actualProgressLabel}</strong></div>
-              <div className="flex justify-between"><span className="text-slate-500">Índice de ritmo</span><strong>{workspace.forecast.paceIndexLabel}</strong></div>
-            </div>
-          </WorkspaceSection>
-
-          <WorkspaceSection
-            icon={TrendingUp}
-            subtitle="Brecha y ritmo requerido"
-            title="Gap Analysis"
-            tone="amber"
-          >
-            <div className="space-y-4 text-sm">
-              <div><p className="text-slate-400">Brecha restante</p><p className="text-2xl font-semibold text-slate-950">{workspace.forecast.revenueGapLabel}</p></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Ritmo diario actual</p><strong>{workspace.forecast.currentDailyRevenueLabel}</strong></div>
-                <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Ritmo diario requerido</p><strong>{workspace.forecast.requiredDailyRevenueLabel}</strong></div>
-              </div>
-              <div className="flex justify-between border-t border-slate-200 pt-3"><span className="text-slate-500">Variación contra plan</span><strong>{workspace.forecast.revenueVarianceToPaceLabel}</strong></div>
             </div>
           </WorkspaceSection>
         </div>
@@ -359,18 +213,6 @@ export function BrandIntelligencePage() {
             </div>
           </div>
         </WorkspaceSection>
-
-        <WorkspaceGrid
-          className="mt-6"
-          columns={5}
-        >
-          {workspace.cards.map((card) => (
-            <BrandKpiCard
-              card={card}
-              key={card.id}
-            />
-          ))}
-        </WorkspaceGrid>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[2fr_1fr]">
           <WorkspaceSection
@@ -530,10 +372,6 @@ export function BrandIntelligencePage() {
           </WorkspaceSection>
         </div>
 
-        <BrandCommercialComparisonPanel
-          comparison={workspace.commercialComparison}
-        />
-
         <WorkspaceSection
           className="mt-6"
           icon={AlertTriangle}
@@ -572,82 +410,7 @@ export function BrandIntelligencePage() {
           </div>
         </WorkspaceSection>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-2">
-          <WorkspaceSection
-            icon={Users}
-            subtitle="Clientes sin recompra durante los dos meses completos evaluados; importes históricos de esta marca"
-            title="Lost Customers"
-            tone="rose"
-          >
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-wide text-slate-400">
-                  <tr>
-                    <th className="pb-3 pr-4">Cliente</th>
-                    <th className="pb-3 pr-4">Venta previa</th>
-                    <th className="pb-3 pr-4">GP previo</th>
-                    <th className="pb-3 pr-4">Cantidad</th>
-                    <th className="pb-3">Documentos</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {workspace.tables.lostCustomers.map((customer) => (
-                    <tr key={customer.id}>
-                      <td className="py-3 pr-4 font-medium text-slate-900">
-                        <Link
-                          className="hover:text-violet-700"
-                          to={`/customers/${encodeURIComponent(customer.id)}?brand=${encodeURIComponent(workspace.header.brandId)}`}
-                        >
-                          {customer.customerName}
-                        </Link>
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">{customer.previousRevenue}</td>
-                      <td className="py-3 pr-4 text-slate-600">{customer.previousGrossProfit}</td>
-                      <td className="py-3 pr-4 text-slate-600">{customer.previousQuantity}</td>
-                      <td className="py-3 text-slate-600">{customer.previousDocuments}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {workspace.tables.lostCustomers.length === 0 && (
-                <p className="py-8 text-center text-sm text-slate-500">
-                  No existen clientes perdidos en el comparativo.
-                </p>
-              )}
-            </div>
-          </WorkspaceSection>
-
-          <WorkspaceSection
-            icon={PackageSearch}
-            subtitle="Productos sin actividad durante los dos meses completos evaluados"
-            title="Lost Products"
-            tone="amber"
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              {workspace.tables.lostProducts.map((product) => (
-                <article
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                  key={product.id}
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    {product.id}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {product.productModel}
-                  </p>
-                </article>
-              ))}
-            </div>
-
-            {workspace.tables.lostProducts.length === 0 && (
-              <p className="py-8 text-center text-sm text-slate-500">
-                No existen productos perdidos en el comparativo.
-              </p>
-            )}
-          </WorkspaceSection>
-        </div>
       </div>
-    </main>
+    </div>
   )
 }

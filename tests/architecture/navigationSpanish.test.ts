@@ -70,7 +70,7 @@ describe('NAV-001 Spanish navigation', () => {
 
   it('titles the top bar and the browser tab in Spanish', () => {
     const paths = ['/', '/executive', '/executive/attention/brands', '/brands', '/brands/X', '/customers',
-      '/customers/X', '/products', '/products/X', '/actions', '/sales', '/forecast', '/inventory',
+      '/customers/X', '/products', '/products/X', '/actions', '/forecast', '/inventory',
       '/pricing', '/purchasing', '/data-center', '/data-quality/products', '/settings']
 
     expect(paths.map(screenTitle).filter((title) => ENGLISH.test(title))).toEqual([])

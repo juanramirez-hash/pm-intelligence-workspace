@@ -139,7 +139,7 @@ describe(
       )
 
       expect(markup).toContain(
-        'href="/sales"',
+        'href="/brands"',
       )
 
       expect(markup).toContain(

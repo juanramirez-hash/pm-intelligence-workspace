@@ -48,7 +48,7 @@ export function BrandCommercialPlan({ workspace, request }: {
             ))}
             {plan.products.map((product) => <p key={product.id}>{product.productModel} · {product.id}</p>)}
             {plan.customers.length === 0 && plan.products.length === 0 && <p>No hay candidatos identificados para este alcance. Revisar el historial antes de definir contactos u ofertas.</p>}
-            {(plan.customers.length === 5 || plan.products.length === 5) && <p className="text-xs">Primeros 5 candidatos. El listado completo está en las tablas de esta página.</p>}
+            {(plan.customers.length === 5 || plan.products.length === 5) && <p className="text-xs">Primeros 5 candidatos. El listado completo está en las pestañas Clientes y Productos, filtro Por recuperar.</p>}
           </div>
         )}
       </div>

@@ -503,9 +503,9 @@ export function ExecutiveSalesPerformance({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
-            to="/sales"
+            to="/brands"
           >
-            Abrir Sales Workspace
+            Abrir Marcas
 
             <ArrowRight size={14} />
           </Link>
