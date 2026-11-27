@@ -227,6 +227,21 @@ export interface BrandYearOverYear {
   }
 }
 
+// MB-001C: year over year of a portfolio (Mis marcas / Todas), for the directory.
+export interface BrandPortfolioYearResponse {
+  ok: true
+  view: MyDayView
+  brandSource: 'assigned' | 'all-brands' | 'none'
+  // Number of brands of "Mis marcas"; null for Todas (no brand filter).
+  brandCount: number | null
+  period: string | null
+  periods: string[]
+  dataCutoff: string | null
+  costHidden: boolean
+  reason?: string
+  yearOverYear: BrandYearOverYear | null
+}
+
 export interface BrandSeriesMonth {
   periodId: string
   hasSales: boolean

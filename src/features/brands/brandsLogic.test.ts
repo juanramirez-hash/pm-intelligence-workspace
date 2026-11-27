@@ -10,6 +10,7 @@ import {
   loadBrandCustomers,
   loadBrandDirectory,
   loadBrandHeader,
+  loadBrandPortfolioYearOverYear,
   loadBrandProducts,
   loadBrandSales,
   loadBrandSalesExport,
@@ -27,7 +28,11 @@ import {
   brandSegment,
   brandTabPath,
   describeDates,
+  PORTFOLIO_LOADING_ALL,
+  costHiddenNote,
   marginPointsText,
+  portfolioRequestKey,
+  portfolioSubtitle,
   readPeriodParam,
   shortMonthLabel,
   variationText,
@@ -79,6 +84,33 @@ describe('MB-001 texts', () => {
     expect(brandReasonMessage(undefined)).toBeNull()
     expect(brandReasonMessage('no-sales-data')).toBe('No hay ventas cargadas.')
     expect(brandReasonMessage('otra-razon')).toBe('Sin datos para mostrar.')
+  })
+
+  it('portfolio subtitle and cost note (MB-001C)', () => {
+    expect(portfolioSubtitle('all', null)).toContain('Todas las marcas')
+    expect(portfolioSubtitle('all', null)).toContain('sin PM')
+    expect(portfolioSubtitle('mine', 11)).toBe('Mis marcas · 11 marcas')
+    expect(portfolioSubtitle('mine', 1)).toBe('Mis marcas · 1 marca')
+    expect(portfolioSubtitle('mine', undefined)).toBe('Mis marcas')
+    expect(costHiddenNote('brand')).toContain('de esta marca')
+    expect(costHiddenNote('portfolio')).toContain('de las marcas incluidas')
+  })
+
+  it('Todas makes no call until the user opens it; Mis marcas does (MB-001C)', () => {
+    expect(portfolioRequestKey('all', false, '2026-11')).toBeNull()
+    expect(portfolioRequestKey('all', false, null)).toBeNull()
+    expect(portfolioRequestKey('mine', false, '2026-11')).toBe('portfolio|mine|2026-11')
+    expect(portfolioRequestKey('mine', false, null)).toBe('portfolio|mine|')
+    expect(portfolioRequestKey('all', true, '2026-11')).toBe('portfolio|all|2026-11')
+  })
+
+  it('an open Todas reloads when the period changes, and Mis marcas and Todas never share a request', () => {
+    const november = portfolioRequestKey('all', true, '2026-11')
+    const october = portfolioRequestKey('all', true, '2026-10')
+
+    expect(november).not.toBe(october)
+    expect(portfolioRequestKey('mine', true, '2026-11')).not.toBe(november)
+    expect(PORTFOLIO_LOADING_ALL).toBe('Calculando comparativo de toda la cartera…')
   })
 
   it('403 keeps the server message and 404 says the brand was not found', () => {
@@ -161,6 +193,18 @@ describe('MB-001 server calls', () => {
       '/api/brands/UNV%20(UNIVIEW)/products?filter=agotados&limit=50',
     ])
     expect(urls.some((url) => url.startsWith('/api/data'))).toBe(false)
+  })
+
+  it('the portfolio comparison only calls /api/brand-portfolio, with the view and the period', async () => {
+    const fetchMock = stubFetch()
+
+    await loadBrandPortfolioYearOverYear({ view: 'all', period: '2026-10' })
+    await loadBrandPortfolioYearOverYear({ view: 'mine', period: null })
+
+    expect(fetchMock.mock.calls.map((call) => String((call as unknown[])[0]))).toEqual([
+      '/api/brand-portfolio/year-over-year?view=all&period=2026-10',
+      '/api/brand-portfolio/year-over-year',
+    ])
   })
 
   it('does not send view=mine nor the default sort', async () => {

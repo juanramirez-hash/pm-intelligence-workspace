@@ -51,11 +51,23 @@ describe('MB-001 brand queries use the index expression', () => {
     expect(reads.length).toBeGreaterThanOrEqual(7)
 
     for (const part of reads) {
-      // The WHERE of the same statement (up to the next semicolon or backtick).
+      // The WHERE of the same statement (up to the next backtick).
       const statement = part.split('`')[0] ?? ''
+
+      // The year windows statement takes its brand condition as a parameter
+      // (checked below); every other statement filters inline.
+      if (statement.includes('${where}')) {
+        continue
+      }
 
       expect(statement).toContain('brand_key(f.brand) = $1')
     }
+  })
+
+  it('the shared year windows statement is called with the index expression (a brand or ANY of the brands)', () => {
+    expect(service).toContain("yearWindowsStatement(windows, 'brand_key(f.brand) = $1', [brandKey])")
+    expect(service).toContain("'brand_key(f.brand) = ANY($1::TEXT[])'")
+    expect(service).toContain('yearWindowsStatement(windows, null, [])')
   })
 
   it('never filters sales_facts with the raw brand text or another brand_key form', () => {

@@ -21,6 +21,10 @@ import {
   loadInventoryForItems,
   loadLostProducts,
   loadMonthlySeriesRows,
+  loadPortfolioTargetsRange,
+  loadPortfolioYearWindows,
+  portfolioTargetsRangeQuery,
+  portfolioYearWindowsQuery,
   loadProductRows,
   loadTargetsRange,
   loadYearWindows,
@@ -62,6 +66,10 @@ describe('MB-001 queries never interpolate values', () => {
     brandTeamQueries(brand).assistants,
     allBrandKeysQuery(),
     yearWindowsQuery(brand, plan.windows),
+    portfolioYearWindowsQuery([brand, 'ZKTECO'], plan.windows),
+    portfolioYearWindowsQuery(null, plan.windows),
+    portfolioTargetsRangeQuery([brand], '2026-01', '2026-12'),
+    portfolioTargetsRangeQuery(null, '2026-01', '2026-12'),
     monthlySeriesQuery(brand, '2024-12', '2026-11'),
     targetsRangeQuery(brand, '2024-12', '2026-12'),
     documentsQuery(brand, '2026-11-01', '2026-11-30', 50, 0),
@@ -150,15 +158,26 @@ describe('MB-001 year windows', () => {
 
     const windows = await loadYearWindows(pool, 'UNVUNIVIEW', plan.windows)
 
-    // One read of sales_facts: the brand and one overall range, then FILTER per window.
+    // One read of sales_facts: the brand and one overall range.
     expect(sql().match(/FROM sales_facts/g)).toHaveLength(1)
     expect(sql()).not.toContain('JOIN sales_facts')
     expect(sql()).toContain('brand_key(f.brand) = $1')
     expect(sql()).toContain('f.sale_date BETWEEN LEAST(')
     expect(sql()).toContain('AND GREATEST(')
-    expect(sql()).toContain('COUNT(f.sale_date) FILTER (WHERE f.sale_date BETWEEN $3::DATE AND $4::DATE) AS row_count_0')
-    expect(sql()).toContain("COUNT(DISTINCT NULLIF(f.document_number, '')) FILTER")
-    expect(sql().match(/FILTER \(WHERE/g)).toHaveLength(plan.windows.length * 7)
+    // Amounts: FILTER per window (4 aggregates each).
+    expect(sql()).toContain('COUNT(*) FILTER (WHERE sale_date BETWEEN $3::DATE AND $4::DATE) AS row_count_0')
+    expect(sql().match(/FILTER \(WHERE sale_date/g)).toHaveLength(plan.windows.length * 4)
+    // Distinct keys: no COUNT(DISTINCT); one grouping per key with a BOOL_OR flag per window.
+    expect(sql()).not.toContain('COUNT(DISTINCT')
+    expect(sql().match(/BOOL_OR\(/g)).toHaveLength(plan.windows.length * 3)
+    expect(sql()).toContain('GROUP BY document_key')
+    expect(sql()).toContain('GROUP BY customer_key')
+    expect(sql()).toContain('GROUP BY product_key')
+    expect(sql()).toContain("NULLIF(f.document_number, '') AS document_key")
+    expect(sql()).toContain("NULLIF(UPPER(BTRIM(f.product_name)), '') AS product_key")
+    expect(sql()).toContain('document_key IS NOT NULL')
+    expect(sql()).toContain('COUNT(*) FILTER (WHERE w0) AS documents_0')
+    expect(sql()).toContain('COUNT(*) FILTER (WHERE w7) AS products_7')
     expect(sql()).toContain('t(key, revenue, gross_profit, quantity, documents, customers, products, row_count)')
     expect(params()).toHaveLength(1 + plan.windows.length * 3)
     expect(params().slice(0, 4)).toEqual(['UNVUNIVIEW', 'monthly:2026', '2026-11-01', '2026-11-24'])
@@ -167,6 +186,76 @@ describe('MB-001 year windows', () => {
     })
     // A year without sales answers with rowCount 0 (missing for the rules).
     expect(windows.get('fy:2024')?.rowCount).toBe(0)
+  })
+})
+
+describe('MB-001C portfolio queries', () => {
+  const plan = buildYearWindowPlan('2026-11', '2026-11-24')
+  const row = { key: 'ytd:2026', revenue: '900', gross_profit: '180', quantity: '9', documents: '5', customers: '4', products: '3', row_count: '11' }
+
+  it('Mis marcas: the brands go as one array parameter, with the index expression', async () => {
+    const { pool, sql, params } = fakePool([row])
+
+    const windows = await loadPortfolioYearWindows(pool, ['BELDEN', 'UNVUNIVIEW'], plan.windows)
+
+    expect(sql()).toContain('brand_key(f.brand) = ANY($1::TEXT[])')
+    expect(sql()).not.toContain('BELDEN')
+    expect(params()[0]).toEqual(['BELDEN', 'UNVUNIVIEW'])
+    expect(params()).toHaveLength(1 + plan.windows.length * 3)
+    expect(params().slice(1, 4)).toEqual(['monthly:2026', '2026-11-01', '2026-11-24'])
+    expect(windows.get('ytd:2026')).toEqual({
+      revenue: 900, grossProfit: 180, quantity: 9, documents: 5, customers: 4, products: 3, rowCount: 11,
+    })
+  })
+
+  it('Todas: no brand filter at all and the window parameters start at $1', async () => {
+    const { pool, sql, params } = fakePool([row])
+
+    await loadPortfolioYearWindows(pool, null, plan.windows)
+
+    expect(sql()).not.toContain('brand_key(')
+    expect(sql()).toContain('WHERE f.sale_date BETWEEN LEAST($2::DATE')
+    expect(params()).toHaveLength(plan.windows.length * 3)
+    expect(params().slice(0, 3)).toEqual(['monthly:2026', '2026-11-01', '2026-11-24'])
+    // Still one read of sales_facts and no COUNT(DISTINCT).
+    expect(sql().match(/FROM sales_facts/g)).toHaveLength(1)
+    expect(sql()).not.toContain('COUNT(DISTINCT')
+  })
+
+  it('the brand, the portfolio of one brand and Todas share the statement after the scope', () => {
+    const one = yearWindowsQuery('UNVUNIVIEW', plan.windows).sql
+    const mine = portfolioYearWindowsQuery(['UNVUNIVIEW'], plan.windows).sql
+
+    // Only the brand condition differs.
+    expect(mine.replace('brand_key(f.brand) = ANY($1::TEXT[])', 'brand_key(f.brand) = $1')).toBe(one)
+  })
+
+  it('the quota of a portfolio is the latest target of each brand and month, summed by month', async () => {
+    const { pool, sql, params } = fakePool([
+      { period_id: '2026-01', target_revenue: '300', target_gross_profit: null },
+      { period_id: '2026-02', target_revenue: null, target_gross_profit: '5' },
+    ])
+
+    const rows = await loadPortfolioTargetsRange(pool, ['BELDEN', 'UNVUNIVIEW'], '2026-01', '2026-12')
+
+    expect(sql()).toContain('DISTINCT ON (period_id, brand_key(brand_id))')
+    expect(sql()).toContain('ORDER BY period_id, brand_key(brand_id), updated_at DESC, id DESC')
+    expect(sql()).toContain('SUM(target_revenue)')
+    expect(sql()).toContain('brand_key(brand_id) = ANY($3::TEXT[])')
+    expect(params()).toEqual(['2026-01', '2026-12', ['BELDEN', 'UNVUNIVIEW']])
+    expect(rows).toEqual([
+      { periodId: '2026-01', revenue: 300, grossProfit: null, grossMargin: null },
+      { periodId: '2026-02', revenue: null, grossProfit: 5, grossMargin: null },
+    ])
+    // Months without a revenue target do not count as months with quota.
+    expect(annualTargetFrom(rows, 2026)).toEqual({ revenue: 300, monthsWithTarget: 1 })
+  })
+
+  it('Todas sums every quota loaded: no brand filter', () => {
+    const query = portfolioTargetsRangeQuery(null, '2026-01', '2026-12')
+
+    expect(query.sql).not.toContain('ANY(')
+    expect(query.params).toEqual(['2026-01', '2026-12'])
   })
 })
 

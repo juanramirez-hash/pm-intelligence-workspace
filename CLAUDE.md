@@ -82,7 +82,7 @@ Fuentes operativas (archivos Excel/CSV)
 
 Capa de servidor (en curso en la rama v0.57.0, "production platform foundation"):
 
-- `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, myDay, brands, dataStatus, settingsUsers, settingsRoles). `dataStatus` (`GET /api/status/data-cutoff`) solo pide sesión y devuelve fechas: el corte de ventas y la última carga de ventas, inventario y compras.
+- `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, myDay, brands, brandPortfolio, dataStatus, settingsUsers, settingsRoles). `dataStatus` (`GET /api/status/data-cutoff`) solo pide sesión y devuelve fechas: el corte de ventas y la última carga de ventas, inventario y compras.
 - `server/services/`: importación por chunks con tablas staging, agregados de negocio (`refresh_business_aggregates`), analítica de ventas en SQL, búsqueda global y conciliación de facturación de proyectos.
 - `server/middleware/`: `requireAuth`, `requireAdmin`, `requireBrandScope`, `requireWriteAccess` (usuarios, roles y asignación de marcas por PM).
 - Roles (NAV-002B): `admin`, `manager`, `pm`, `engineering` y `assistant`. Los roles heredados `analyst` y `viewer` y el alcance `legacy` se retiraron (migración 041). El alcance `pricing` ya no lo usa ningún rol desde la 029 y sigue aceptado en `app_roles.scope` (pendiente de decidir).

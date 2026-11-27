@@ -35,3 +35,31 @@ describe('MB-001 architecture', () => {
     expect(importers.map((file) => file.replace(/\\/g, '/'))).toEqual(['src/features/brands/pages/BrandIntelligenceRoute.tsx'])
   })
 })
+
+describe('MB-001C portfolio panel', () => {
+  const page = readFileSync('src/features/brands/pages/BrandsDirectoryPage.tsx', 'utf8')
+
+  it('the directory page shows the panel before the table, sharing the Mis marcas / Todas selector and the period', () => {
+    expect(page).toContain('<BrandPortfolioPanel view={view} period={period} />')
+    expect(page.indexOf('<BrandPortfolioPanel')).toBeLessThan(page.indexOf('title="Directorio de marcas"'))
+  })
+
+  it('the panel is keyed by the view and asks for its request key (Todas collapsed until the click)', () => {
+    const panel = readFileSync('src/features/brands/components/BrandPortfolioPanel.tsx', 'utf8')
+
+    expect(panel).toContain('<PortfolioPanel key={view} view={view} period={period} />')
+    expect(panel).toContain('portfolioRequestKey(view, expanded, period)')
+    expect(panel).toContain('collapsed={!active}')
+    expect(panel).toContain('onExpand={() => setExpanded(true)}')
+  })
+
+  it('the Ventas tab and the directory use the same year comparison component (no copy)', () => {
+    const sales = readFileSync('src/features/brands/components/BrandSalesTab.tsx', 'utf8')
+    const panel = readFileSync('src/features/brands/components/BrandPortfolioPanel.tsx', 'utf8')
+
+    expect(sales).toContain("from './BrandYearComparison'")
+    expect(panel).toContain("from './BrandYearComparison'")
+    expect(sales).not.toMatch(/function (YearComparison|SlotsTable|AnnualClose)/)
+    expect(panel).not.toMatch(/function (YearComparison|SlotsTable|AnnualClose)/)
+  })
+})

@@ -620,6 +620,23 @@ export function buildMonthlySeries({
 // -- Cost visibility ---------------------------------------------------------
 
 /**
+ * MB-001C: cost visibility of a portfolio. brandKeys = the included brands;
+ * null = all the sales (needs cost access to every brand). Visible only when
+ * the user has cost access to EVERY included brand.
+ */
+export function costVisibleForPortfolio(costScope, brandKeys) {
+  if (costScope?.mode === 'all') {
+    return true
+  }
+
+  return costScope?.mode === 'assigned' &&
+    Array.isArray(costScope.brandKeys) &&
+    Array.isArray(brandKeys) &&
+    brandKeys.length > 0 &&
+    brandKeys.every((key) => costScope.brandKeys.includes(key))
+}
+
+/**
  * Gross profit and margin reveal the cost. With a cost scope (resolveCostScope
  * of SEC-003A): all brands, only the assigned ones, or none.
  */

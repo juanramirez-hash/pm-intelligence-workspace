@@ -11,6 +11,7 @@ import type {
   BrandDirectoryRow,
   BrandHeaderResponse,
   BrandMonthOverMonth,
+  BrandPortfolioYearResponse,
   BrandSeriesMonth,
   BrandYearOverYear,
   BrandYearWindow,
@@ -19,14 +20,14 @@ import { BrandsDirectoryTable } from '../pages/BrandsDirectoryPage'
 import { BrandErrorState } from './BrandFrame'
 import { BrandFrameView } from './BrandFrame'
 import {
-  AnnualClose,
   BrandIndicators,
   BrandOpenActions,
   DocumentsTable,
   MonthComparison,
   MonthlySeries,
-  YearComparison,
 } from './BrandSalesTab'
+import { AnnualClose, YearComparison } from './BrandYearComparison'
+import { BrandPortfolioPanelView } from './BrandPortfolioPanel'
 import { CustomersTable, ProductsTable } from './BrandListTabs'
 import { BrandsApiError } from '../api/brandsApi'
 
@@ -528,4 +529,161 @@ describe('MB-001 directory', () => {
     expect(text(html)).not.toContain('$60,000')
     expect(text(html)).toContain('$300,000')
   })
+})
+
+describe('MB-001C portfolio panel in the directory', () => {
+  const SLOTS = {
+    current: WINDOW(2026, 300000, 60000),
+    previousYear: WINDOW(2025, 250000, 50000),
+    twoYearsBack: null,
+    variations: { vsPreviousYear: VARIATION, vsTwoYearsBack: null },
+  }
+
+  const response = (overrides: Partial<BrandPortfolioYearResponse> = {}): BrandPortfolioYearResponse => ({
+    ok: true,
+    view: 'mine',
+    brandSource: 'assigned',
+    brandCount: 11,
+    period: '2026-11',
+    periods: ['2026-11'],
+    dataCutoff: '2026-11-24',
+    costHidden: false,
+    yearOverYear: {
+      available: true,
+      currentYear: 2026,
+      closed: false,
+      description: 'Comparativo contra el mismo día hábil de los años anteriores.',
+      costHidden: false,
+      monthly: SLOTS,
+      ytd: SLOTS,
+      annual: {
+        projection: null,
+        previousYear: null,
+        twoYearsBack: null,
+        target: null,
+        projectionVariations: { vsPreviousYear: null, vsTwoYearsBack: null },
+      },
+    },
+    ...overrides,
+  })
+
+  const view = (
+    data: BrandPortfolioYearResponse | null,
+    options: { view?: 'mine' | 'all', status?: 'loading' | 'success' | 'error', error?: Error | null, collapsed?: boolean } = {},
+  ) =>
+    render(
+      <BrandPortfolioPanelView
+        view={options.view ?? 'mine'}
+        collapsed={options.collapsed}
+        status={options.status ?? 'success'}
+        data={data}
+        error={options.error ?? null}
+        onRetry={() => {}}
+      />,
+    )
+
+  it('shows the same year over year panel, open, for Mis marcas with the brand count', () => {
+    const html = view(response())
+    const content = text(html)
+
+    expect(content).toContain('Año contra año de la cartera')
+    expect(content).toContain('Mis marcas · 11 marcas')
+    expect(content).toContain('Mes equivalente')
+    expect(content).toContain('Acumulado YTD')
+    expect(content).toContain('Cierre anual')
+    expect(content).toContain('1 nov 2026 – 24 nov 2026 · 17 días hábiles')
+    expect(content).toContain('distintos sobre toda la cartera')
+    expect(html).toContain('data-brand-portfolio="mine"')
+  })
+
+  it('Todas starts collapsed with "Ver comparativo" and shows no data nor request text', () => {
+    const html = view(null, { view: 'all', collapsed: true, status: 'loading' })
+    const content = text(html)
+
+    expect(html).toContain('data-brand-portfolio-collapsed="all"')
+    expect(html).toContain('data-brand-portfolio-expand="true"')
+    expect(content).toContain('Ver comparativo')
+    expect(content).toContain('Todas las marcas')
+    expect(content).not.toContain('Calculando comparativo')
+    expect(html).not.toContain('data-brand-portfolio="all"')
+  })
+
+  it('Mis marcas is not collapsed: it shows the comparison', () => {
+    const html = view(response(), { view: 'mine', collapsed: false })
+
+    expect(html).not.toContain('data-brand-portfolio-collapsed')
+    expect(text(html)).not.toContain('Ver comparativo')
+    expect(html).toContain('data-brand-portfolio="mine"')
+  })
+
+  it('Todas says "Calculando comparativo de toda la cartera…" while it loads, also on a period change', () => {
+    const stale = response({ view: 'all', brandSource: 'all-brands', brandCount: null })
+    const fresh = text(view(null, { view: 'all', status: 'loading' }))
+    const changingHtml = view(stale, { view: 'all', status: 'loading' })
+    const changing = text(changingHtml)
+
+    expect(fresh).toContain('Calculando comparativo de toda la cartera…')
+    // The previous period's numbers are not shown while the new ones load.
+    expect(changing).toContain('Calculando comparativo de toda la cartera…')
+    expect(changingHtml).not.toContain('data-brand-portfolio="all"')
+    expect(changing).not.toContain('Acumulado YTD')
+  })
+
+  it('Mis marcas keeps the generic loading text', () => {
+    const content = text(view(null, { view: 'mine', status: 'loading' }))
+
+    expect(content).toContain('Cargando…')
+    expect(content).not.toContain('Calculando comparativo')
+  })
+
+  it('an open Todas shows the comparison', () => {
+    const html = view(response({ view: 'all', brandSource: 'all-brands', brandCount: null }), { view: 'all', collapsed: false })
+
+    expect(html).toContain('data-brand-portfolio="all"')
+    expect(text(html)).toContain('Mes equivalente')
+  })
+
+  it('Todas says it includes the brands without a PM', () => {
+    const content = text(view(response({ view: 'all', brandSource: 'all-brands', brandCount: null }), { view: 'all' }))
+
+    expect(content).toContain('Todas las marcas')
+    expect(content).toContain('incluidas las marcas sin PM')
+  })
+
+  it('shows the portfolio cost note and "—" (never $0) when the cost is hidden', () => {
+    const hiddenSlots = {
+      ...SLOTS,
+      current: WINDOW(2026, 300000, null),
+      previousYear: WINDOW(2025, 250000, null),
+      variations: { vsPreviousYear: { ...VARIATION, grossProfit: { amount: null, percentage: null }, grossMarginPoints: null }, vsTwoYearsBack: null },
+    }
+    const base = response()
+    const html = view({
+      ...base,
+      costHidden: true,
+      yearOverYear: { ...base.yearOverYear!, costHidden: true, monthly: hiddenSlots, ytd: hiddenSlots },
+    })
+    const content = text(html)
+    const gross = text(html.split('>Utilidad bruta</td>')[1]?.split('</tr>')[0] ?? '')
+
+    expect(content).toContain('No tienes acceso a costos de alguna de las marcas incluidas')
+    expect(content).not.toContain('de esta marca')
+    expect(gross).toContain('—')
+    expect(gross).not.toContain('$')
+    expect(content).not.toContain('$0')
+  })
+
+  it('explains the reason when there is nothing to compare', () => {
+    const content = text(view(response({ reason: 'no-sales-data', yearOverYear: null })))
+
+    expect(content).toContain('No hay ventas cargadas.')
+  })
+
+  it('a failure stays inside the panel', () => {
+    const content = text(view(null, { status: 'error', error: new Error('La consulta respondió 500') }))
+
+    expect(content).toContain('La consulta respondió 500')
+    expect(content).toContain('Reintentar')
+  })
+
 })

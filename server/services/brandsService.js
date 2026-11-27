@@ -157,57 +157,102 @@ export async function loadBrandSalesDates(pool, brandKeys) {
 
 /**
  * One row per window (key) with its sums, zeros and row_count 0 when the
- * brand sold nothing there. A single scan of sales_facts for the brand and the
- * overall date range; each window is a FILTER aggregate, so every window answers.
+ * sales are empty there. MB-001C ("alternativa C"):
+ *
+ * - One read of sales_facts (scoped): the brand filter and the range from the
+ *   oldest window start to the newest window end.
+ * - Amounts (revenue, gross profit, quantity, rows): SUM / COUNT with FILTER
+ *   per window, in one aggregate over the scope.
+ * - Distinct documents, customers and products: no COUNT(DISTINCT) (each one
+ *   sorts its own rows). Each key is grouped once (hash) with one BOOL_OR flag
+ *   per window (did the key sell inside that window?) and the flags are
+ *   counted. Same result as COUNT(DISTINCT key) FILTER (WHERE window): a key
+ *   counts in a window if and only if one of its rows falls inside it.
  */
-export function yearWindowsQuery(brandKey, windows) {
-  const params = [brandKey]
+function yearWindowsStatement(windows, brandCondition, leadingParams) {
+  const params = [...leadingParams]
   const refs = windows.map((window) => {
     params.push(window.key, window.dateFrom, window.dateTo)
     const base = params.length
 
     return { key: `$${base - 2}::TEXT`, from: `$${base - 1}::DATE`, to: `$${base}::DATE` }
   })
-  const inWindow = (ref) => `FILTER (WHERE f.sale_date BETWEEN ${ref.from} AND ${ref.to})`
-  const aggregates = refs.flatMap((ref, index) => [
-    `SUM(f.revenue) ${inWindow(ref)} AS revenue_${index}`,
-    `SUM(f.gross_profit) ${inWindow(ref)} AS gross_profit_${index}`,
-    `SUM(f.quantity) ${inWindow(ref)} AS quantity_${index}`,
-    `COUNT(DISTINCT NULLIF(f.document_number, '')) ${inWindow(ref)} AS documents_${index}`,
-    `COUNT(DISTINCT NULLIF(f.customer_id, '')) ${inWindow(ref)} AS customers_${index}`,
-    `COUNT(DISTINCT NULLIF(UPPER(BTRIM(f.product_name)), '')) ${inWindow(ref)} AS products_${index}`,
-    `COUNT(f.sale_date) ${inWindow(ref)} AS row_count_${index}`,
+  const between = (ref) => `sale_date BETWEEN ${ref.from} AND ${ref.to}`
+  const amounts = refs.flatMap((ref, index) => [
+    `SUM(revenue) FILTER (WHERE ${between(ref)}) AS revenue_${index}`,
+    `SUM(gross_profit) FILTER (WHERE ${between(ref)}) AS gross_profit_${index}`,
+    `SUM(quantity) FILTER (WHERE ${between(ref)}) AS quantity_${index}`,
+    `COUNT(*) FILTER (WHERE ${between(ref)}) AS row_count_${index}`,
   ])
+  const flags = refs.map((ref, index) => `BOOL_OR(${between(ref)}) AS w${index}`).join(', ')
+  const counted = (alias) => refs
+    .map((_ref, index) => `COUNT(*) FILTER (WHERE w${index}) AS ${alias}_${index}`)
+    .join(', ')
+  const distinctCounts = (name, alias, column) => `${name} AS (
+            SELECT ${counted(alias)}
+              FROM (SELECT ${flags}
+                      FROM scoped
+                     WHERE ${column} IS NOT NULL
+                     GROUP BY ${column}) grouped
+          )`
   const rows = refs.map((ref, index) =>
     `(${ref.key}, COALESCE(a.revenue_${index}, 0), COALESCE(a.gross_profit_${index}, 0), ` +
-    `COALESCE(a.quantity_${index}, 0), a.documents_${index}, a.customers_${index}, ` +
-    `a.products_${index}, a.row_count_${index})`,
+    `COALESCE(a.quantity_${index}, 0), d.documents_${index}, c.customers_${index}, ` +
+    `p.products_${index}, a.row_count_${index})`,
   )
+  const where = brandCondition
+    ? `WHERE ${brandCondition}
+               AND f.sale_date BETWEEN`
+    : 'WHERE f.sale_date BETWEEN'
 
-  // One read of sales_facts: the brand and the range from the oldest window
-  // start to the newest window end; each window is a FILTER over that scan.
   return {
-    sql: `WITH agg AS (
-            SELECT ${aggregates.join(', ')}
+    sql: `WITH scoped AS (
+            SELECT f.sale_date, f.revenue, f.gross_profit, f.quantity,
+                   NULLIF(f.document_number, '') AS document_key,
+                   NULLIF(f.customer_id, '') AS customer_key,
+                   NULLIF(UPPER(BTRIM(f.product_name)), '') AS product_key
               FROM sales_facts f
-             WHERE brand_key(f.brand) = $1
-               AND f.sale_date BETWEEN LEAST(${refs.map((ref) => ref.from).join(', ')})
-                                   AND GREATEST(${refs.map((ref) => ref.to).join(', ')})
-          )
+             ${where} LEAST(${refs.map((ref) => ref.from).join(', ')})
+                                     AND GREATEST(${refs.map((ref) => ref.to).join(', ')})
+          ),
+          amounts AS (
+            SELECT ${amounts.join(', ')}
+              FROM scoped
+          ),
+          ${distinctCounts('doc_counts', 'documents', 'document_key')},
+          ${distinctCounts('customer_counts', 'customers', 'customer_key')},
+          ${distinctCounts('product_counts', 'products', 'product_key')}
           SELECT t.key, t.revenue, t.gross_profit, t.quantity, t.documents,
                  t.customers, t.products, t.row_count
-            FROM agg a
+            FROM amounts a
+           CROSS JOIN doc_counts d
+           CROSS JOIN customer_counts c
+           CROSS JOIN product_counts p
            CROSS JOIN LATERAL (VALUES ${rows.join(', ')})
                  AS t(key, revenue, gross_profit, quantity, documents, customers, products, row_count)`,
     params,
   }
 }
 
-export async function loadYearWindows(pool, brandKey, windows) {
-  const { sql, params } = yearWindowsQuery(brandKey, windows)
+/** A brand: brand_key(f.brand) = $1 (the index of migration 042). */
+export function yearWindowsQuery(brandKey, windows) {
+  return yearWindowsStatement(windows, 'brand_key(f.brand) = $1', [brandKey])
+}
 
+/**
+ * MB-001C: the same windows for a portfolio. brandKeys = the brands of the user
+ * (brand_key(f.brand) = ANY($1)); null = all the sales, with no brand filter
+ * (brands without a PM included). Same statement, so the same rules.
+ */
+export function portfolioYearWindowsQuery(brandKeys, windows) {
+  return brandKeys === null
+    ? yearWindowsStatement(windows, null, [])
+    : yearWindowsStatement(windows, 'brand_key(f.brand) = ANY($1::TEXT[])', [brandKeys])
+}
+
+function mapYearWindows(rows) {
   return new Map(
-    (await pool.query(sql, params)).rows.map((row) => [
+    rows.map((row) => [
       row.key,
       {
         revenue: toCount(row.revenue),
@@ -220,6 +265,19 @@ export async function loadYearWindows(pool, brandKey, windows) {
       },
     ]),
   )
+}
+
+export async function loadYearWindows(pool, brandKey, windows) {
+  const { sql, params } = yearWindowsQuery(brandKey, windows)
+
+  return mapYearWindows((await pool.query(sql, params)).rows)
+}
+
+/** brandKeys = list of brands, or null for all the sales. */
+export async function loadPortfolioYearWindows(pool, brandKeys, windows) {
+  const { sql, params } = portfolioYearWindowsQuery(brandKeys, windows)
+
+  return mapYearWindows((await pool.query(sql, params)).rows)
 }
 
 // -- Sales: monthly series and targets ---------------------------------------
@@ -270,6 +328,46 @@ export async function loadTargetsRange(pool, brandKey, fromPeriod, toPeriod) {
     revenue: toNumber(row.target_revenue),
     grossProfit: toNumber(row.target_gross_profit),
     grossMargin: toNumber(row.target_gross_margin),
+  }))
+}
+
+/**
+ * MB-001C: monthly quota of a portfolio = the latest stored target of each
+ * brand and month (like brand_period_scorecard), summed by month. brandKeys
+ * null = every target loaded (brands without sales included).
+ */
+export function portfolioTargetsRangeQuery(brandKeys, fromPeriod, toPeriod) {
+  const params = [fromPeriod, toPeriod]
+  const brandFilter = brandKeys === null ? '' : ' AND brand_key(brand_id) = ANY($3::TEXT[])'
+
+  if (brandKeys !== null) {
+    params.push(brandKeys)
+  }
+
+  return {
+    sql: `SELECT period_id, SUM(target_revenue) AS target_revenue,
+                 SUM(target_gross_profit) AS target_gross_profit
+            FROM (
+              SELECT DISTINCT ON (period_id, brand_key(brand_id))
+                     period_id, target_revenue, target_gross_profit
+                FROM brand_targets
+               WHERE period_id BETWEEN $1 AND $2${brandFilter}
+               ORDER BY period_id, brand_key(brand_id), updated_at DESC, id DESC
+            ) latest
+           GROUP BY period_id
+           ORDER BY period_id`,
+    params,
+  }
+}
+
+export async function loadPortfolioTargetsRange(pool, brandKeys, fromPeriod, toPeriod) {
+  const { sql, params } = portfolioTargetsRangeQuery(brandKeys, fromPeriod, toPeriod)
+
+  return (await pool.query(sql, params)).rows.map((row) => ({
+    periodId: row.period_id,
+    revenue: toNumber(row.target_revenue),
+    grossProfit: toNumber(row.target_gross_profit),
+    grossMargin: null,
   }))
 }
 

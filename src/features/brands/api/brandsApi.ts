@@ -13,10 +13,12 @@ import type {
   BrandDirectoryResponse,
   BrandExportResponse,
   BrandHeaderResponse,
+  BrandPortfolioYearResponse,
   BrandProductFilter,
   BrandProductsResponse,
   BrandSalesResponse,
   BrandSalesSection,
+  MyDayView,
 } from './brandsTypes'
 
 export class BrandsApiError extends Error {
@@ -104,6 +106,21 @@ export function loadBrandDirectory(
       sort: sort === 'revenue' ? undefined : sort,
       limit,
       offset: offset || undefined,
+    }),
+    signal,
+  )
+}
+
+/** MB-001C: year over year of the portfolio of the directory (Mis marcas / Todas). */
+export function loadBrandPortfolioYearOverYear(
+  { view, period }: { view: MyDayView, period?: string | null },
+  signal?: AbortSignal,
+): Promise<BrandPortfolioYearResponse> {
+  return requestJson(
+    brandsPath('/api/brand-portfolio/year-over-year', {
+      // The server default is view=mine; only view=all is sent.
+      view: view === 'all' ? 'all' : undefined,
+      period,
     }),
     signal,
   )

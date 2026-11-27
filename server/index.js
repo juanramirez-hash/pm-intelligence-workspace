@@ -303,6 +303,11 @@ app.use(
   createApiRateLimit(),
 )
 
+app.use(
+  '/api/brand-portfolio',
+  createApiRateLimit(),
+)
+
 registerBusinessRoutes(app, pool)
 
 app.use(

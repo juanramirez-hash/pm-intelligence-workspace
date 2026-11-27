@@ -6,6 +6,7 @@ import { requireAuth } from './middleware/requireAuth.js'
 import { loadAuthenticatedUser } from './middleware/loadAuthenticatedUser.js'
 import { createActionsRouter } from './routes/actions.js'
 import { createMetricsRouter } from './routes/metrics.js'
+import { createBrandPortfolioRouter } from './routes/brandPortfolio.js'
 import { createBrandsRouter } from './routes/brands.js'
 import { createMyDayRouter } from './routes/myDay.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
@@ -95,6 +96,14 @@ export function registerBusinessRoutes(app, pool) {
     requireAuth,
     authenticatedUser,
     createBrandsRouter(pool),
+  )
+
+  // MB-001C: year over year of a portfolio of brands. Rate limited in index.js.
+  app.use(
+    '/api/brand-portfolio',
+    requireAuth,
+    authenticatedUser,
+    createBrandPortfolioRouter(pool),
   )
 
   // NAV-001: "Datos al corte" of the top bar. Session only, no brand scope

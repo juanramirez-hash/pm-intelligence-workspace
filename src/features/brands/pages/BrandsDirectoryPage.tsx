@@ -26,6 +26,10 @@ import type {
 } from '../api/brandsTypes'
 
 import {
+  BrandPortfolioPanel,
+} from '../components/BrandPortfolioPanel'
+
+import {
   brandReasonMessage,
   brandSegment,
 } from '../format/brandsFormat'
@@ -238,6 +242,9 @@ export function BrandsDirectoryPage() {
             </label>
           </div>
         </header>
+
+        {/* MB-001C: open by default; its own call, loading and error. */}
+        <BrandPortfolioPanel view={view} period={period} />
 
         <MyDayBlock
           title="Directorio de marcas"

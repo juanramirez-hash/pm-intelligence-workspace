@@ -18,6 +18,7 @@ import type {
   BrandAnnualTarget,
   BrandTabId,
   BrandVariation,
+  MyDayView,
 } from '../api/brandsTypes'
 
 export const BRAND_TABS: ReadonlyArray<{ id: BrandTabId, label: string }> = [
@@ -32,6 +33,46 @@ export const FORECAST_TAB_BADGE = 'MB-002'
 
 export const COST_HIDDEN_NOTE =
   'No tienes acceso a costos de esta marca: la utilidad bruta y el margen no se muestran.'
+
+// MB-001C: portfolio of brands (Mis marcas / Todas).
+export const COST_HIDDEN_PORTFOLIO_NOTE =
+  'No tienes acceso a costos de alguna de las marcas incluidas: la utilidad bruta y el margen no se muestran.'
+
+/** Note of hidden costs for one brand or for a portfolio of brands. */
+export function costHiddenNote(scope: 'brand' | 'portfolio'): string {
+  return scope === 'portfolio' ? COST_HIDDEN_PORTFOLIO_NOTE : COST_HIDDEN_NOTE
+}
+
+/** Subtitle of the portfolio panel: Mis marcas (with the count) or Todas. */
+export function portfolioSubtitle(
+  view: MyDayView,
+  brandCount: number | null | undefined,
+): string {
+  if (view === 'all') {
+    return 'Todas las marcas (toda la venta, incluidas las marcas sin PM)'
+  }
+
+  return typeof brandCount === 'number'
+    ? `Mis marcas · ${formatInteger(brandCount)} ${brandCount === 1 ? 'marca' : 'marcas'}`
+    : 'Mis marcas'
+}
+
+export const PORTFOLIO_LOADING_ALL = 'Calculando comparativo de toda la cartera…'
+
+/**
+ * Request key of the portfolio panel; null = do not call. Mis marcas loads at
+ * once; Todas (about 2 s) only after the user opens it. The key includes the
+ * view and the period, so an open panel reloads when the period changes.
+ */
+export function portfolioRequestKey(
+  view: MyDayView,
+  expanded: boolean,
+  period: string | null,
+): string | null {
+  return view === 'mine' || expanded
+    ? `portfolio|${view}|${period ?? ''}`
+    : null
+}
 
 export const BRAND_NOT_FOUND = 'Marca no encontrada'
 
