@@ -25,8 +25,6 @@ const SCOPES: Record<AuthenticatedUserRole, AuthenticatedUserScope> = {
   manager: 'all',
   pm: 'assigned',
   engineering: 'assigned',
-  analyst: 'legacy',
-  viewer: 'legacy',
   assistant: 'assigned',
 }
 
@@ -113,13 +111,14 @@ describe('NAV-001 menu by role', () => {
     ])
   })
 
-  it('keeps legacy roles on their current screens', () => {
-    expect(menu('analyst')).toEqual({
-      Inicio: ['Mi día'],
-      'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
-      'Análisis': ['Ventas', 'Pronóstico', 'Inventario'],
-    })
-    expect(menu('viewer')['Análisis']).toEqual(['Ventas', 'Pronóstico', 'Inventario'])
+  it('has a menu for exactly the five current roles (NAV-002B)', () => {
+    const roles = Object.keys(SCOPES).sort()
+
+    expect(roles).toEqual(['admin', 'assistant', 'engineering', 'manager', 'pm'])
+
+    for (const role of roles as AuthenticatedUserRole[]) {
+      expect(buildNavigation(user(role)).length).toBeGreaterThan(0)
+    }
   })
 
   it('marks the analysis entries as temporary and reserves Proyectos', () => {

@@ -24,7 +24,7 @@ function buildUser(
       : role === 'pm' || role === 'assistant' ||
           role === 'engineering'
         ? 'assigned'
-        : 'legacy'
+        : 'pricing'
 
   return {
     id: 1,
@@ -77,8 +77,7 @@ describe('workspace access', () => {
         'manager',
         'pm',
         'engineering',
-        'analyst',
-        'viewer',
+        'assistant',
       ] as const
     ) {
       expect(
@@ -196,40 +195,24 @@ describe('workspace access', () => {
     ).toBe(false)
   })
 
-  it('keeps legacy roles aligned with approved matrix', () => {
-    const analyst =
-      buildUser('analyst')
-
-    const viewer =
-      buildUser('viewer')
-
+  // NAV-002B (migration 041): analyst and viewer no longer exist.
+  it('has no access entry for the removed legacy roles', () => {
     expect(
-      canAccessWorkspace(
-        analyst,
-        'pricing',
-      ),
-    ).toBe(true)
+      getAccessibleWorkspaces(buildUser('admin')),
+    ).toHaveLength(14)
 
-    expect(
-      canAccessWorkspace(
-        viewer,
-        'pricing',
-      ),
-    ).toBe(false)
+    // A role without an entry has no access and does not break the app.
+    for (const role of ['analyst', 'viewer']) {
+      const user =
+        buildUser(role as AuthenticatedUserRole)
 
-    expect(
-      canAccessWorkspace(
-        analyst,
-        'data-center',
-      ),
-    ).toBe(false)
-
-    expect(
-      canAccessWorkspace(
-        viewer,
-        'data-center',
-      ),
-    ).toBe(false)
+      expect(
+        getAccessibleWorkspaces(user),
+      ).toEqual([])
+      expect(
+        canAccessWorkspace(user, 'my-day'),
+      ).toBe(false)
+    }
   })
 
   it('opens "Mi día" to every role (MD-003)', () => {
@@ -239,8 +222,6 @@ describe('workspace access', () => {
         'manager',
         'pm',
         'engineering',
-        'analyst',
-        'viewer',
         'assistant',
       ] as const
     ) {

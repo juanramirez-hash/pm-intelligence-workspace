@@ -465,15 +465,15 @@ describe('MD-003 page', () => {
   const page = (user: AuthenticatedUser) =>
     text(render(<AuthProvider user={user}><MyDayPage /></AuthProvider>))
 
+  // NAV-002B: 'legacy' no longer exists; the message still serves the
+  // 'pricing' scope and any 403 of the server.
   it('is not available for scopes without commercial access', () => {
-    for (const scope of ['pricing', 'legacy'] as const) {
-      expect(page({ ...USER, scope })).toContain('Mi día no está disponible para tu tipo de acceso')
-    }
+    expect(page({ ...USER, scope: 'pricing' })).toContain('Mi día no está disponible para tu tipo de acceso')
   })
 
-  it('links the screens the role can open while NAV-002 is pending (NAV-001)', () => {
+  it('links the screens the role can open when "Mi día" is not available', () => {
     const html = render(
-      <AuthProvider user={{ ...USER, role: 'analyst', scope: 'legacy', brandIds: [] }}>
+      <AuthProvider user={{ ...USER, role: 'engineering', scope: 'pricing', brandIds: [] }}>
         <MyDayPage />
       </AuthProvider>,
     )
@@ -481,11 +481,12 @@ describe('MD-003 page', () => {
 
     expect(content).toContain('Puedes abrir:')
 
-    for (const path of ['/brands', '/customers', '/products', '/actions', '/sales', '/executive', '/pricing']) {
+    for (const path of ['/brands', '/customers', '/products', '/actions', '/sales', '/inventory']) {
       expect(html).toContain(`href="${path}"`)
     }
 
     expect(html).not.toContain('href="/"')
+    expect(html).not.toContain('href="/executive"')
     expect(html).not.toContain('href="/settings"')
   })
 

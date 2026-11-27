@@ -76,7 +76,7 @@ describe(
       () => {
         expect(
           resolveCostScope({
-            scope: 'legacy',
+            scope: 'pricing',
             costAccess: true,
             brandIds: ['HIKVISION'],
           }),

@@ -224,7 +224,7 @@ describe('MD-001 GET /api/my-day', () => {
   })
 
   it('rejects invalid scopes with 403', async () => {
-    const res = await invoke('/', { authUser: { scope: 'legacy', brandIds: ['UNV'] }, query: {} })
+    const res = await invoke('/', { authUser: { scope: 'pricing', brandIds: ['UNV'] }, query: {} })
 
     expect(res.status).toHaveBeenCalledWith(403)
   })

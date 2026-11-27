@@ -22,6 +22,7 @@ import {
 } from '../../atlas/layout/PageHeader'
 
 import {
+  DEFAULT_NEW_USER_ROLE,
   createSettingsUser,
   deleteSettingsUser,
   loadSettingsUserBrands,
@@ -260,7 +261,7 @@ const [
     setRole,
   ] =
     useState<SettingsUserRole>(
-      'viewer',
+      DEFAULT_NEW_USER_ROLE,
     )
 
   const [
@@ -323,14 +324,6 @@ const [
       // NAV-002: sees the brands of its linked PMs ("PMs a cargo").
       value: 'assistant',
       label: 'Auxiliar',
-    },
-    {
-      value: 'analyst',
-      label: 'Analyst · Legacy',
-    },
-    {
-      value: 'viewer',
-      label: 'Viewer · Legacy',
     },
   ]
 
@@ -531,7 +524,7 @@ const [
 
         setEmail('')
         setName('')
-        setRole('viewer')
+        setRole(DEFAULT_NEW_USER_ROLE)
 
         setSuccessMessage(
           `Usuario ${created.email} autorizado.`,
@@ -1433,10 +1426,6 @@ function RolesSettings() {
     {
       value: 'pricing',
       label: 'Pricing',
-    },
-    {
-      value: 'legacy',
-      label: 'Legacy',
     },
   ]
 

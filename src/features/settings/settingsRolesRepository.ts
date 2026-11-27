@@ -2,7 +2,6 @@ export type SettingsRoleScope =
   | 'all'
   | 'assigned'
   | 'pricing'
-  | 'legacy'
 
 export interface SettingsRole {
   role_key: string

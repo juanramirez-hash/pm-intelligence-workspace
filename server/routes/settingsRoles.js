@@ -7,7 +7,7 @@ const ALLOWED_SCOPES =
     'all',
     'assigned',
     'pricing',
-    'legacy',
+    // NAV-002B (migration 041): 'legacy' was removed with analyst and viewer.
   ])
 
 const ADMIN_ROLE_KEY = 'admin'

@@ -294,7 +294,7 @@ Despliegue: aplicar la migración 037 **antes** de reiniciar el backend; sin la 
 |---|---|---|
 | SEC-003B | Protección del rol admin y de los administradores activos, columna "Ver costos" en Settings y alcance de costos en el frontend | Implementado · pendiente de validación funcional y despliegue |
 
-- `PATCH /api/settings/roles/:roleKey`: en los roles de sistema (`system_role`: admin y analyst) rechaza con 400 cualquier cambio de alcance, escritura o estado, igual que ya lo bloquea la interfaz. El rol admin conserva `cost_access` (SEC-003A).
+- `PATCH /api/settings/roles/:roleKey`: en los roles de sistema (`system_role`: admin y, hasta NAV-002B, analyst) rechaza con 400 cualquier cambio de alcance, escritura o estado, igual que ya lo bloquea la interfaz. El rol admin conserva `cost_access` (SEC-003A).
 - `PATCH /api/settings/users/:id`: usa el mismo patrón transaccional del DELETE. Bloquea con `FOR UPDATE`, en orden de id, a quien hace el cambio, al usuario modificado y a todos los admins activos, y vuelve a verificar que quien hace el cambio siga siendo admin activo. Si el cambio le quita el rol admin o desactiva al último admin activo, responde 409 "Debe quedar al menos un administrador activo". Un admin puede degradarse a sí mismo si queda otro; su sesión refleja el cambio en la siguiente petición.
 - Settings > Roles: columna "Ver costos" que envía `costAccess`. En el rol admin, los controles quedan deshabilitados con la nota "El rol Administrador siempre conserva acceso total".
 - Settings > Usuarios: confirmación "Vas a quitarte permisos de administrador. ¿Continuar?" antes de que un admin cambie su propio rol o se deshabilite.
@@ -477,7 +477,7 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 |---|---|---|
 | NAV-001 | Menú por rol, "Mi día" como inicio, Panorama ejecutivo en `/executive`, navegación en español, buscador con Ctrl+K y "Datos al corte" en la barra superior | Implementado · pendiente de validación funcional y despliegue |
 | NAV-002 | Rol de auxiliar vinculado a sus PMs (R3 de la auditoría) | Implementado (ver sección NAV-002) |
-| NAV-002B | Retiro de los roles `legacy` (`analyst`, `viewer`, migración 041) cuando no les quede ningún usuario | Pendiente |
+| NAV-002B | Retiro de los roles `legacy` (`analyst`, `viewer`, migración 041) | Implementado · pendiente de despliegue (ver sección NAV-002B) |
 
 - Menú (`src/layouts/navigation/navigationConfig.ts`): Inicio (Mi día), Mi trabajo (Marcas, Clientes, Productos, Acciones), Análisis temporal (Ventas, Pronóstico, Inventario, marcados `temporary` para MB-001 y PR-001), Gerencia solo para admin y manager (Panorama ejecutivo, Pricing Lab, Compras; "Proyectos" reservado sin mostrarse) y Administración (Centro de datos con Calidad de producto debajo, Configuración). Los permisos no cambian: un PM puede seguir abriendo Panorama ejecutivo, Pricing Lab o Compras por URL o enlaces internos.
 - Rutas: "Mi día" en `/` (todos aterrizan ahí después del login, sin descargar datasets); Panorama ejecutivo en `/executive` y cola de atención en `/executive/attention/:domain`. `/my-day` y `/attention/:domain` redirigen conservando parámetros.
@@ -509,8 +509,21 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Acciones: la auxiliar crea, edita y comenta acciones de las marcas a su alcance; puede editar las suyas y las de sus PMs vinculados; no puede asignar ni reasignar acciones a otros (el backend ya lo exigía con alcance total).
 - Menú y acceso: Inicio, Mi trabajo y Análisis, como un PM; a diferencia del PM, sin acceso por URL a Panorama ejecutivo, Pricing Lab ni Compras. Sin Administración ni importaciones.
 - Configuración (solo admin): "Auxiliar" en el selector de rol; para una auxiliar, "PMs a cargo" (solo PMs activos, nunca ella misma) con `GET`/`PUT /api/settings/users/:id/pms` y "Marcas efectivas" en solo lectura con el PM de donde viene cada una. Al pasar a una auxiliar a otro rol se borran sus vínculos; los vínculos hacia un PM se conservan pero solo cuentan mientras ese PM esté activo con rol `pm`.
-- Los roles `analyst` y `viewer` no cambian: se retiran en NAV-002B (migración 041) cuando la consulta de usuarios por rol dé 0 en ambos.
+- Los roles `analyst` y `viewer` no cambiaron en NAV-002: se retiraron en NAV-002B (migración 041).
 - Despliegue: migración 040 antes de reiniciar el backend (la carga del usuario lee la tabla en cada petición).
+
+## Usuarios — NAV-002B
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| NAV-002B | Retiro de los roles heredados `analyst` y `viewer` y del alcance `legacy` (pendiente R3 de la auditoría) | Implementado · pendiente de despliegue |
+
+- Migración 041: guarda de seguridad que falla con un mensaje claro (`RAISE EXCEPTION`) y no cambia nada si algún usuario conserva `analyst` o `viewer`; CHECK `app_users_role_check` con `admin`, `manager`, `pm`, `engineering` y `assistant`; `DELETE` de los dos roles de `app_roles`. Se borran y no se desactivan porque no hay llaves foráneas hacia `app_roles` y un rol inactivo seguiría listándose en Configuración; la protección de roles de sistema (SEC-003B) solo bloquea editar alcance, escritura y estado por la API, no una migración. Sin tablas ni columnas nuevas: sin entrada en `REQUIRED_SCHEMA`.
+- Rollback 041: restaura el CHECK de 7 roles y los dos roles con los valores de la 028. **Si hubiera que retroceder también la 040, el rollback 041 va primero:** el de la 040 pasa a las auxiliares al rol `analyst`, que después de la 041 no existe.
+- Código: `ALLOWED_ROLES`, selector de rol de Configuración, `ROLE_WORKSPACE_ACCESS` y el alcance `legacy` (tipos, `ALLOWED_SCOPES` y opciones de Configuración) sin los roles heredados. El rol preseleccionado al crear un usuario pasa de `viewer` a `engineering` (el de menor privilegio que queda). Un rol sin entrada en la matriz de acceso no tiene acceso y ya no rompe la aplicación.
+- "Mi día no está disponible para tu tipo de acceso" se conserva: sigue sirviendo para el alcance `pricing` y para cualquier 403 del servidor.
+- Alcance `pricing`: ningún rol lo usa desde la migración 029 (borró el rol `pricing`). No se tocó en este sprint; sigue aceptado en `app_roles.scope`, en Configuración y en el frontend. Pendiente de decidir si se retira.
+- Despliegue: consulta previa de usuarios por rol, migración 041 y luego el reinicio del backend (el código nuevo ya no acepta los roles que la migración borra).
 
 ## Pendientes de seguridad
 

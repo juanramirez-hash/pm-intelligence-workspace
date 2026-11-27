@@ -1,11 +1,13 @@
 export type SettingsUserRole =
   | 'admin'
-  | 'analyst'
-  | 'viewer'
   | 'manager'
   | 'pm'
   | 'engineering'
   | 'assistant'
+
+// NAV-002B: role preselected when creating a user. It was 'viewer'; now the
+// role with the least privilege left (no write access, assigned brands only).
+export const DEFAULT_NEW_USER_ROLE: SettingsUserRole = 'engineering'
 
 // NAV-002: PMs of an assistant and its effective brands.
 export interface SettingsUserPm {

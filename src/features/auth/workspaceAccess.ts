@@ -93,42 +93,28 @@ const ROLE_WORKSPACE_ACCESS:
       'inventory',
       'actions',
     ],
-
-    analyst: [
-      'my-day',
-      'executive',
-      'sales',
-      'brands',
-      'customers',
-      'products',
-      'pricing',
-      'forecast',
-      'inventory',
-      'purchasing',
-      'actions',
-    ],
-
-    viewer: [
-      'my-day',
-      'executive',
-      'sales',
-      'brands',
-      'customers',
-      'products',
-      'forecast',
-      'inventory',
-      'purchasing',
-      'actions',
-    ],
   }
+
+// NAV-002B: a role without an entry (for example a removed legacy role) has
+// no access; it never breaks the application.
+function workspacesOf(
+  user: AuthenticatedUser,
+): readonly WorkspaceAccessId[] {
+  return (
+    ROLE_WORKSPACE_ACCESS as Partial<
+      Record<
+        AuthenticatedUserRole,
+        readonly WorkspaceAccessId[]
+      >
+    >
+  )[user.role] ?? []
+}
 
 export function canAccessWorkspace(
   user: AuthenticatedUser,
   workspaceId: WorkspaceAccessId,
 ): boolean {
-  return ROLE_WORKSPACE_ACCESS[
-    user.role
-  ].includes(
+  return workspacesOf(user).includes(
     workspaceId,
   )
 }
@@ -136,7 +122,5 @@ export function canAccessWorkspace(
 export function getAccessibleWorkspaces(
   user: AuthenticatedUser,
 ): readonly WorkspaceAccessId[] {
-  return ROLE_WORKSPACE_ACCESS[
-    user.role
-  ]
+  return workspacesOf(user)
 }

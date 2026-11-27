@@ -225,7 +225,7 @@ describe('NAV-002 role change of an assistant', () => {
 
     const pm = buildPool({ target: { id: 5, role: 'pm', active: true } })
 
-    await call(pm, 'patch', '/:id', { params: { id: '5' }, body: { role: 'analyst' } })
+    await call(pm, 'patch', '/:id', { params: { id: '5' }, body: { role: 'engineering' } })
 
     for (const fixture of [sameRole, pm]) {
       expect(statements(fixture).some((sql) => sql.includes('DELETE FROM app_user_pm_links'))).toBe(false)

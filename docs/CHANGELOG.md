@@ -1,3 +1,10 @@
+# 0.57.0-NAV-002B
+
+- Retires the legacy roles `analyst` and `viewer` and the `legacy` scope (migration 041). A guard fails with a clear message and changes nothing if any user still has one of them; the CHECK keeps `admin`, `manager`, `pm`, `engineering` and `assistant`, and both roles are deleted from `app_roles`. The rollback restores the 7-role CHECK and both roles with their original values.
+- Removes them from the allowed roles, the role selector of Configuración and the workspace access matrix; a role without an entry now has no access instead of breaking the app. New users are preselected as `engineering` (the lowest privilege left) instead of `viewer`.
+- Keeps the "Mi día no está disponible para tu tipo de acceso" message (still used by the `pricing` scope and server 403s). The `pricing` scope, unused by any role since migration 029, is untouched.
+- If migration 040 has to be rolled back after 041, roll back 041 first: the 040 rollback moves assistants to `analyst`.
+
 # 0.57.0-NAV-002
 
 - Adds the "Auxiliar" role (`assistant`, migration 040): assigned scope, write access for Acciones only and no cost access (configurable later in Configuración). An assistant sees its own brands plus the brands of its linked PMs (`app_user_pm_links`), counting only active users with the pm role. The rule lives in `server/services/effectiveBrands.js` and is used by the authenticated user (brand scope, cost scope, `/api/auth/me`) and by Acciones.

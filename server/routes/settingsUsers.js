@@ -11,13 +11,12 @@ import {
 const ALLOWED_ROLES =
   new Set([
     'admin',
-    'analyst',
-    'viewer',
     'manager',
     'pm',
     'engineering',
     // NAV-002 (migration 040).
     ASSISTANT_ROLE,
+    // NAV-002B (migration 041): analyst and viewer were removed.
   ])
 
 /**

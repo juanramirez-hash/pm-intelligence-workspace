@@ -90,12 +90,12 @@ describe('brand access', () => {
     ])
   })
 
-  it('keeps legacy scopes unrestricted for now', () => {
+  it('keeps the pricing scope unrestricted for now', () => {
     const user =
       buildUser({
-        role: 'viewer',
-        roleName: 'Viewer · Legacy',
-        scope: 'legacy',
+        role: 'engineering',
+        roleName: 'Ingeniero de Marca',
+        scope: 'pricing',
         writeAccess: false,
       })
 
@@ -189,8 +189,8 @@ describe('cost visibility (SEC-003B)', () => {
     expect(
       resolveCostVisibility(
         buildUser({
-          role: 'viewer',
-          scope: 'legacy',
+          role: 'engineering',
+          scope: 'pricing',
         }),
       ),
     ).toEqual({

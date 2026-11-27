@@ -57,8 +57,10 @@ describe(
         active: true,
         system_role: true,
       },
-      analyst: {
-        scope: 'legacy',
+      // NAV-002B: admin is the only system role left; any role flagged
+      // system_role stays protected (the rule is generic).
+      protected_example: {
+        scope: 'assigned',
         write_access: false,
         active: true,
         system_role: true,
@@ -106,9 +108,9 @@ describe(
       ['admin', { scope: 'assigned' }],
       ['admin', { writeAccess: false }],
       ['admin', { active: false }],
-      ['analyst', { scope: 'all' }],
-      ['analyst', { writeAccess: true }],
-      ['analyst', { active: false }],
+      ['protected_example', { scope: 'all' }],
+      ['protected_example', { writeAccess: true }],
+      ['protected_example', { active: false }],
     ])(
       'rechaza con 400 el cambio de %s %j',
       async (roleKey, body) => {
