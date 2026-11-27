@@ -43,6 +43,10 @@ export const REQUIRED_SCHEMA = [
     migration: '039',
     table: 'inventory_items',
   },
+  {
+    migration: '040',
+    table: 'app_user_pm_links',
+  },
 ]
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/

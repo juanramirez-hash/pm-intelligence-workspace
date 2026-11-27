@@ -71,6 +71,19 @@ const ROLE_WORKSPACE_ACCESS:
       'actions',
     ],
 
+    // NAV-002: the PM screens of Inicio, Mi trabajo and Análisis, without
+    // Gerencia (Panorama ejecutivo, Pricing Lab, Compras) nor Administración.
+    assistant: [
+      'my-day',
+      'sales',
+      'brands',
+      'customers',
+      'products',
+      'forecast',
+      'inventory',
+      'actions',
+    ],
+
     engineering: [
       'my-day',
       'sales',

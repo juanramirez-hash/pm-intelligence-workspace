@@ -476,7 +476,8 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 | Entrega | Alcance | Estado |
 |---|---|---|
 | NAV-001 | Menú por rol, "Mi día" como inicio, Panorama ejecutivo en `/executive`, navegación en español, buscador con Ctrl+K y "Datos al corte" en la barra superior | Implementado · pendiente de validación funcional y despliegue |
-| NAV-002 | Rol de auxiliar vinculado a sus PMs (R3 de la auditoría) y retiro de los roles `legacy` | Pendiente |
+| NAV-002 | Rol de auxiliar vinculado a sus PMs (R3 de la auditoría) | Implementado (ver sección NAV-002) |
+| NAV-002B | Retiro de los roles `legacy` (`analyst`, `viewer`, migración 041) cuando no les quede ningún usuario | Pendiente |
 
 - Menú (`src/layouts/navigation/navigationConfig.ts`): Inicio (Mi día), Mi trabajo (Marcas, Clientes, Productos, Acciones), Análisis temporal (Ventas, Pronóstico, Inventario, marcados `temporary` para MB-001 y PR-001), Gerencia solo para admin y manager (Panorama ejecutivo, Pricing Lab, Compras; "Proyectos" reservado sin mostrarse) y Administración (Centro de datos con Calidad de producto debajo, Configuración). Los permisos no cambian: un PM puede seguir abriendo Panorama ejecutivo, Pricing Lab o Compras por URL o enlaces internos.
 - Rutas: "Mi día" en `/` (todos aterrizan ahí después del login, sin descargar datasets); Panorama ejecutivo en `/executive` y cola de atención en `/executive/attention/:domain`. `/my-day` y `/attention/:domain` redirigen conservando parámetros.
@@ -496,6 +497,20 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - `revenueWithTarget`, `projectedRevenueWithTarget` y `brandsWithTarget` se conservan como datos informativos. Por marca no cambia: una marca sin cuota sigue con avance nulo ("—").
 - "Mi día": el cierre por ritmo muestra la proyección de todas las marcas con su avance (deja de decir "Todas las marcas $…"); nota "Avance, ritmo y brecha comparan la venta de todas las marcas contra la cuota total (N marcas sin cuota)". Los colores del cierre por ritmo usan el avance nuevo.
 - Sin migraciones. Despliegue con reinicio del backend (`server/services/myDayRules.js`).
+
+## Usuarios — NAV-002
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| NAV-002 | Rol "Auxiliar" (`assistant`) vinculado a sus PMs: ve las marcas de ellos, sin costos ni Gerencia (pendiente R3 de la auditoría) | Implementado · pendiente de validación funcional y despliegue |
+
+- Migración 040: rol `assistant` ("Auxiliar", alcance `assigned`, escritura solo para Acciones, sin costos; `cost_access` configurable en Configuración), CHECK `app_users_role_check` con los 7 roles y tabla `app_user_pm_links` (auxiliar–PM, llave del par, sin vincularse a sí misma, borrado en cascada, `GRANT SELECT, INSERT, DELETE` a `pm_intelligence`). Rollback: pasa las auxiliares a `analyst`, restaura el CHECK y borra tabla y rol, sin `CASCADE`. Sin datos de usuarios.
+- Marcas efectivas (`server/services/effectiveBrands.js`): asignaciones propias más las de los PMs vinculados que estén activos y con rol `pm`. Las usan `loadAuthenticatedUser` (`requireBrandScope`, `resolveCostScope`, `/api/auth/me` y por tanto "Mi día", búsqueda, ventas y acciones) y Acciones. Una auxiliar sin PMs ni marcas se comporta como un PM sin marcas (mismo 403).
+- Acciones: la auxiliar crea, edita y comenta acciones de las marcas a su alcance; puede editar las suyas y las de sus PMs vinculados; no puede asignar ni reasignar acciones a otros (el backend ya lo exigía con alcance total).
+- Menú y acceso: Inicio, Mi trabajo y Análisis, como un PM; a diferencia del PM, sin acceso por URL a Panorama ejecutivo, Pricing Lab ni Compras. Sin Administración ni importaciones.
+- Configuración (solo admin): "Auxiliar" en el selector de rol; para una auxiliar, "PMs a cargo" (solo PMs activos, nunca ella misma) con `GET`/`PUT /api/settings/users/:id/pms` y "Marcas efectivas" en solo lectura con el PM de donde viene cada una. Al pasar a una auxiliar a otro rol se borran sus vínculos; los vínculos hacia un PM se conservan pero solo cuentan mientras ese PM esté activo con rol `pm`.
+- Los roles `analyst` y `viewer` no cambian: se retiran en NAV-002B (migración 041) cuando la consulta de usuarios por rol dé 0 en ambos.
+- Despliegue: migración 040 antes de reiniciar el backend (la carga del usuario lee la tabla en cada petición).
 
 ## Pendientes de seguridad
 

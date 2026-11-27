@@ -1,5 +1,6 @@
 import { normalizeBrandKey, normalizeBrandKeys } from '../middleware/requireBrandScope.js'
 import { httpError, pageInteger, positiveId } from './actionValidation.js'
+import { ASSISTANT_ROLE, activeLinkedPmIdsSql, inheritedBrandsSql } from './effectiveBrands.js'
 
 const OPEN_STATUSES = ['open', 'in_progress', 'blocked']
 const CLOSED_STATUSES = ['done', 'cancelled', 'auto_resolved']
@@ -111,9 +112,11 @@ async function transaction(pool, task) {
 }
 
 // Reload roles and assignments in the transaction; HTTP middleware is not the final authority.
+// NAV-002: an assistant also gets the brands of its active linked PMs (same
+// rule as loadAuthenticatedUser, effectiveBrands.js) and the ids of those PMs.
 async function lockUser(client, id) {
   const result = await client.query(
-    `SELECT u.id,u.active,r.scope,r.write_access,r.active AS role_active
+    `SELECT u.id,u.active,r.scope,r.write_access,r.active AS role_active,u.role
     FROM app_users u JOIN app_roles r ON r.role_key=u.role WHERE u.id=$1 FOR SHARE OF u,r`,
     [id],
   )
@@ -133,11 +136,35 @@ async function lockUser(client, id) {
     'SELECT brand_id FROM app_user_brand_assignments WHERE user_id=$1 ORDER BY brand_id FOR SHARE',
     [id],
   )
+  const brandIds = assignments.rows.map((row) => row.brand_id)
+  let linkedPmIds = []
+
+  if (user.role === ASSISTANT_ROLE) {
+    const inherited = await client.query(inheritedBrandsSql({ forShare: true }), [id])
+    const linkedPms = await client.query(activeLinkedPmIdsSql({ forShare: true }), [id])
+
+    brandIds.push(...inherited.rows.map((row) => row.brand_id))
+    linkedPmIds = linkedPms.rows.map((row) => String(row.pm_user_id))
+  }
 
   return {
     ...user,
-    keys: normalizeBrandKeys(assignments.rows.map((row) => row.brand_id)),
+    keys: normalizeBrandKeys(brandIds),
+    linkedPmIds,
   }
+}
+
+/**
+ * Who may modify an action: team-wide users, its owner and, for an
+ * assistant (NAV-002), the actions owned by its active linked PMs.
+ * Reassigning (ownerUserId) still requires the team-wide scope.
+ */
+export function canModifyAction(actor, ownerUserId) {
+  const owner = String(ownerUserId)
+
+  return actor.scope === 'all' ||
+    owner === String(actor.id) ||
+    (actor.role === ASSISTANT_ROLE && (actor.linkedPmIds ?? []).includes(owner))
 }
 
 function checkBrand(user, brandId, status = 403) {
@@ -321,7 +348,7 @@ export async function updateAction(pool, actionId, changes, actorUserId) {
 
     checkBrand(actor, before.brand_id, 404)
 
-    if (actor.scope !== 'all' && String(before.owner_user_id) !== String(actor.id)) {
+    if (!canModifyAction(actor, before.owner_user_id)) {
       throw httpError(403, 'Solo el responsable puede modificar la acción')
     }
 

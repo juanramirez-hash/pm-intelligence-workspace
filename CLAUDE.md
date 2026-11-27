@@ -85,7 +85,8 @@ Capa de servidor (en curso en la rama v0.57.0, "production platform foundation")
 - `server/routes/`: API REST por dominio (sales, salesAnalytics, inventory, targets, products, customers, pricing, purchases, purchaseRequests, projects, projectBillings, exchangeRates, actions, search, metrics, myDay, dataStatus, settingsUsers, settingsRoles). `dataStatus` (`GET /api/status/data-cutoff`) solo pide sesión y devuelve fechas: el corte de ventas y la última carga de ventas, inventario y compras.
 - `server/services/`: importación por chunks con tablas staging, agregados de negocio (`refresh_business_aggregates`), analítica de ventas en SQL, búsqueda global y conciliación de facturación de proyectos.
 - `server/middleware/`: `requireAuth`, `requireAdmin`, `requireBrandScope`, `requireWriteAccess` (usuarios, roles y asignación de marcas por PM).
-- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `039`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
+- Marcas efectivas (NAV-002): `server/services/effectiveBrands.js` es la única regla. Cada usuario tiene sus asignaciones; el rol `assistant` ("Auxiliar") hereda además las de sus PMs vinculados en `app_user_pm_links` (solo PMs activos con rol `pm`). `loadAuthenticatedUser` (y con él `requireBrandScope`, `resolveCostScope` y `/api/auth/me`) y Acciones (`actionService.lockUser`) usan esa misma regla.
+- `server/migrations/`: SQL numerado `NNN_descripcion.sql` (último en Git: `040`). Las migraciones nuevas van con el siguiente número; nunca editar una ya aplicada.
 
 Navegación del frontend (NAV-001):
 

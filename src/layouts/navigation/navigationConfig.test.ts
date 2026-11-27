@@ -27,6 +27,7 @@ const SCOPES: Record<AuthenticatedUserRole, AuthenticatedUserScope> = {
   engineering: 'assigned',
   analyst: 'legacy',
   viewer: 'legacy',
+  assistant: 'assigned',
 }
 
 function user(role: AuthenticatedUserRole): AuthenticatedUser {
@@ -92,6 +93,24 @@ describe('NAV-001 menu by role', () => {
       'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
       'Análisis': ['Ventas', 'Inventario'],
     })
+  })
+
+  it('shows an assistant the PM menu, without Gerencia nor Administración (NAV-002)', () => {
+    expect(menu('assistant')).toEqual(menu('pm'))
+    expect(menu('assistant')).toEqual({
+      Inicio: ['Mi día'],
+      'Mi trabajo': ['Marcas', 'Clientes', 'Productos', 'Acciones'],
+      'Análisis': ['Ventas', 'Pronóstico', 'Inventario'],
+    })
+
+    // Unlike a PM, no URL access to Gerencia or Administración either.
+    for (const workspace of ['executive', 'pricing', 'purchasing', 'data-center', 'product-quality', 'settings'] as const) {
+      expect(canAccessWorkspace(user('assistant'), workspace)).toBe(false)
+    }
+
+    expect(accessibleScreens(user('assistant')).map((item) => item.id)).toEqual([
+      'my-day', 'brands', 'customers', 'products', 'actions', 'sales', 'forecast', 'inventory',
+    ])
   })
 
   it('keeps legacy roles on their current screens', () => {

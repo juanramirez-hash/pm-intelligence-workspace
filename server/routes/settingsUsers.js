@@ -2,6 +2,12 @@ import {
   Router,
 } from 'express'
 
+import {
+  ASSISTANT_ROLE,
+  PM_ROLE,
+  inheritedBrandsSql,
+} from '../services/effectiveBrands.js'
+
 const ALLOWED_ROLES =
   new Set([
     'admin',
@@ -10,7 +16,67 @@ const ALLOWED_ROLES =
     'manager',
     'pm',
     'engineering',
+    // NAV-002 (migration 040).
+    ASSISTANT_ROLE,
   ])
+
+/**
+ * NAV-002: pmUserIds of PUT /:id/pms. Positive integers, without
+ * duplicates; null when the value is not valid.
+ */
+export function normalizePmUserIds(value) {
+  if (!Array.isArray(value)) {
+    return null
+  }
+
+  const ids = []
+
+  for (const item of value) {
+    const id = Number(item)
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return null
+    }
+
+    if (!ids.includes(id)) {
+      ids.push(id)
+    }
+  }
+
+  return ids
+}
+
+/**
+ * NAV-002: effective brands of an assistant for Configuración: own
+ * assignments plus the brands of each active linked PM, telling where each
+ * brand comes from.
+ */
+export function buildEffectiveBrands(ownBrandIds, inheritedRows) {
+  const brands = new Map()
+  const entry = (brandId) => {
+    const existing = brands.get(brandId) ?? { brandId, own: false, fromPms: [] }
+
+    brands.set(brandId, existing)
+
+    return existing
+  }
+
+  for (const brandId of ownBrandIds) {
+    entry(brandId).own = true
+  }
+
+  for (const row of inheritedRows) {
+    entry(row.brand_id).fromPms.push({
+      id: Number(row.pm_user_id),
+      name: row.pm_name ?? null,
+      email: row.pm_email ?? null,
+    })
+  }
+
+  return [...brands.values()].sort((left, right) =>
+    left.brandId.localeCompare(right.brandId, 'es-MX'),
+  )
+}
 
 function normalizeEmail(value) {
   if (typeof value !== 'string') {
@@ -520,12 +586,37 @@ export function createSettingsUsersRouter(
             values,
           )
 
+        // NAV-002: an assistant moved to another role loses its PM links
+        // (they would otherwise stay hidden and come back by surprise if the
+        // role were restored). Links pointing to a PM are kept: they only
+        // count while that PM is active with the pm role.
+        let removedPmLinks = 0
+
+        if (
+          target.role === ASSISTANT_ROLE &&
+          Object.hasOwn(req.body, 'role') &&
+          req.body.role !== ASSISTANT_ROLE
+        ) {
+          const removed =
+            await client.query(
+              `
+                DELETE FROM app_user_pm_links
+                WHERE assistant_user_id = $1
+              `,
+              [userId],
+            )
+
+          removedPmLinks =
+            removed.rowCount ?? 0
+        }
+
         await client.query('COMMIT')
         inTransaction = false
 
         return res.json({
           ok: true,
           user: result.rows[0],
+          removedPmLinks,
         })
       } catch (error) {
         if (client && inTransaction) {
@@ -777,6 +868,339 @@ export function createSettingsUsersRouter(
           })
       } finally {
         client.release()
+      }
+    },
+  )
+
+  // NAV-002: PMs of an assistant ("PMs a cargo") and its effective brands
+  // (own plus inherited from each active linked PM), read only.
+  router.get(
+    '/:id/pms',
+    async (req, res) => {
+      try {
+        const userId =
+          Number(req.params.id)
+
+        if (
+          !Number.isSafeInteger(userId) ||
+          userId <= 0
+        ) {
+          return res
+            .status(400)
+            .json({
+              ok: false,
+              error:
+                'El id de usuario no es válido',
+            })
+        }
+
+        const userResult =
+          await pool.query(
+            `
+              SELECT id, role
+              FROM app_users
+              WHERE id = $1
+            `,
+            [userId],
+          )
+
+        if (userResult.rows.length === 0) {
+          return res
+            .status(404)
+            .json({
+              ok: false,
+              error:
+                'Usuario no encontrado',
+            })
+        }
+
+        const [links, own, inherited] =
+          await Promise.all([
+            pool.query(
+              `
+                SELECT
+                  l.pm_user_id,
+                  pm.name,
+                  pm.email,
+                  pm.role,
+                  pm.active
+                FROM app_user_pm_links l
+                JOIN app_users pm
+                  ON pm.id = l.pm_user_id
+                WHERE l.assistant_user_id = $1
+                ORDER BY pm.name NULLS LAST, pm.email
+              `,
+              [userId],
+            ),
+            pool.query(
+              `
+                SELECT brand_id
+                FROM app_user_brand_assignments
+                WHERE user_id = $1
+                ORDER BY brand_id
+              `,
+              [userId],
+            ),
+            pool.query(
+              inheritedBrandsSql(),
+              [userId],
+            ),
+          ])
+
+        const isAssistant =
+          userResult.rows[0].role === ASSISTANT_ROLE
+
+        return res.json({
+          ok: true,
+          role: userResult.rows[0].role,
+          pmUserIds:
+            links.rows.map(
+              (row) =>
+                Number(row.pm_user_id),
+            ),
+          pms:
+            links.rows.map(
+              (row) => ({
+                id: Number(row.pm_user_id),
+                name: row.name ?? null,
+                email: row.email,
+                // Only active users with the pm role give brands.
+                counts:
+                  row.active === true &&
+                  row.role === PM_ROLE,
+              }),
+            ),
+          effectiveBrands:
+            buildEffectiveBrands(
+              own.rows.map(
+                (row) =>
+                  row.brand_id,
+              ),
+              isAssistant
+                ? inherited.rows
+                : [],
+            ),
+        })
+      } catch (error) {
+        console.error(
+          'Settings user PMs load failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'No se pudieron consultar los PMs a cargo',
+          })
+      }
+    },
+  )
+
+  router.put(
+    '/:id/pms',
+    async (req, res) => {
+      const userId =
+        Number(req.params.id)
+
+      if (
+        !Number.isSafeInteger(userId) ||
+        userId <= 0
+      ) {
+        return res
+          .status(400)
+          .json({
+            ok: false,
+            error:
+              'El id de usuario no es válido',
+          })
+      }
+
+      const pmUserIds =
+        normalizePmUserIds(
+          req.body?.pmUserIds,
+        )
+
+      if (pmUserIds === null) {
+        return res
+          .status(400)
+          .json({
+            ok: false,
+            error:
+              'pmUserIds debe ser una lista de ids de usuario',
+          })
+      }
+
+      if (pmUserIds.includes(userId)) {
+        return res
+          .status(400)
+          .json({
+            ok: false,
+            error:
+              'Una auxiliar no puede quedar a cargo de sí misma',
+          })
+      }
+
+      const createdBy =
+        Number(req.authUser?.id)
+
+      let client
+      let inTransaction = false
+
+      try {
+        client =
+          await pool.connect()
+        await client.query('BEGIN')
+        inTransaction = true
+
+        const targetResult =
+          await client.query(
+            `
+              SELECT id, role
+              FROM app_users
+              WHERE id = $1
+              FOR UPDATE
+            `,
+            [userId],
+          )
+        const target =
+          targetResult.rows[0]
+
+        if (!target) {
+          await client.query('ROLLBACK')
+          inTransaction = false
+
+          return res
+            .status(404)
+            .json({
+              ok: false,
+              error:
+                'Usuario no encontrado',
+            })
+        }
+
+        if (target.role !== ASSISTANT_ROLE) {
+          await client.query('ROLLBACK')
+          inTransaction = false
+
+          return res
+            .status(409)
+            .json({
+              ok: false,
+              error:
+                'Solo un usuario con rol Auxiliar puede tener PMs a cargo',
+            })
+        }
+
+        if (pmUserIds.length > 0) {
+          const pmResult =
+            await client.query(
+              `
+                SELECT id
+                FROM app_users
+                WHERE
+                  id = ANY($1::BIGINT[])
+                  AND role = $2
+                  AND active = TRUE
+                FOR SHARE
+              `,
+              [pmUserIds, PM_ROLE],
+            )
+          const validIds =
+            new Set(
+              pmResult.rows.map(
+                (row) =>
+                  Number(row.id),
+              ),
+            )
+          const invalid =
+            pmUserIds.filter(
+              (id) =>
+                !validIds.has(id),
+            )
+
+          if (invalid.length > 0) {
+            await client.query('ROLLBACK')
+            inTransaction = false
+
+            return res
+              .status(400)
+              .json({
+                ok: false,
+                error:
+                  `Solo se pueden vincular PMs activos; no son PM activos los usuarios ${invalid.join(', ')}`,
+              })
+          }
+        }
+
+        await client.query(
+          `
+            DELETE FROM app_user_pm_links
+            WHERE assistant_user_id = $1
+          `,
+          [userId],
+        )
+
+        if (pmUserIds.length > 0) {
+          await client.query(
+            `
+              INSERT INTO app_user_pm_links (
+                assistant_user_id,
+                pm_user_id,
+                created_by
+              )
+              SELECT
+                $1,
+                pm_user_id,
+                $3
+              FROM unnest(
+                $2::BIGINT[]
+              ) AS pm_user_id
+            `,
+            [
+              userId,
+              pmUserIds,
+              Number.isSafeInteger(createdBy) && createdBy > 0
+                ? createdBy
+                : null,
+            ],
+          )
+        }
+
+        await client.query('COMMIT')
+        inTransaction = false
+
+        return res.json({
+          ok: true,
+          pmUserIds,
+        })
+      } catch (error) {
+        if (client && inTransaction) {
+          try {
+            await client.query('ROLLBACK')
+          } catch (rollbackError) {
+            console.error(
+              'User PMs rollback failed:',
+              rollbackError,
+            )
+          }
+        }
+
+        console.error(
+          'Settings user PMs update failed:',
+          error,
+        )
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              'No se pudieron guardar los PMs a cargo',
+          })
+      } finally {
+        client?.release()
       }
     },
   )

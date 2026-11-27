@@ -1,3 +1,10 @@
+import {
+  effectiveBrandIdsSql,
+} from '../services/effectiveBrands.js'
+
+// NAV-002: brandIds are the effective brands: own assignments plus, for an
+// assistant, the brands of its active linked PMs (effectiveBrands.js).
+// requireBrandScope and resolveCostScope keep working with brandIds.
 export function loadAuthenticatedUser(
   pool,
 ) {
@@ -41,33 +48,22 @@ export function loadAuthenticatedUser(
               r.cost_access,
               r.active AS role_active,
               COALESCE(
-                ARRAY_AGG(
-                  a.brand_id
-                  ORDER BY a.brand_id
-                ) FILTER (
-                  WHERE
-                    a.brand_id IS NOT NULL
+                (
+                  SELECT
+                    ARRAY_AGG(
+                      brands.brand_id
+                      ORDER BY brands.brand_id
+                    )
+                  FROM (
+                    ${effectiveBrandIdsSql('u.id', 'u.role')}
+                  ) AS brands
                 ),
                 ARRAY[]::TEXT[]
               ) AS brand_ids
             FROM app_users u
             LEFT JOIN app_roles r
               ON r.role_key = u.role
-            LEFT JOIN
-              app_user_brand_assignments a
-              ON a.user_id = u.id
             WHERE u.id = $1
-            GROUP BY
-              u.id,
-              u.email,
-              u.name,
-              u.role,
-              u.active,
-              r.role_name,
-              r.scope,
-              r.write_access,
-              r.cost_access,
-              r.active
           `,
           [userId],
         )

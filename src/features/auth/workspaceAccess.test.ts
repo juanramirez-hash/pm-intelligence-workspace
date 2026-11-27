@@ -21,7 +21,7 @@ function buildUser(
     role === 'admin' ||
     role === 'manager'
       ? 'all'
-      : role === 'pm' ||
+      : role === 'pm' || role === 'assistant' ||
           role === 'engineering'
         ? 'assigned'
         : 'legacy'
@@ -241,6 +241,7 @@ describe('workspace access', () => {
         'engineering',
         'analyst',
         'viewer',
+        'assistant',
       ] as const
     ) {
       expect(
@@ -250,5 +251,22 @@ describe('workspace access', () => {
         ),
       ).toBe(true)
     }
+  })
+
+  it('gives the assistant the PM screens without Gerencia nor Administración (NAV-002)', () => {
+    expect(
+      getAccessibleWorkspaces(
+        buildUser('assistant'),
+      ),
+    ).toEqual([
+      'my-day',
+      'sales',
+      'brands',
+      'customers',
+      'products',
+      'forecast',
+      'inventory',
+      'actions',
+    ])
   })
 })

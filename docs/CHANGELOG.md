@@ -1,3 +1,11 @@
+# 0.57.0-NAV-002
+
+- Adds the "Auxiliar" role (`assistant`, migration 040): assigned scope, write access for Acciones only and no cost access (configurable later in Configuración). An assistant sees its own brands plus the brands of its linked PMs (`app_user_pm_links`), counting only active users with the pm role. The rule lives in `server/services/effectiveBrands.js` and is used by the authenticated user (brand scope, cost scope, `/api/auth/me`) and by Acciones.
+- Assistants create, edit and comment actions of their brands, may edit the actions of their linked PMs and still cannot assign or reassign actions to others.
+- Assistants get the PM menu (Inicio, Mi trabajo, Análisis) without URL access to Panorama ejecutivo, Pricing Lab, Compras or administration.
+- Configuración offers the Auxiliar role, a "PMs a cargo" section (`GET`/`PUT /api/settings/users/:id/pms`, active PMs only) and the read-only effective brands with the PM each one comes from; moving an assistant to another role removes its links.
+- Migration 040 includes rollback, grants for `pm_intelligence` and the startup schema requirement; it adds no user data. Legacy roles are unchanged (NAV-002B). The migration must be applied before restarting the backend.
+
 # 0.57.0-MD-003-HOTFIX2
 
 - The "Mi día" portfolio now compares the revenue of every brand, with and without quota, against the total quota, as the quota progress report and the DNR rule do: attainment, gap, projected close, projected attainment and daily gap use the total revenue (October 2026 with every brand: 80.4 % instead of 78.6 %). `revenueWithTarget`, `projectedRevenueWithTarget` and `brandsWithTarget` remain as information; each brand keeps a null attainment without quota.

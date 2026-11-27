@@ -5,6 +5,8 @@ export type AuthenticatedUserRole =
   | 'manager'
   | 'pm'
   | 'engineering'
+  // NAV-002: sees the brands of its linked PMs.
+  | 'assistant'
 
 export type AuthenticatedUserScope =
   | 'all'

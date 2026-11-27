@@ -5,6 +5,29 @@ export type SettingsUserRole =
   | 'manager'
   | 'pm'
   | 'engineering'
+  | 'assistant'
+
+// NAV-002: PMs of an assistant and its effective brands.
+export interface SettingsUserPm {
+  id: number
+  name: string | null
+  email: string
+  // Only active users with the pm role give brands.
+  counts: boolean
+}
+
+export interface SettingsEffectiveBrand {
+  brandId: string
+  own: boolean
+  fromPms: Array<{ id: number, name: string | null, email: string | null }>
+}
+
+export interface SettingsUserPms {
+  role: SettingsUserRole
+  pmUserIds: number[]
+  pms: SettingsUserPm[]
+  effectiveBrands: SettingsEffectiveBrand[]
+}
 
 export interface SettingsUser {
   id: number
@@ -131,6 +154,47 @@ export async function loadSettingsUserBrands(
     )
 
   return result.brandIds
+}
+
+export async function loadSettingsUserPms(
+  userId: number,
+): Promise<SettingsUserPms> {
+  const result =
+    await requestJson<{ ok: true } & SettingsUserPms>(
+      `/api/settings/users/${userId}/pms`,
+    )
+
+  return {
+    role: result.role,
+    pmUserIds: result.pmUserIds,
+    pms: result.pms,
+    effectiveBrands: result.effectiveBrands,
+  }
+}
+
+export async function updateSettingsUserPms(
+  userId: number,
+  pmUserIds: number[],
+): Promise<number[]> {
+  const result =
+    await requestJson<{
+      ok: true
+      pmUserIds: number[]
+    }>(
+      `/api/settings/users/${userId}/pms`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          pmUserIds,
+        }),
+      },
+    )
+
+  return result.pmUserIds
 }
 
 export async function updateSettingsUserBrands(

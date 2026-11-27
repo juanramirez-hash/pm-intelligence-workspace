@@ -33,6 +33,10 @@ import {
 } from './settingsUsersRepository'
 
 import {
+  AssistantPmsPanel,
+} from './AssistantPmsPanel'
+
+import {
   useWorkspaceContext,
 } from '../workspaces/shared/hooks/useWorkspaceContext'
 
@@ -314,6 +318,11 @@ const [
     {
       value: 'engineering',
       label: 'Ingeniero de Marca',
+    },
+    {
+      // NAV-002: sees the brands of its linked PMs ("PMs a cargo").
+      value: 'assistant',
+      label: 'Auxiliar',
     },
     {
       value: 'analyst',
@@ -1236,6 +1245,16 @@ const handleSaveName =
           </div>
         )}
       </AtlasCard>
+
+{assignmentUserId !== null &&
+  users.find((item) => item.id === assignmentUserId)?.role === 'assistant' && (
+  // NAV-002: an assistant also inherits the brands of its PMs.
+  <AssistantPmsPanel
+    key={assignmentUserId}
+    userId={assignmentUserId}
+    users={users}
+  />
+)}
 
 {assignmentUserId !== null && (
   <AtlasCard className="p-6">
