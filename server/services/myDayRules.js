@@ -337,8 +337,15 @@ export function buildMyDayBrands({
 }
 
 /**
- * Portfolio totals. Quota figures use only the brands with target: a brand
- * without target never inflates the attainment.
+ * Portfolio totals.
+ *
+ * MD-003-HOTFIX2: the revenue of EVERY brand (with and without target) is
+ * compared against the total target, the same rule as the quota progress
+ * report (Alcance_cuota_marcas_GAP) and the DNR: attainment, gap, projected
+ * close, projected attainment and daily gap use the total revenue. The
+ * revenue and projection of the brands with target stay as information
+ * (revenueWithTarget, projectedRevenueWithTarget, brandsWithTarget). Each
+ * brand keeps its own rule: a brand without target has attainment null.
  */
 export function buildMyDayPortfolio(brands, window) {
   const sum = (items, pick) => items.reduce((total, item) => total + pick(item), 0)
@@ -350,7 +357,7 @@ export function buildMyDayPortfolio(brands, window) {
     ? sum(withTarget, (brand) => brand.target.revenue)
     : null
   const revenueWithTarget = sum(withTarget, (brand) => brand.revenue)
-  const pace = quotaPace(revenueWithTarget, target, window.workingDays, window.periodStatus)
+  const pace = quotaPace(revenue, target, window.workingDays, window.periodStatus)
 
   return {
     brands: brands.length,
@@ -359,8 +366,7 @@ export function buildMyDayPortfolio(brands, window) {
     revenueWithTarget,
     target,
     ...pace,
-    projectedRevenue: quotaPace(revenue, null, window.workingDays, window.periodStatus).projectedRevenue,
-    projectedRevenueWithTarget: pace.projectedRevenue,
+    projectedRevenueWithTarget: quotaPace(revenueWithTarget, null, window.workingDays, window.periodStatus).projectedRevenue,
     previousRevenue,
     revenueVariation: revenue - previousRevenue,
     revenueVariationPercentage: variationPercentage(revenue, previousRevenue),

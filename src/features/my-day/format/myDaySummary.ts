@@ -12,10 +12,16 @@ export const MY_DAY_SUMMARY_LIMITS = Object.freeze({
   arrivals: 20,
 })
 
+/**
+ * MD-003-HOTFIX2: the portfolio compares the revenue of every brand (with
+ * and without quota) against the total quota, as the quota progress report.
+ */
 export function targetScopeNote(
   portfolio: Pick<MyDayPortfolio, 'brands' | 'brandsWithTarget'>,
 ): string {
-  return `Cuota, avance, ritmo y brecha consideran solo marcas con meta (${portfolio.brandsWithTarget} de ${portfolio.brands})`
+  const withoutTarget = Math.max(portfolio.brands - portfolio.brandsWithTarget, 0)
+
+  return `Avance, ritmo y brecha comparan la venta de todas las marcas contra la cuota total (${withoutTarget} ${withoutTarget === 1 ? 'marca' : 'marcas'} sin cuota)`
 }
 
 /** By revenue, highest first (negative revenue last), then by name. */

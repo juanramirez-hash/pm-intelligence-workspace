@@ -76,8 +76,10 @@ export interface MyDayPortfolio extends MyDayQuotaPace {
   revenue: number
   revenueWithTarget: number
   target: number | null
-  // projectedRevenue covers every brand; this one only the brands with
-  // target (the base of projectedAttainment).
+  // MD-003-HOTFIX2: attainment, projectedRevenue, projectedAttainment, gap
+  // and dailyGap use the revenue of every brand against the total target.
+  // revenueWithTarget, projectedRevenueWithTarget and brandsWithTarget are
+  // information only.
   projectedRevenueWithTarget: number | null
   previousRevenue: number
   revenueVariation: number

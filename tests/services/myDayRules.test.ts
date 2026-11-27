@@ -233,22 +233,68 @@ describe('MD-001 brands and portfolio', () => {
     })
   })
 
-  it('totals the portfolio and computes the quota only over brands with target', () => {
-    expect(buildMyDayPortfolio(brands, window)).toMatchObject({
+  // MD-003-HOTFIX2 (replaces the MD-001 rule "quota only over brands with
+  // target"): the revenue of every brand against the total target.
+  it('compares the revenue of every brand against the total target', () => {
+    const portfolio = buildMyDayPortfolio(brands, window)
+
+    expect(portfolio).toMatchObject({
       brands: 3,
       brandsWithTarget: 1,
       revenue: 400,
-      revenueWithTarget: 300,
       target: 600,
-      attainment: 0.5,
+      gap: 200,
       projectedRevenue: 560,
-      projectedRevenueWithTarget: 420,
-      projectedAttainment: 0.7,
-      gap: 300,
-      dailyGap: 50,
       previousRevenue: 450,
       brandsRequiringAttention: 2,
       lostCustomers: 2,
+      // Information only.
+      revenueWithTarget: 300,
+      projectedRevenueWithTarget: 420,
     })
+    expect(portfolio.attainment).toBeCloseTo(400 / 600)
+    expect(portfolio.projectedAttainment).toBeCloseTo(560 / 600)
+    // (600 - 400) / 6 remaining working days.
+    expect(portfolio.dailyGap).toBeCloseTo(200 / 6)
+    // Each brand keeps its own rule.
+    expect(brands[1]).toMatchObject({ target: null, attainment: null })
+  })
+
+  it('reproduces October 2026 with every brand (view=all): 80.4 %', () => {
+    const october = resolvePeriodWindow('2026-10', '2026-11-24')
+    // Brands with quota sold 41,301,165.30 and brands without quota
+    // 975,000: total 42,276,165.30, as in production.
+    const result = buildMyDayPortfolio(
+      buildMyDayBrands({
+        window: october,
+        brands: [
+          { brandKey: 'CONCUOTA', brandLabel: 'CON CUOTA' },
+          { brandKey: 'SINCUOTA', brandLabel: 'SIN CUOTA' },
+        ],
+        current: new Map([
+          ['CONCUOTA', sold(41_301_165.3)],
+          ['SINCUOTA', sold(975_000)],
+        ]),
+        previous: new Map(),
+        targets: new Map([
+          ['CONCUOTA', { revenue: 52_551_606, grossProfit: null, grossMargin: null, workingDays: 22 }],
+        ]),
+        activeBeforePrevious: new Set(),
+        lostCustomers: new Map(),
+      }),
+      october,
+    )
+
+    expect(october.periodStatus).toBe('closed')
+    expect(result.revenue).toBeCloseTo(42_276_165.3)
+    expect(result.target).toBe(52_551_606)
+    expect(Math.round(result.attainment! * 1000) / 10).toBe(80.4)
+    // The old rule (only brands with quota) gave 78.6 %.
+    expect(Math.round((result.revenueWithTarget / result.target!) * 1000) / 10).toBe(78.6)
+    // Closed month: the projection is the revenue and there is no daily gap.
+    expect(result.projectedRevenue).toBeCloseTo(42_276_165.3)
+    expect(result.projectedAttainment).toBeCloseTo(result.attainment!)
+    expect(result.gap).toBeCloseTo(52_551_606 - 42_276_165.3)
+    expect(result.dailyGap).toBeNull()
   })
 })

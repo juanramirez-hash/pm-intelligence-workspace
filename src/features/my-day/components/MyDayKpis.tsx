@@ -1,5 +1,7 @@
-// MD-003: the 4 portfolio indicators. Quota, attainment, pace and daily gap
-// only use the brands with target (the server computes them that way).
+// MD-003: the 4 portfolio indicators.
+// MD-003-HOTFIX2: attainment, pace and daily gap compare the revenue of
+// every brand (with and without quota) against the total quota, as the
+// server computes them.
 
 import {
   CalendarClock,
@@ -81,8 +83,8 @@ export function MyDayKpis({
           icon={Gauge}
           tone={PACE_KPI_TONES[paceTone(portfolio.projectedAttainment)]}
           title="Cierre por ritmo"
-          value={formatMoney(portfolio.projectedRevenueWithTarget)}
-          subtitle={`${formatPercent(portfolio.projectedAttainment)} de la cuota · Todas las marcas ${formatMoney(portfolio.projectedRevenue)}`}
+          value={formatMoney(portfolio.projectedRevenue)}
+          subtitle={`${formatPercent(portfolio.projectedAttainment)} de la cuota`}
         />
 
         <KpiCard

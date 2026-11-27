@@ -45,12 +45,13 @@ const PORTFOLIO: MyDayPortfolio = {
   revenue: 900000,
   revenueWithTarget: 800000,
   target: 1000000,
-  attainment: 0.8,
-  gap: 200000,
-  projectedRevenue: 1300000,
+  // MD-003-HOTFIX2: every brand against the total target.
+  attainment: 0.9,
+  gap: 100000,
+  projectedRevenue: 1260000,
   projectedRevenueWithTarget: 1120000,
-  projectedAttainment: 1.12,
-  dailyGap: 33333.33,
+  projectedAttainment: 1.26,
+  dailyGap: 16666.67,
   previousRevenue: 850000,
   revenueVariation: 50000,
   revenueVariationPercentage: 0.0588,
@@ -198,25 +199,44 @@ describe('MD-003 header and indicators', () => {
     expect(withAll).not.toContain('capitalize')
   })
 
-  it('shows quota, pace and gap of the brands with target, with the note', () => {
-    const html = text(render(
+  // MD-003-HOTFIX2 (replaces the MD-003 rule "solo marcas con meta").
+  it('compares the revenue of every brand against the total quota, with the note', () => {
+    const markup = render(
       <MyDayKpis
         portfolio={PORTFOLIO}
         workingDays={{ elapsed: 15, total: 21, remaining: 6, holidaysExcluded: false }}
         periodStatus="open"
       />,
-    ))
+    )
+    const html = text(markup)
 
     expect(html).toContain('Venta del mes $900,000')
     expect(html).toContain('Cuota $1,000,000')
-    expect(html).toContain('Avance 80.0%')
+    expect(html).toContain('Avance 90.0%')
     expect(html).toContain('Esperado a la fecha 71.4%')
-    // Pace of the brands with target; every brand as secondary text.
-    expect(html).toContain('Cierre por ritmo $1,120,000')
-    expect(html).toContain('112.0% de la cuota · Todas las marcas $1,300,000')
-    expect(html).toContain('Brecha diaria $33,333')
+    // Projected close of every brand, not only the brands with quota.
+    expect(html).toContain('Cierre por ritmo $1,260,000')
+    expect(html).toContain('126.0% de la cuota')
+    expect(html).not.toContain('Todas las marcas')
+    expect(html).not.toContain('$1,120,000')
+    expect(html).toContain('Brecha diaria $16,667')
     expect(html).toContain('6 días hábiles restantes')
-    expect(html).toContain('Cuota, avance, ritmo y brecha consideran solo marcas con meta (2 de 3)')
+    expect(html).toContain('Avance, ritmo y brecha comparan la venta de todas las marcas contra la cuota total (1 marca sin cuota)')
+    expect(html).not.toContain('solo marcas con meta')
+    // The pace color follows the new projected attainment (126 % → green).
+    expect(markup).toContain('bg-emerald-50')
+  })
+
+  it('counts the brands without quota in the note', () => {
+    const html = text(render(
+      <MyDayKpis
+        portfolio={{ ...PORTFOLIO, brands: 46, brandsWithTarget: 41, projectedAttainment: 0.85 }}
+        workingDays={{ elapsed: 15, total: 21, remaining: 6, holidaysExcluded: false }}
+        periodStatus="open"
+      />,
+    ))
+
+    expect(html).toContain('contra la cuota total (5 marcas sin cuota)')
   })
 })
 

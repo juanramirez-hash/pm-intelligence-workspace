@@ -1,3 +1,8 @@
+# 0.57.0-MD-003-HOTFIX2
+
+- The "Mi día" portfolio now compares the revenue of every brand, with and without quota, against the total quota, as the quota progress report and the DNR rule do: attainment, gap, projected close, projected attainment and daily gap use the total revenue (October 2026 with every brand: 80.4 % instead of 78.6 %). `revenueWithTarget`, `projectedRevenueWithTarget` and `brandsWithTarget` remain as information; each brand keeps a null attainment without quota.
+- The projected close indicator shows the projection of every brand and its attainment, and the note now reads "Avance, ritmo y brecha comparan la venta de todas las marcas contra la cuota total (N marcas sin cuota)". No migrations; the backend must be restarted.
+
 # 0.57.0-NAV-001
 
 - Makes "Mi día" the home page (`/`), where everyone lands after the login without downloading the datasets, and moves the executive overview to `/executive` and its attention queue to `/executive/attention/:domain`; `/my-day` and `/attention/:domain` redirect keeping their parameters.

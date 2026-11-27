@@ -486,6 +486,17 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Mientras sale NAV-002, "Mi día no está disponible para tu tipo de acceso" muestra enlaces a las pantallas que ese rol puede abrir.
 - Sin migraciones. Despliegue con reinicio del backend (endpoint nuevo).
 
+## Mi día — MD-003-HOTFIX2
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| MD-003-HOTFIX2 | Cartera de "Mi día" con la venta de TODAS las marcas contra la cuota total | Implementado · pendiente de validación funcional y despliegue |
+
+- Corrige la decisión 5 de MD-003 y la regla de cartera de MD-001 ("cuota, avance y brecha solo con marcas con meta"). Ahora el avance, la brecha, el cierre por ritmo, el avance del cierre y la brecha diaria de la cartera comparan la venta de todas las marcas (con y sin cuota) contra la suma de cuotas, igual que el reporte de avance de cuota (Alcance_cuota_marcas_GAP) y la regla DNR. Ejemplo: octubre 2026 con "Todas" pasa de 78.6 % a 80.4 % ($42,276,165 contra $52,551,606).
+- `revenueWithTarget`, `projectedRevenueWithTarget` y `brandsWithTarget` se conservan como datos informativos. Por marca no cambia: una marca sin cuota sigue con avance nulo ("—").
+- "Mi día": el cierre por ritmo muestra la proyección de todas las marcas con su avance (deja de decir "Todas las marcas $…"); nota "Avance, ritmo y brecha comparan la venta de todas las marcas contra la cuota total (N marcas sin cuota)". Los colores del cierre por ritmo usan el avance nuevo.
+- Sin migraciones. Despliegue con reinicio del backend (`server/services/myDayRules.js`).
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.
