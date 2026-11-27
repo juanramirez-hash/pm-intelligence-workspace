@@ -2,6 +2,10 @@ import {
   authenticatedFetch,
 } from '../../../shared/http/authenticatedFetch'
 
+import {
+  brandPageId,
+} from '../../my-day/navigation/brandPagePath'
+
 export type GlobalSearchResultType =
   | 'brand'
   | 'customer'
@@ -116,8 +120,16 @@ function buildBrandResults(
         brand.name
           ? 'Marca'
           : `ID ${brand.id}`,
+      // SRCH-HOTFIX1: the brand page identifies a brand by its normalized
+      // name (UNV (UNIVIEW)), not by the server's brand_key (UNVUNIVIEW).
+      // The id stays as the result key and as a fallback when the name is
+      // empty.
       route:
-        `/brands/${encodeURIComponent(brand.id)}`,
+        `/brands/${encodeURIComponent(
+          brandPageId(brand.name) ??
+          brandPageId(brand.id) ??
+          brand.id,
+        )}`,
       score:
         brand.score,
     }),
