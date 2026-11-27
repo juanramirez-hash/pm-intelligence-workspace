@@ -298,6 +298,11 @@ app.use(
   createApiRateLimit(),
 )
 
+app.use(
+  '/api/brands',
+  createApiRateLimit(),
+)
+
 registerBusinessRoutes(app, pool)
 
 app.use(

@@ -525,6 +525,21 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Alcance `pricing`: ningún rol lo usa desde la migración 029 (borró el rol `pricing`). No se tocó en este sprint; sigue aceptado en `app_roles.scope`, en Configuración y en el frontend. Pendiente de decidir si se retira.
 - Despliegue: consulta previa de usuarios por rol, migración 041 y luego el reinicio del backend (el código nuevo ya no acepta los roles que la migración borra).
 
+## Marcas — MB-001 (entrega 2A, servidor)
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| MB-001 · 2A | Ficha de marca servida desde el servidor (`/api/brands`): directorio, encabezado, Ventas, Clientes y Productos | Implementado · pendiente de aplicar la migración 042, medir de nuevo y confirmar la 2B (pantalla) |
+
+- Endpoints (solo lectura, alcance = marcas efectivas, auxiliares incluidos; fuera de alcance → 403): `GET /api/brands`, `/:brand`, `/:brand/sales` (`sections=comparison,yoy,series,documents`), `/:brand/sales/export`, `/:brand/customers` (`filter=activos|por-recuperar|suben|bajan`), `/:brand/products` (`filter=vendidos|por-recuperar|agotados`).
+- La marca se identifica por `brand_key` y la URL acepta el nombre de ventas, el normalizado o la llave (`UNV (UNIVIEW)`, `unv (uniview)`, `UNVUNIVIEW`). Marca sin ventas en el periodo → 200 con ceros y faltantes; marca desconocida → 404.
+- Periodo: últimos 12 meses (por defecto el mes del corte), serie de 24 meses. Mes contra mes con las reglas de Mi día (MD-001); año contra año, acumulado y cierre anual portados EXACTAMENTE de `brandCommercialComparison.ts` (prueba de paridad en `tests/services/brandCommercialParity.test.ts`).
+- Utilidad bruta y margen revelan el costo: sin acceso a costos de la marca salen como `null` más `costHidden: true` (nunca 0) y el export no trae esas columnas. Supuesto pendiente de confirmar: Mi día y `/api/data/sales` hoy sí las muestran a todos.
+- Migración 042 (`idx_sales_facts_brand_key_sale_date` sobre `sales_facts (brand_key(brand), sale_date)`): en producción el comparativo anual tardaba 1.1-1.4 s porque `brand_key()` se evaluaba sobre ~500 mil filas. Transacción propia, sin `CONCURRENTLY` (bloquea escrituras de `sales_facts` mientras se crea: aplicar fuera de horario y fuera de una importación), con rollback, sin subir `data_cache_version` y fuera de `REQUIRED_SCHEMA`. Si una migración futura cambia `brand_key()`, debe hacer `REINDEX` en la misma migración. Sin cambios en `/api/data/*`. Reglas en `server/services/brandRules.js`, SQL en `brandsService.js`, rutas en `server/routes/brands.js`.
+- Medición: `node server/scripts/explainBrandQueries.js --cutoff=YYYY-MM-DD BELDEN <marca-top>` imprime un script de solo lectura para `psql`. La migración 042 solo se propone si alguna consulta pasa de ~500 ms.
+- Despliegue: solo backend (`git pull` y reinicio). Rollback: `git revert` local del commit.
+- Pendiente: entrega 2B (pantalla en `src/features/brands/`), MB-001B (limpieza de código viejo), MB-002 (Pronóstico), MB-003 (Inteligencia en servidor).
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

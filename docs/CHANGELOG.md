@@ -1,3 +1,12 @@
+# 0.57.0-MB-001
+
+- Serves the brand page from the server (delivery 2A, backend only): `GET /api/brands` (directory), `/:brand` (header with team, status and open actions), `/:brand/sales` (month vs month, year vs year / YTD / annual close, 24-month series, documents), `/:brand/sales/export`, `/:brand/customers` and `/:brand/products`.
+- Brand accepted by sales name, normalized name or `brand_key`; scope is the effective brands (assistants included), anything else is a 403; a known brand without sales answers 200 with zeros and missing values.
+- Year over year, YTD and annual close reproduce `brandCommercialComparison.ts` exactly (parity test). Gross profit and margin are returned as `null` plus `costHidden` without cost access, and the export omits those columns.
+- The year over year comparison reads `sales_facts` once (brand plus one overall date range, `FILTER` aggregates per window) after measuring 1.1-1.4 s with the 8-window join in production; migration 042 stays pending the new timings. The annual quota is the sum of the monthly quotas and reports `monthsWithTarget` of `monthsInYear` (12) and `complete`.
+- Migration 042 adds `idx_sales_facts_brand_key_sale_date` on `sales_facts (brand_key(brand), sale_date)` (production measured 1.1-1.2 s for the annual comparison because `brand_key()` ran over ~500k rows). Own transaction, no `CONCURRENTLY`, rollback included, no data change (no `data_cache_version` bump) and not in `REQUIRED_SCHEMA`: a missing index only makes it slower. A future change of `brand_key()` must `REINDEX` it in the same migration.
+- No change to `/api/data/*`. `server/scripts/explainBrandQueries.js` prints a read-only EXPLAIN ANALYZE script for the endpoint queries.
+
 # 0.57.0-NAV-002B
 
 - Retires the legacy roles `analyst` and `viewer` and the `legacy` scope (migration 041). A guard fails with a clear message and changes nothing if any user still has one of them; the CHECK keeps `admin`, `manager`, `pm`, `engineering` and `assistant`, and both roles are deleted from `app_roles`. The rollback restores the 7-role CHECK and both roles with their original values.
