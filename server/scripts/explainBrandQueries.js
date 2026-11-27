@@ -32,6 +32,11 @@ import {
 } from '../services/brandRules.js'
 
 import {
+  BUSINESS_CALENDAR_SEED,
+  createBusinessCalendar,
+} from '../services/businessCalendar.js'
+
+import {
   customerRowsQuery,
   documentTotalsQuery,
   documentsQuery,
@@ -92,8 +97,11 @@ if (!cutoff || !/^\d{4}-\d{2}-\d{2}$/.test(cutoff) || (brands.length === 0 && !p
 }
 
 const period = option('period') ?? cutoff.slice(0, 7)
-const window = resolvePeriodWindow(period, cutoff)
-const plan = buildYearWindowPlan(period, cutoff)
+// CAL-001: the windows use the business calendar (the initial one: it only
+// decides the dates the SQL measures).
+const calendar = createBusinessCalendar([...BUSINESS_CALENDAR_SEED])
+const window = resolvePeriodWindow(period, cutoff, calendar)
+const plan = buildYearWindowPlan(period, cutoff, calendar)
 const losses = lossWindow(period, cutoff, 2, 1)
 const output = ['BEGIN READ ONLY;', '\\timing on']
 let counter = 0

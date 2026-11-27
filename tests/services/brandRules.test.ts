@@ -307,6 +307,9 @@ describe('MB-001 annual projection', () => {
       available: false,
       currentYear: 2026,
       description: 'El periodo seleccionado todavía no tiene corte de datos.',
+      // CAL-001: no windows, so no years to report.
+      calendarMissingYears: [],
+      holidaysExcluded: false,
       costHidden: false,
     })
   })

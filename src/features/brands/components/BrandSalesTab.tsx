@@ -79,6 +79,14 @@ import type {
 } from '../../my-day/api/myDayTypes'
 
 import {
+  CalendarNotes,
+} from '../../../shared/calendar/CalendarNotes'
+
+import {
+  missingCalendarNote,
+} from '../../../shared/calendar/calendarText'
+
+import {
   useBrandContext,
 } from './brandContext'
 
@@ -240,6 +248,7 @@ export function MonthComparison({ data }: { data: BrandMonthOverMonth | undefine
 
   const { current, previous, variations } = data
   const hidden = data.costHidden
+  const missingNote = missingCalendarNote(data.calendarMissingYears)
   const rows: Array<[string, string, string, BrandVariation | null, string?]> = [
     ['Venta', formatMoney(current.revenue), formatMoney(previous.revenue), variations.revenue],
     ['Utilidad bruta', amountText(current.grossProfit, hidden), amountText(previous.grossProfit, hidden), hidden ? null : variations.grossProfit],
@@ -250,6 +259,8 @@ export function MonthComparison({ data }: { data: BrandMonthOverMonth | undefine
   ]
 
   return (
+    <>
+      <CalendarNotes className="mb-3" notes={missingNote ? [missingNote] : []} />
     <MyDayTable minWidth="min-w-[720px]">
       <thead>
         <tr>
@@ -282,6 +293,7 @@ export function MonthComparison({ data }: { data: BrandMonthOverMonth | undefine
         ))}
       </tbody>
     </MyDayTable>
+    </>
   )
 }
 

@@ -26,6 +26,14 @@ import type {
 } from '../api/brandsTypes'
 
 import {
+  CalendarNotes,
+} from '../../../shared/calendar/CalendarNotes'
+
+import {
+  calendarNotes,
+} from '../../../shared/calendar/calendarText'
+
+import {
   BrandPortfolioPanel,
 } from '../components/BrandPortfolioPanel'
 
@@ -205,6 +213,13 @@ export function BrandsDirectoryPage() {
                   ? ` · ${formatInteger(data.summary.brands)} marcas · ${formatInteger(data.summary.withSales)} con venta · ${formatInteger(data.summary.requiringAttention)} requieren atención`
                   : ''}
               </p>
+            ) : null}
+
+            {data ? (
+              <CalendarNotes
+                className="mt-1 max-w-2xl"
+                notes={calendarNotes(data.calendarMissingYears, data.workingDays)}
+              />
             ) : null}
           </div>
 

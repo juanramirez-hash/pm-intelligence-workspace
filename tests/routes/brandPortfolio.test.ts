@@ -35,6 +35,19 @@ vi.mock('../../server/services/myDayService.js', async (importOriginal) => ({
   ...myDay,
 }))
 
+const calendarMock = vi.hoisted(() => ({ loadBusinessCalendar: vi.fn() }))
+
+vi.mock('../../server/services/businessCalendar.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...calendarMock,
+}))
+
+import {
+  BUSINESS_CALENDAR_SEED,
+  EMPTY_CALENDAR,
+  createBusinessCalendar,
+} from '../../server/services/businessCalendar.js'
+
 import { createBrandPortfolioRouter } from '../../server/routes/brandPortfolio.js'
 import { createBrandsRouter } from '../../server/routes/brands.js'
 import {
@@ -136,6 +149,7 @@ const QUOTA_ROWS = Array.from({ length: 12 }, (_, index) => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  calendarMock.loadBusinessCalendar.mockResolvedValue(EMPTY_CALENDAR)
   myDay.loadDataCutoff.mockResolvedValue('2026-11-24')
   brands.loadPortfolioYearWindows.mockResolvedValue(metricsFor(1))
   brands.loadPortfolioTargetsRange.mockResolvedValue(QUOTA_ROWS)
@@ -313,5 +327,49 @@ describe('MB-001C parity with the brand page', () => {
     )
 
     expect(body(await portfolio(user)).yearOverYear).toEqual(body(brandRes).yearOverYear)
+  })
+})
+
+describe('CAL-001 calendar in the portfolio', () => {
+  const seed = () => createBusinessCalendar([...BUSINESS_CALENDAR_SEED])
+
+  it('uses the same equivalent windows as the brand page, with the calendar', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    myDay.loadDataCutoff.mockResolvedValue('2026-11-26')
+
+    const result = body(await portfolio(PM))
+    const windows = brands.loadPortfolioYearWindows.mock.calls[0]?.[2] as Array<{ key: string, dateTo: string, workingDays: number }>
+
+    expect(result.yearOverYear.holidaysExcluded).toBe(true)
+    expect(result.yearOverYear.calendarMissingYears).toEqual([])
+    expect(windows.find((window) => window.key === 'monthly:2026')).toMatchObject({ dateTo: '2026-11-26', workingDays: 18 })
+    expect(windows.find((window) => window.key === 'monthly:2025')).toMatchObject({ dateTo: '2025-11-27', workingDays: 18 })
+    expect(result.yearOverYear.monthly.current.workingDays).toBe(18)
+  })
+
+  it('a portfolio of one brand still equals the brand page with the calendar', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    myDay.loadDataCutoff.mockResolvedValue('2026-11-26')
+
+    const user: AuthUser = { scope: 'assigned', brandIds: ['UNV (UNIVIEW)'], costAccess: true }
+    const brandRes = await call(
+      createBrandsRouter({ query: vi.fn() }),
+      '/:brand/sales',
+      user,
+      { sections: 'yoy' },
+      { brand: 'UNVUNIVIEW' },
+    )
+
+    expect(body(await portfolio(user)).yearOverYear).toEqual(body(brandRes).yearOverYear)
+  })
+
+  it('warns of a year without calendar', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    myDay.loadDataCutoff.mockResolvedValue('2027-01-20')
+
+    const result = body(await portfolio(PM))
+
+    expect(result.yearOverYear.calendarMissingYears).toEqual([2027])
+    expect(result.yearOverYear.holidaysExcluded).toBe(false)
   })
 })

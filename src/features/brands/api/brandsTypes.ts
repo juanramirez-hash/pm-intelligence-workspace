@@ -58,6 +58,8 @@ export interface BrandDirectoryResponse {
   offset: number
   reason?: string
   periodStatus?: MyDayPeriodStatus
+  workingDays?: MyDayWorkingDays
+  calendarMissingYears?: number[]
   summary: {
     brands: number
     withSales: number
@@ -102,6 +104,7 @@ export interface BrandOpenAction {
 export interface BrandHeaderResponse extends BrandBase {
   periodStatus?: MyDayPeriodStatus
   workingDays?: MyDayWorkingDays
+  calendarMissingYears?: number[]
   comparison?: BrandComparisonDates | null
   hasSalesInPeriod?: boolean
   firstSaleDate?: string | null
@@ -141,6 +144,7 @@ export interface BrandMonthOverMonth {
   basis?: string
   periodStatus?: MyDayPeriodStatus
   holidaysExcluded?: boolean
+  calendarMissingYears?: number[]
   costHidden: boolean
   current?: BrandMonthSide
   previous?: BrandMonthSide
@@ -212,6 +216,9 @@ export interface BrandYearOverYear {
   currentYear: number
   closed?: boolean
   description?: string
+  // CAL-001: years of the windows without a calendar (counted Monday to Friday).
+  calendarMissingYears?: number[]
+  holidaysExcluded?: boolean
   costHidden: boolean
   monthly?: BrandYearSlots
   ytd?: BrandYearSlots

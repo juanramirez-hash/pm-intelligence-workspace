@@ -18,6 +18,10 @@ import {
 } from './actionValidation.js'
 
 import {
+  EMPTY_CALENDAR,
+} from './businessCalendar.js'
+
+import {
   variationPercentage,
 } from './myDayRules.js'
 
@@ -28,7 +32,8 @@ export const BRAND_RULES = Object.freeze({
   seriesMonths: 24,
   // Years of the year over year comparison: current, -1 and -2.
   comparisonYears: 3,
-  workingDays: 'Lunes a viernes, sin ajuste por feriados',
+  // CAL-001: the calendar of non-working days (Configuración) rules.
+  workingDays: 'Lunes a viernes menos los feriados oficiales y los días de la empresa del calendario',
   exportMaxRows: 20000,
   pageLimit: Object.freeze({ default: 50, max: 500 }),
   customerFilters: Object.freeze(['activos', 'por-recuperar', 'suben', 'bajan']),
@@ -88,40 +93,20 @@ export function resolveBrandPeriod(value, cutoff) {
 
 /**
  * Same rule as resolveEquivalentWorkingDayCutoff in
- * src/core/analytics/shared/dateAnalytics.ts: the target month is cut on its
- * Nth weekday, N being the weekdays elapsed in the source month up to its
- * cutoff; the target month end when it has fewer weekdays. null when no
- * weekday has elapsed.
+ * src/core/analytics/shared/dateAnalytics.ts, with the CAL-001 calendar: the
+ * target month is cut on its Nth business day, N being the business days
+ * elapsed in the source month up to its cutoff; the target month end when it
+ * has fewer. null when no business day has elapsed. Without a calendar (the
+ * default) the days are Monday to Friday, as the client rule.
  */
-export function equivalentWorkingDayCutoff(sourcePeriod, sourceCutoff, targetPeriod) {
-  const elapsed = weekdaysBetween(`${sourcePeriod}-01`, sourceCutoff)
+export function equivalentWorkingDayCutoff(sourcePeriod, sourceCutoff, targetPeriod, calendar = EMPTY_CALENDAR) {
+  const elapsed = weekdaysBetween(`${sourcePeriod}-01`, sourceCutoff, calendar)
 
   if (elapsed <= 0) {
     return null
   }
 
-  const targetEnd = monthEnd(targetPeriod)
-  let counted = 0
-
-  for (
-    const cursor = new Date(`${targetPeriod}-01T00:00:00Z`);
-    cursor.toISOString().slice(0, 10) <= targetEnd;
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
-  ) {
-    const weekday = cursor.getUTCDay()
-
-    if (weekday === 0 || weekday === 6) {
-      continue
-    }
-
-    counted += 1
-
-    if (counted === elapsed) {
-      return cursor.toISOString().slice(0, 10)
-    }
-  }
-
-  return targetEnd
+  return calendar.nthBusinessDay(targetPeriod, elapsed) ?? monthEnd(targetPeriod)
 }
 
 /**
@@ -129,7 +114,7 @@ export function equivalentWorkingDayCutoff(sourcePeriod, sourceCutoff, targetPer
  * in each year, with the same number of working days when the month is
  * still open. null when no equivalent cutoff can be set.
  */
-export function resolveComparableMonthCutoffs(currentPeriod, currentTo, years, closed) {
+export function resolveComparableMonthCutoffs(currentPeriod, currentTo, years, closed, calendar = EMPTY_CALENDAR) {
   const month = currentPeriod.slice(5, 7)
   const currentYear = Number(currentPeriod.slice(0, 4))
   const preliminary = []
@@ -144,7 +129,7 @@ export function resolveComparableMonthCutoffs(currentPeriod, currentTo, years, c
     } else if (closed) {
       dateTo = end
     } else {
-      const equivalent = equivalentWorkingDayCutoff(currentPeriod, currentTo, period)
+      const equivalent = equivalentWorkingDayCutoff(currentPeriod, currentTo, period, calendar)
 
       if (!equivalent) {
         return null
@@ -158,7 +143,7 @@ export function resolveComparableMonthCutoffs(currentPeriod, currentTo, years, c
       periodId: period,
       end,
       dateTo,
-      workingDays: weekdaysBetween(`${period}-01`, dateTo),
+      workingDays: weekdaysBetween(`${period}-01`, dateTo, calendar),
     })
   }
 
@@ -185,7 +170,7 @@ export function resolveComparableMonthCutoffs(currentPeriod, currentTo, years, c
       continue
     }
 
-    const dateTo = equivalentWorkingDayCutoff(reference.periodId, reference.dateTo, item.periodId)
+    const dateTo = equivalentWorkingDayCutoff(reference.periodId, reference.dateTo, item.periodId, calendar)
 
     if (!dateTo) {
       return null
@@ -194,7 +179,7 @@ export function resolveComparableMonthCutoffs(currentPeriod, currentTo, years, c
     adjusted.push({
       ...item,
       dateTo,
-      workingDays: weekdaysBetween(`${item.periodId}-01`, dateTo),
+      workingDays: weekdaysBetween(`${item.periodId}-01`, dateTo, calendar),
     })
   }
 
@@ -208,7 +193,7 @@ export function resolveComparableMonthCutoffs(currentPeriod, currentTo, years, c
  * service sums sales_facts inside each one.
  * { available: false, description } when the comparison cannot be built.
  */
-export function buildYearWindowPlan(period, cutoff) {
+export function buildYearWindowPlan(period, cutoff, calendar = EMPTY_CALENDAR) {
   if (!cutoff || !/^\d{4}-\d{2}-\d{2}$/.test(cutoff)) {
     return {
       available: false,
@@ -235,7 +220,7 @@ export function buildYearWindowPlan(period, cutoff) {
     { length: BRAND_RULES.comparisonYears },
     (_, index) => currentYear - index,
   )
-  const cutoffs = resolveComparableMonthCutoffs(period, currentTo, years, closed)
+  const cutoffs = resolveComparableMonthCutoffs(period, currentTo, years, closed, calendar)
 
   if (!cutoffs) {
     return {
@@ -255,6 +240,7 @@ export function buildYearWindowPlan(period, cutoff) {
       periodId: comparable.periodId,
       dateFrom: `${comparable.periodId}-01`,
       dateTo: comparable.dateTo,
+      workingDays: weekdaysBetween(`${comparable.periodId}-01`, comparable.dateTo, calendar),
     })
     windows.push({
       key: `ytd:${comparable.year}`,
@@ -263,6 +249,7 @@ export function buildYearWindowPlan(period, cutoff) {
       periodId: `${comparable.year}-YTD`,
       dateFrom: `${comparable.year}-01-01`,
       dateTo: comparable.dateTo,
+      workingDays: weekdaysBetween(`${comparable.year}-01-01`, comparable.dateTo, calendar),
     })
   }
 
@@ -274,19 +261,29 @@ export function buildYearWindowPlan(period, cutoff) {
       periodId: `${year}-FY`,
       dateFrom: `${year}-01-01`,
       dateTo: `${year}-12-31`,
+      workingDays: weekdaysBetween(`${year}-01-01`, `${year}-12-31`, calendar),
     })
   }
 
   const [previousYear, twoYearsBack] = [currentYear - 1, currentYear - 2]
+  // CAL-001: years of the windows without a calendar are counted Monday to
+  // Friday and reported so the screen warns.
+  const calendarMissingYears = calendar.missingYears(
+    windows.reduce((lowest, item) => (item.dateFrom < lowest ? item.dateFrom : lowest), windows[0].dateFrom),
+    windows.reduce((highest, item) => (item.dateTo > highest ? item.dateTo : highest), windows[0].dateTo),
+  )
+  const holidaysExcluded = calendarMissingYears.length === 0
 
   return {
     available: true,
     currentYear,
     closed,
     windows,
+    calendarMissingYears,
+    holidaysExcluded,
     description: closed
       ? `Mes cerrado. Comparativo del mismo mes en ${currentYear}, ${previousYear} y ${twoYearsBack}; YTD al cierre del mes y proyección anual basada en la estacionalidad histórica disponible.`
-      : `Mismo segmento del año: igual número de días laborables del mes actual (lunes a viernes, sin ajuste por feriados) para ${currentYear}, ${previousYear} y ${twoYearsBack}. YTD conserva los mismos meses completos más ese corte equivalente.`,
+      : `Mismo segmento del año: igual número de días laborables del mes actual (${holidaysExcluded ? 'lunes a viernes menos feriados y días de la empresa' : 'lunes a viernes, sin ajuste por feriados'}) para ${currentYear}, ${previousYear} y ${twoYearsBack}. YTD conserva los mismos meses completos más ese corte equivalente.`,
   }
 }
 
@@ -310,7 +307,7 @@ function toWindow(definition, metrics, costVisible) {
     periodId: definition.periodId,
     dateFrom: definition.dateFrom,
     dateTo: definition.dateTo,
-    workingDays: weekdaysBetween(definition.dateFrom, definition.dateTo),
+    workingDays: definition.workingDays ?? weekdaysBetween(definition.dateFrom, definition.dateTo),
     revenue,
     grossProfit: costVisible ? grossProfit : null,
     grossMargin: costVisible ? margin(revenue, grossProfit) : null,
@@ -370,6 +367,8 @@ export function assembleYearComparison(plan, metrics, { costVisible = true, annu
       available: false,
       currentYear: plan.currentYear,
       description: plan.description,
+      calendarMissingYears: plan.calendarMissingYears ?? [],
+      holidaysExcluded: plan.holidaysExcluded ?? false,
       costHidden: !costVisible,
     }
   }
@@ -481,6 +480,9 @@ export function assembleYearComparison(plan, metrics, { costVisible = true, annu
     currentYear,
     closed: plan.closed,
     description: plan.description,
+    // CAL-001: years without a calendar are counted Monday to Friday.
+    calendarMissingYears: plan.calendarMissingYears ?? [],
+    holidaysExcluded: plan.holidaysExcluded ?? false,
     costHidden: !costVisible,
     monthly: {
       current: strip(monthly.current),
@@ -510,14 +512,14 @@ export function assembleYearComparison(plan, metrics, { costVisible = true, annu
 // -- Month against month (MD-001 windows) -----------------------------------
 
 /** One side of the month against month comparison. */
-function monthSide(metrics, costVisible, from, to) {
+function monthSide(metrics, costVisible, from, to, calendar) {
   const revenue = metrics?.revenue ?? 0
   const grossProfit = metrics?.grossProfit ?? 0
 
   return {
     dateFrom: from,
     dateTo: to,
-    workingDays: weekdaysBetween(from, to),
+    workingDays: weekdaysBetween(from, to, calendar),
     revenue,
     grossProfit: costVisible ? grossProfit : null,
     grossMargin: costVisible ? margin(revenue, grossProfit) : null,
@@ -533,24 +535,27 @@ function monthSide(metrics, costVisible, from, to) {
  * the MD-001 windows (resolvePeriodWindow): revenue, gross profit, margin,
  * customers, products and documents.
  */
-export function assembleMonthComparison(window, current, previous, costVisible = true) {
+export function assembleMonthComparison(window, current, previous, costVisible = true, calendar = EMPTY_CALENDAR) {
   if (!window.comparison) {
     return {
       available: false,
       periodStatus: window.periodStatus,
+      calendarMissingYears: window.calendarMissingYears ?? [],
       costHidden: !costVisible,
     }
   }
 
   const { comparison } = window
-  const now = monthSide(current, costVisible, comparison.currentFrom, comparison.currentTo)
-  const before = monthSide(previous, costVisible, comparison.previousFrom, comparison.previousTo)
+  const now = monthSide(current, costVisible, comparison.currentFrom, comparison.currentTo, calendar)
+  const before = monthSide(previous, costVisible, comparison.previousFrom, comparison.previousTo, calendar)
 
   return {
     available: true,
     basis: comparison.basis,
     periodStatus: window.periodStatus,
     holidaysExcluded: comparison.holidaysExcluded,
+    // CAL-001: years without a calendar are counted Monday to Friday.
+    calendarMissingYears: window.calendarMissingYears ?? [],
     costHidden: !costVisible,
     current: now,
     previous: before,

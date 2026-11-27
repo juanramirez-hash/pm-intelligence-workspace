@@ -29,10 +29,15 @@ import {
 } from '../services/actionValidation.js'
 
 import {
+  loadBusinessCalendar,
+} from '../services/businessCalendar.js'
+
+import {
   MY_DAY_RULES,
   buildMyDayBrands,
   buildMyDayPortfolio,
   resolvePeriodWindow,
+  withTemplateWorkingDays,
 } from '../services/myDayRules.js'
 
 import {
@@ -303,7 +308,10 @@ export function createMyDayRouter(pool) {
   router.get('/', async (req, res) => {
     try {
       const source = resolveMyDayBrandSource(req.authUser, req.query.view)
-      const dataCutoff = await loadDataCutoff(pool)
+      const [dataCutoff, calendar] = await Promise.all([
+        loadDataCutoff(pool),
+        loadBusinessCalendar(pool),
+      ])
       const period = resolvePeriod(req.query, dataCutoff)
 
       if (source.mode === 'none') {
@@ -322,7 +330,8 @@ export function createMyDayRouter(pool) {
         }))
       }
 
-      const window = resolvePeriodWindow(period, dataCutoff)
+      // CAL-001: business days = Monday to Friday minus the calendar.
+      const window = resolvePeriodWindow(period, dataCutoff, calendar)
 
       if (window.periodStatus === 'after-cutoff') {
         return res.json(emptyResponse({
@@ -330,6 +339,7 @@ export function createMyDayRouter(pool) {
           dataCutoff,
           periodStatus: window.periodStatus,
           workingDays: window.workingDays,
+          calendarMissingYears: window.calendarMissingYears,
           comparison: null,
           reason: 'period-after-data-cutoff',
         }))
@@ -370,7 +380,12 @@ export function createMyDayRouter(pool) {
         dataCutoff,
         brandSource: source.mode,
         periodStatus: window.periodStatus,
-        workingDays: window.workingDays,
+        // The quota template (working_days) is informative; the calendar rules.
+        workingDays: withTemplateWorkingDays(
+          window.workingDays,
+          [...targets.values()].map((target) => target.workingDays),
+        ),
+        calendarMissingYears: window.calendarMissingYears,
         comparison: window.comparison,
         lostCustomersWindow: lossWindow,
         rules: MY_DAY_RULES,

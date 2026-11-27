@@ -46,6 +46,14 @@ import {
 } from '../format/brandsFormat'
 
 import {
+  CalendarNotes,
+} from '../../../shared/calendar/CalendarNotes'
+
+import {
+  calendarNotes,
+} from '../../../shared/calendar/calendarText'
+
+import {
   capitalizeFirst,
   formatDate,
   formatPeriod,
@@ -169,6 +177,13 @@ export function BrandFrameView({
                 Datos al corte: <strong className="font-semibold text-slate-900">{formatDate(header.dataCutoff)}</strong>
                 {header.lastSaleDate ? ` · Última venta: ${formatDate(header.lastSaleDate)}` : ''}
               </p>
+            ) : null}
+
+            {header ? (
+              <CalendarNotes
+                className="mt-1 max-w-2xl"
+                notes={calendarNotes(header.calendarMissingYears, header.workingDays)}
+              />
             ) : null}
           </div>
 

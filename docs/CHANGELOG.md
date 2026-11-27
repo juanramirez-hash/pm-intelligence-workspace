@@ -1,3 +1,12 @@
+# 0.57.0-CAL-001A
+
+- Adds the business calendar: business days = Monday to Friday minus official holidays and company days (`business_calendar`, migration 043, with 35 initial dates for 2024-2026, rollback and `REQUIRED_SCHEMA`; no `data_cache_version` bump). Sales of non-working days are still summed; only the day count changes.
+- `server/services/businessCalendar.js` is the single server rule. Mi día (elapsed, total and remaining days, pace, projected close, daily gap, previous-month cutoff), the brand page (month vs month and the year over year / YTD / annual close equivalent windows) and the portfolio use it. A year without calendar is counted Monday to Friday and reported in `calendarMissingYears`, with a warning on screen.
+- The quota template (`brand_targets.working_days`) is only compared: the calendar rules; `workingDays` carries `templateTotal` and `mismatch`, shown as a discreet note and listed in Configuración.
+- `GET /api/business-calendar` (signed-in users) and, for administrators, `GET/PUT/DELETE /api/settings/business-calendar` with the new Configuración > Calendario section.
+- `server/scripts/simulateBusinessCalendar.js`: read-only simulation (today -> calendar) with the calendar inside the script, to approve the numbers before applying the migration.
+- Phase B (client engines) cancelled: the old Pronóstico, Inteligencia and Executive code is not touched. The Mi día / Executive working-day parity test now compares with an empty calendar.
+
 # 0.57.0-MB-001B
 
 - Removes the code the brand page replaced: `src/features/sales-workspace/` (44 files), `src/features/brand-workspace/` (5), `src/atlas/widgets/brandDirectory/`, `src/features/auth/brandIntelligenceAccess.ts` and `BrandCommercialComparisonPanel.tsx` (55 files, `git rm`). 37 tests went with them; all of them tested only the removed code.

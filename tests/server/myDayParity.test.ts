@@ -1,5 +1,11 @@
 // MD-001: "Mi día" (server) must give the same status, trend, attention and
 // working-day comparison as the Executive brand table (frontend).
+//
+// CAL-001: the Executive table counts Monday to Friday and does not know the
+// calendar of non-working days (it is retired in EX-001, so it is not given the
+// calendar). The working-day parity is therefore checked with an EMPTY
+// calendar, which is the same Monday-to-Friday rule; with the calendar Mi día
+// differs from the Executive table by design (see businessCalendar.test.ts).
 
 import { readFileSync } from 'node:fs'
 
@@ -18,6 +24,7 @@ import {
   resolveEquivalentWorkingDayCutoff,
 } from '../../src/core/analytics/shared/dateAnalytics'
 
+import { EMPTY_CALENDAR } from '../../server/services/businessCalendar.js'
 import {
   equivalentPreviousCutoff,
   monthEnd,
@@ -80,7 +87,7 @@ describe('MD-001 parity with Executive', () => {
         previous,
         monthEnd(previous),
       )
-      const myDay = equivalentPreviousCutoff(period, cutoff)
+      const myDay = equivalentPreviousCutoff(period, cutoff, EMPTY_CALENDAR)
 
       if (executive !== myDay) {
         mismatches.push(`${cutoff}: ${executive} vs ${myDay}`)
@@ -88,7 +95,7 @@ describe('MD-001 parity with Executive', () => {
 
       const elapsed = countWeekdaysInclusive(`${period}-01`, cutoff)
 
-      if (elapsed !== weekdaysBetween(`${period}-01`, cutoff)) {
+      if (elapsed !== weekdaysBetween(`${period}-01`, cutoff, EMPTY_CALENDAR)) {
         mismatches.push(`${cutoff}: weekdays`)
       }
     }
@@ -97,8 +104,8 @@ describe('MD-001 parity with Executive', () => {
   })
 
   it('counts Monday-to-Friday working days per month', () => {
-    expect(weekdaysInPeriod('2026-11')).toBe(21)
-    expect(weekdaysInPeriod('2026-02')).toBe(20)
-    expect(weekdaysInPeriod('2026-03')).toBe(22)
+    expect(weekdaysInPeriod('2026-11', EMPTY_CALENDAR)).toBe(21)
+    expect(weekdaysInPeriod('2026-02', EMPTY_CALENDAR)).toBe(20)
+    expect(weekdaysInPeriod('2026-03', EMPTY_CALENDAR)).toBe(22)
   })
 })

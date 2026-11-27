@@ -47,6 +47,10 @@ export const REQUIRED_SCHEMA = [
     migration: '040',
     table: 'app_user_pm_links',
   },
+  {
+    migration: '043',
+    table: 'business_calendar',
+  },
 ]
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/

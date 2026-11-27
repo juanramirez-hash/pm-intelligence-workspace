@@ -37,6 +37,10 @@ import {
 } from '../services/brandRules.js'
 
 import {
+  loadBusinessCalendar,
+} from '../services/businessCalendar.js'
+
+import {
   annualTargetFrom,
   loadPortfolioTargetsRange,
   loadPortfolioYearWindows,
@@ -64,7 +68,10 @@ export function createBrandPortfolioRouter(pool) {
     try {
       const view = resolveMyDayView(req.query.view)
       const source = resolveMyDayBrandSource(req.authUser, view)
-      const dataCutoff = await loadDataCutoff(pool)
+      const [dataCutoff, calendar] = await Promise.all([
+        loadDataCutoff(pool),
+        loadBusinessCalendar(pool),
+      ])
       const period = resolveBrandPeriod(req.query.period, dataCutoff)
       // null = all the sales (no brand filter).
       const brandKeys = source.mode === 'all-brands' ? null : source.brandKeys
@@ -88,7 +95,8 @@ export function createBrandPortfolioRouter(pool) {
         return res.json({ ...base, reason: 'no-sales-data', yearOverYear: null })
       }
 
-      const plan = buildYearWindowPlan(period, dataCutoff)
+      // CAL-001: the same equivalent windows with the business calendar.
+      const plan = buildYearWindowPlan(period, dataCutoff, calendar)
       const targetYear = Number(period.slice(0, 4))
       const [windows, targetRows] = await Promise.all([
         plan.available ? loadPortfolioYearWindows(pool, brandKeys, plan.windows) : new Map(),

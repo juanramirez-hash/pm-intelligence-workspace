@@ -27,6 +27,11 @@ import {
 } from '../../../layouts/navigation/navigationConfig'
 
 import {
+  missingCalendarNote,
+  summaryNote,
+} from '../../../shared/calendar/calendarText'
+
+import {
   resolveActionBrandKeys,
 } from '../actions/selectPriorityActions'
 
@@ -178,7 +183,8 @@ function SummarySection({
       <MyDayBlock
         title={title}
         sourceLine={periodLine(data)}
-        note="Ordenado por venta · el cierre por ritmo usa días hábiles de lunes a viernes"
+        note={summaryNote(data?.workingDays)}
+        warnings={[missingCalendarNote(data?.calendarMissingYears)]}
         status={status}
         errorMessage={blockErrorMessage(state.error)}
         emptyMessage={reasonMessage(data?.reason) ?? 'Sin marcas con venta o meta en el periodo.'}

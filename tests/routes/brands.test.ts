@@ -66,6 +66,19 @@ vi.mock('../../server/services/actionService.js', async (importOriginal) => ({
   ...actions,
 }))
 
+const calendarMock = vi.hoisted(() => ({ loadBusinessCalendar: vi.fn() }))
+
+vi.mock('../../server/services/businessCalendar.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...calendarMock,
+}))
+
+import {
+  BUSINESS_CALENDAR_SEED,
+  EMPTY_CALENDAR,
+  createBusinessCalendar,
+} from '../../server/services/businessCalendar.js'
+
 import {
   createBrandsRouter,
   exportColumns,
@@ -137,6 +150,7 @@ const ASSISTANT: AuthUser = { scope: 'assigned', brandIds: ['UNVUNIVIEW', 'HIKVI
 
 beforeEach(() => {
   vi.clearAllMocks()
+  calendarMock.loadBusinessCalendar.mockResolvedValue(EMPTY_CALENDAR)
   myDay.loadDataCutoff.mockResolvedValue('2026-11-24')
   brands.loadBrandIdentity.mockResolvedValue({
     known: true, label: 'UNV (UNIVIEW)', firstSaleDate: '2019-01-02', lastSaleDate: '2026-11-23',
@@ -381,5 +395,50 @@ describe('MB-001 validation', () => {
 
     expect(body(res).reason).toBe('no-inventory-data')
     expect(body(res).rows[0]).toMatchObject({ onHand: null, catalogStatus: null, pendingReceiptUnits: null })
+  })
+})
+
+describe('CAL-001 calendar in the brand page', () => {
+  const seed = () => createBusinessCalendar([...BUSINESS_CALENDAR_SEED])
+
+  it('the header counts business days with the calendar and compares the template', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    myDay.loadDataCutoff.mockResolvedValue('2026-11-26')
+    myDay.loadTargets.mockResolvedValue(new Map([
+      ['UNVUNIVIEW', { revenue: 1000, grossProfit: null, grossMargin: null, workingDays: 21 }],
+    ]))
+
+    const result = body(await invoke('/:brand', PM, { brand: 'UNVUNIVIEW' }))
+
+    expect(result.workingDays).toEqual({ elapsed: 18, total: 20, remaining: 2, holidaysExcluded: true, templateTotal: 21, mismatch: true })
+    expect(result.calendarMissingYears).toEqual([])
+    expect(result.comparison).toMatchObject({ previousTo: '2026-10-26' })
+  })
+
+  it('the sales comparisons count the days of each window with the calendar', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    myDay.loadDataCutoff.mockResolvedValue('2026-11-26')
+
+    const result = body(await invoke('/:brand/sales', PM, { brand: 'UNVUNIVIEW' }, { sections: 'comparison,yoy' }))
+
+    expect(result.monthOverMonth.current).toMatchObject({ dateTo: '2026-11-26', workingDays: 18 })
+    expect(result.monthOverMonth.previous).toMatchObject({ dateTo: '2026-10-26', workingDays: 18 })
+    expect(result.monthOverMonth.holidaysExcluded).toBe(true)
+    expect(result.yearOverYear.holidaysExcluded).toBe(true)
+    expect(result.yearOverYear.calendarMissingYears).toEqual([])
+
+    const windows = brands.loadYearWindows.mock.calls[0]?.[2] as Array<{ key: string, dateTo: string, workingDays: number }>
+
+    expect(windows.find((window) => window.key === 'monthly:2025')).toMatchObject({ dateTo: '2025-11-27', workingDays: 18 })
+    expect(windows.find((window) => window.key === 'monthly:2024')).toMatchObject({ dateTo: '2024-11-27', workingDays: 18 })
+  })
+
+  it('warns of a year without calendar in the header, the sales and the directory', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    myDay.loadDataCutoff.mockResolvedValue('2027-01-20')
+
+    expect(body(await invoke('/:brand', PM, { brand: 'UNVUNIVIEW' })).calendarMissingYears).toEqual([2027])
+    expect(body(await invoke('/:brand/sales', PM, { brand: 'UNVUNIVIEW' }, { sections: 'comparison,yoy' })).yearOverYear.calendarMissingYears).toEqual([2027])
+    expect(body(await invoke('/', PM)).calendarMissingYears).toEqual([2027])
   })
 })

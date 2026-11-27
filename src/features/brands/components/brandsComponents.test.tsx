@@ -687,3 +687,100 @@ describe('MB-001C portfolio panel in the directory', () => {
   })
 
 })
+
+describe('CAL-001 calendar notes in the brand page', () => {
+  const frame = (overrides: Partial<BrandHeaderResponse>) =>
+    text(render(
+      <BrandFrameView routeBrand="UNVUNIVIEW" period={null} header={header(overrides)} activeTab="ventas" onPeriodChange={() => {}}>
+        <p>contenido</p>
+      </BrandFrameView>,
+    ))
+
+  it('the frame warns of a year without calendar and counts Monday to Friday', () => {
+    const content = frame({ calendarMissingYears: [2027] })
+
+    expect(content).toContain('No hay calendario de días no laborables cargado para 2027')
+    expect(content).toContain('Configuración &gt; Calendario')
+  })
+
+  it('the frame shows the discreet quota template note: the calendar rules', () => {
+    const content = frame({
+      workingDays: { elapsed: 18, total: 20, remaining: 2, holidaysExcluded: true, templateTotal: 21, mismatch: true },
+    })
+
+    expect(content).toContain('La plantilla de cuotas indica 21 días hábiles; el calendario, 20. Manda el calendario.')
+  })
+
+  it('the frame shows no calendar note when everything agrees', () => {
+    const html = render(
+      <BrandFrameView
+        routeBrand="UNVUNIVIEW"
+        period={null}
+        header={header({
+          calendarMissingYears: [],
+          workingDays: { elapsed: 18, total: 20, remaining: 2, holidaysExcluded: true, templateTotal: 20, mismatch: false },
+        })}
+        activeTab="ventas"
+        onPeriodChange={() => {}}
+      >
+        <p>contenido</p>
+      </BrandFrameView>,
+    )
+
+    expect(html).not.toContain('data-calendar-notes')
+  })
+
+  it('the month comparison and the year comparison warn of a year without calendar', () => {
+    const month: BrandMonthOverMonth = {
+      available: true,
+      costHidden: false,
+      calendarMissingYears: [2027],
+      current: { dateFrom: '2027-01-01', dateTo: '2027-01-15', workingDays: 10, revenue: 1, grossProfit: 1, grossMargin: 1, quantity: 1, documents: 1, customers: 1, products: 1 },
+      previous: { dateFrom: '2026-12-01', dateTo: '2026-12-14', workingDays: 10, revenue: 1, grossProfit: 1, grossMargin: 1, quantity: 1, documents: 1, customers: 1, products: 1 },
+      variations: {
+        revenue: { amount: 0, percentage: 0 },
+        grossProfit: { amount: 0, percentage: 0 },
+        grossMarginPoints: 0,
+        customers: { amount: 0, percentage: 0 },
+        products: { amount: 0, percentage: 0 },
+        documents: { amount: 0, percentage: 0 },
+      },
+    }
+    const year: BrandYearOverYear = {
+      available: true,
+      currentYear: 2027,
+      costHidden: false,
+      calendarMissingYears: [2027],
+      monthly: { current: null, previousYear: null, twoYearsBack: null, variations: { vsPreviousYear: null, vsTwoYearsBack: null } },
+    }
+
+    expect(text(render(<MonthComparison data={month} />))).toContain('No hay calendario de días no laborables cargado para 2027')
+    expect(text(render(<YearComparison data={year} />))).toContain('No hay calendario de días no laborables cargado para 2027')
+    expect(render(<YearComparison data={{ ...year, calendarMissingYears: [] }} />)).not.toContain('data-calendar-notes')
+    expect(render(<MonthComparison data={{ ...month, calendarMissingYears: undefined }} />)).not.toContain('data-calendar-notes')
+  })
+
+  it('the portfolio panel warns too, through the same year comparison', () => {
+    const base = {
+      ok: true as const,
+      view: 'mine' as const,
+      brandSource: 'assigned' as const,
+      brandCount: 3,
+      period: '2027-01',
+      periods: ['2027-01'],
+      dataCutoff: '2027-01-15',
+      costHidden: false,
+      yearOverYear: {
+        available: true,
+        currentYear: 2027,
+        costHidden: false,
+        calendarMissingYears: [2027],
+        monthly: { current: null, previousYear: null, twoYearsBack: null, variations: { vsPreviousYear: null, vsTwoYearsBack: null } },
+      },
+    }
+
+    expect(text(render(
+      <BrandPortfolioPanelView view="mine" status="success" data={base} error={null} onRetry={() => {}} />,
+    ))).toContain('No hay calendario de días no laborables cargado para 2027')
+  })
+})

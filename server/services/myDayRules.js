@@ -6,6 +6,10 @@
 // thresholds, texts and working-day comparison identical.
 
 import {
+  EMPTY_CALENDAR,
+} from './businessCalendar.js'
+
+import {
   equivalentPreviousCutoff,
   monthEnd,
   shiftMonth,
@@ -136,12 +140,20 @@ export function attentionReason(
  * Current and previous windows of a period for a data cutoff.
  * - closed: the cutoff reached the month end; full months are compared.
  * - open: the month to the cutoff against the previous month cut on the same
- *   number of weekdays (Executive rule).
+ *   number of business days (Executive rule, with the CAL-001 calendar).
  * - after-cutoff: the period starts after the data cutoff; no data.
+ *
+ * calendar: the business calendar (CAL-001). Without one (the default) the
+ * days are Monday to Friday. calendarMissingYears lists the years the windows
+ * touch that have no calendar loaded; they are counted Monday to Friday and
+ * holidaysExcluded is false.
  */
-export function resolvePeriodWindow(period, cutoff) {
+export function resolvePeriodWindow(period, cutoff, calendar = EMPTY_CALENDAR) {
   const previousPeriod = shiftMonth(period, -1)
-  const total = weekdaysInPeriod(period)
+  const total = weekdaysInPeriod(period, calendar)
+  // The previous month may belong to the previous year (January).
+  const calendarMissingYears = calendar.missingYears(`${previousPeriod}-01`, monthEnd(period))
+  const holidaysExcluded = calendarMissingYears.length === 0
 
   if (!cutoff || cutoff < `${period}-01`) {
     return {
@@ -149,7 +161,8 @@ export function resolvePeriodWindow(period, cutoff) {
       previousPeriod,
       periodStatus: 'after-cutoff',
       comparison: null,
-      workingDays: { elapsed: 0, total, remaining: total, holidaysExcluded: false },
+      calendarMissingYears,
+      workingDays: { elapsed: 0, total, remaining: total, holidaysExcluded },
     }
   }
 
@@ -169,14 +182,15 @@ export function resolvePeriodWindow(period, cutoff) {
         currentFrom: `${period}-01`,
         currentTo: periodEnd,
         ...fullPrevious,
-        holidaysExcluded: false,
+        holidaysExcluded,
       },
-      workingDays: { elapsed: total, total, remaining: 0, holidaysExcluded: false },
+      calendarMissingYears,
+      workingDays: { elapsed: total, total, remaining: 0, holidaysExcluded },
     }
   }
 
-  const elapsed = weekdaysBetween(`${period}-01`, cutoff)
-  const previousCutoff = equivalentPreviousCutoff(period, cutoff)
+  const elapsed = weekdaysBetween(`${period}-01`, cutoff, calendar)
+  const previousCutoff = equivalentPreviousCutoff(period, cutoff, calendar)
 
   return {
     period,
@@ -188,9 +202,29 @@ export function resolvePeriodWindow(period, cutoff) {
       currentTo: cutoff,
       previousFrom: fullPrevious.previousFrom,
       previousTo: previousCutoff ?? fullPrevious.previousTo,
-      holidaysExcluded: false,
+      holidaysExcluded,
     },
-    workingDays: { elapsed, total, remaining: total - elapsed, holidaysExcluded: false },
+    calendarMissingYears,
+    workingDays: { elapsed, total, remaining: total - elapsed, holidaysExcluded },
+  }
+}
+
+/**
+ * CAL-001: the quota template (brand_targets.working_days) is informative; the
+ * calendar rules. templateValues are the working_days of the targets of the
+ * brands shown. templateTotal is the template value when every brand has the
+ * same one (null otherwise or without template); mismatch is true when any
+ * template value differs from the calendar total, so the screens can show a
+ * discreet note.
+ */
+export function withTemplateWorkingDays(workingDays, templateValues = []) {
+  const values = templateValues.filter((value) => Number.isFinite(value))
+  const distinct = [...new Set(values)]
+
+  return {
+    ...workingDays,
+    templateTotal: distinct.length === 1 ? distinct[0] : null,
+    mismatch: distinct.some((value) => value !== workingDays.total),
   }
 }
 

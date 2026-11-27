@@ -41,6 +41,19 @@ vi.mock('../../server/services/myDayAvailabilityService.js', async (importOrigin
   ...availability,
 }))
 
+const calendarMock = vi.hoisted(() => ({ loadBusinessCalendar: vi.fn() }))
+
+vi.mock('../../server/services/businessCalendar.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...calendarMock,
+}))
+
+import {
+  BUSINESS_CALENDAR_SEED,
+  EMPTY_CALENDAR,
+  createBusinessCalendar,
+} from '../../server/services/businessCalendar.js'
+
 import {
   createMyDayRouter,
   resolveMyDayBrandSource,
@@ -95,6 +108,7 @@ const body = (res: ReturnType<typeof buildResponse>) =>
 
 beforeEach(() => {
   vi.clearAllMocks()
+  calendarMock.loadBusinessCalendar.mockResolvedValue(EMPTY_CALENDAR)
   mocks.loadDataCutoff.mockResolvedValue('2026-11-20')
   mocks.loadActiveBrandKeys.mockResolvedValue(['HIKVISION', 'UNV'])
   mocks.loadBrandLabels.mockResolvedValue(new Map([['UNV', 'UNV']]))
@@ -708,5 +722,72 @@ describe('MD-001 mounting', () => {
     expect(read('../../server/index.js')).toMatch(
       /'\/api\/my-day',\s*createApiRateLimit\(\)/,
     )
+  })
+})
+
+describe('CAL-001 calendar in Mi día', () => {
+  const seed = () => createBusinessCalendar([...BUSINESS_CALENDAR_SEED])
+  const user = { scope: 'assigned', brandIds: ['UNV', 'HIKVISION'] }
+
+  it('counts the business days with the calendar and compares the quota template', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    mocks.loadDataCutoff.mockResolvedValue('2026-11-26')
+    mocks.loadTargets.mockResolvedValue(new Map([
+      ['UNV', { revenue: 1000, grossProfit: null, grossMargin: null, workingDays: 21 }],
+    ]))
+
+    const res = await invoke('/', { authUser: user, query: {} })
+
+    // 19 of 21 Monday-to-Friday days minus the 16th (Revolución): 18 of 20.
+    expect(body(res).workingDays).toEqual({
+      elapsed: 18,
+      total: 20,
+      remaining: 2,
+      holidaysExcluded: true,
+      templateTotal: 21,
+      mismatch: true,
+    })
+    expect(body(res).calendarMissingYears).toEqual([])
+    expect(body(res).comparison).toMatchObject({ currentTo: '2026-11-26', previousTo: '2026-10-26', holidaysExcluded: true })
+  })
+
+  it('the template is only compared: the calendar days drive the pace', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    mocks.loadDataCutoff.mockResolvedValue('2026-11-26')
+    mocks.loadTargets.mockResolvedValue(new Map([
+      ['UNV', { revenue: 1000, grossProfit: null, grossMargin: null, workingDays: 20 }],
+    ]))
+
+    const res = await invoke('/', { authUser: user, query: {} })
+
+    expect(body(res).workingDays).toMatchObject({ total: 20, templateTotal: 20, mismatch: false })
+
+    const unv = (body(res).brands as Array<Record<string, unknown>>).find((brand) => brand.brandKey === 'UNV')
+
+    expect(unv?.projectedRevenue).toBeCloseTo((300 / 18) * 20, 6)
+  })
+
+  it('sales on non-working days are still summed: the metrics windows are plain dates', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    mocks.loadDataCutoff.mockResolvedValue('2026-11-26')
+
+    await invoke('/', { authUser: user, query: {} })
+
+    expect(mocks.loadWindowMetrics.mock.calls[0]?.[2]).toMatchObject({
+      currentFrom: '2026-11-01',
+      currentTo: '2026-11-26',
+      previousFrom: '2026-10-01',
+      previousTo: '2026-10-26',
+    })
+  })
+
+  it('a year without calendar warns and counts Monday to Friday', async () => {
+    calendarMock.loadBusinessCalendar.mockResolvedValue(seed())
+    mocks.loadDataCutoff.mockResolvedValue('2027-01-15')
+
+    const res = await invoke('/', { authUser: user, query: {} })
+
+    expect(body(res).calendarMissingYears).toEqual([2027])
+    expect(body(res).workingDays.holidaysExcluded).toBe(false)
   })
 })

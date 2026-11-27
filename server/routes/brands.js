@@ -62,9 +62,14 @@ import {
 } from '../services/brandsService.js'
 
 import {
+  loadBusinessCalendar,
+} from '../services/businessCalendar.js'
+
+import {
   MY_DAY_RULES,
   buildMyDayBrands,
   resolvePeriodWindow,
+  withTemplateWorkingDays,
 } from '../services/myDayRules.js'
 
 import {
@@ -153,9 +158,10 @@ function oneOf(value, allowed, name, fallback) {
 /** Brand, data cutoff, selected period, cost visibility and MD-001 window. */
 async function loadContext(pool, req) {
   const brandKey = resolveBrandParam(req)
-  const [dataCutoff, identity] = await Promise.all([
+  const [dataCutoff, identity, calendar] = await Promise.all([
     loadDataCutoff(pool),
     loadBrandIdentity(pool, brandKey),
+    loadBusinessCalendar(pool),
   ])
 
   if (!identity.known) {
@@ -172,7 +178,9 @@ async function loadContext(pool, req) {
     period,
     periods: periodOptions(dataCutoff),
     costVisible: costVisibleForBrand(resolveCostScope(req.authUser), brandKey),
-    window: period ? resolvePeriodWindow(period, dataCutoff) : null,
+    // CAL-001: business days = Monday to Friday minus the calendar.
+    calendar,
+    window: period ? resolvePeriodWindow(period, dataCutoff, calendar) : null,
   }
 }
 
@@ -247,7 +255,10 @@ export function createBrandsRouter(pool) {
       const sort = oneOf(req.query.sort, ['revenue', 'name', 'variation'], 'sort', 'revenue')
       const text = typeof req.query.q === 'string' ? req.query.q.trim() : ''
       const { limit, offset } = pagingOf(req.query)
-      const dataCutoff = await loadDataCutoff(pool)
+      const [dataCutoff, calendar] = await Promise.all([
+        loadDataCutoff(pool),
+        loadBusinessCalendar(pool),
+      ])
       const period = resolveBrandPeriod(req.query.period, dataCutoff)
       const base = {
         ok: true,
@@ -277,7 +288,7 @@ export function createBrandsRouter(pool) {
         return empty('no-sales-data')
       }
 
-      const window = resolvePeriodWindow(period, dataCutoff)
+      const window = resolvePeriodWindow(period, dataCutoff, calendar)
       const brandKeys = source.mode === 'all-brands'
         ? await loadAllBrandKeys(pool)
         : source.brandKeys
@@ -341,7 +352,12 @@ export function createBrandsRouter(pool) {
       return res.json({
         ...base,
         periodStatus: window.periodStatus,
-        workingDays: window.workingDays,
+        // CAL-001: the quota template is informative; the calendar rules.
+        workingDays: withTemplateWorkingDays(
+          window.workingDays,
+          [...targets.values()].map((target) => target.workingDays),
+        ),
+        calendarMissingYears: window.calendarMissingYears,
         comparison: window.comparison,
         summary: {
           brands: all.length,
@@ -401,7 +417,11 @@ export function createBrandsRouter(pool) {
       return res.json({
         ...base,
         periodStatus: window.periodStatus,
-        workingDays: window.workingDays,
+        workingDays: withTemplateWorkingDays(
+          window.workingDays,
+          [...targets.values()].map((target) => target.workingDays),
+        ),
+        calendarMissingYears: window.calendarMissingYears,
         comparison: window.comparison,
         hasSalesInPeriod: hasSalesIn(current),
         firstSaleDate: context.identity.firstSaleDate,
@@ -449,9 +469,9 @@ export function createBrandsRouter(pool) {
         return res.json({ ...base, reason: 'no-sales-data' })
       }
 
-      const { brandKey, period, dataCutoff, costVisible, window } = context
+      const { brandKey, period, dataCutoff, costVisible, window, calendar } = context
       const wants = (section) => requested.includes(section)
-      const plan = wants('yoy') ? buildYearWindowPlan(period, dataCutoff) : null
+      const plan = wants('yoy') ? buildYearWindowPlan(period, dataCutoff, calendar) : null
       const seriesFrom = shiftMonth(period, -(BRAND_RULES.seriesMonths - 1))
       const targetYear = Number(period.slice(0, 4))
       const targetsFrom = [seriesFrom, `${targetYear}-01`].sort()[0]
@@ -477,6 +497,7 @@ export function createBrandsRouter(pool) {
           month?.current.get(brandKey),
           month?.previous.get(brandKey),
           costVisible,
+          calendar,
         )
       }
 

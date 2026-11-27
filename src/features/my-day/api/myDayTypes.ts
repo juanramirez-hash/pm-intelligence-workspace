@@ -31,7 +31,13 @@ export interface MyDayWorkingDays {
   elapsed: number
   total: number
   remaining: number
+  // CAL-001: business days = Monday to Friday minus the calendar of
+  // non-working days. false when a year of the window has no calendar loaded.
   holidaysExcluded: boolean
+  // The quota template (brand_targets.working_days) is informative; the
+  // calendar rules. mismatch: the template differs from the calendar.
+  templateTotal?: number | null
+  mismatch?: boolean
 }
 
 export interface MyDayQuotaPace {
@@ -97,6 +103,8 @@ export interface MyDaySummaryResponse {
   brandSource?: MyDayBrandSource
   periodStatus?: MyDayPeriodStatus
   workingDays?: MyDayWorkingDays
+  // Years of the windows without a calendar (counted Monday to Friday).
+  calendarMissingYears?: number[]
   portfolio: MyDayPortfolio | null
   brands: MyDayBrand[]
   reason?: string

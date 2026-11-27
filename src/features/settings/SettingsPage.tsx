@@ -1,6 +1,7 @@
 import { useAuth } from '../auth/useAuth'
 
 import {
+  CalendarDays,
   CheckCircle2,
   Database,
   Settings2,
@@ -38,6 +39,10 @@ import {
 } from './AssistantPmsPanel'
 
 import {
+  CalendarSettings,
+} from './CalendarSettings'
+
+import {
   useWorkspaceContext,
 } from '../workspaces/shared/hooks/useWorkspaceContext'
 
@@ -52,6 +57,7 @@ type SettingsSection =
   | 'general'
   | 'users'
   | 'roles'
+  | 'calendar'
   | 'system'
 
 const sections: Array<{
@@ -80,6 +86,15 @@ const sections: Array<{
     description:
       'Alcance y permisos por perfil.',
     icon: ShieldCheck,
+  },
+  {
+    // CAL-001: official holidays and company days; business days = Monday to
+    // Friday minus these days.
+    id: 'calendar',
+    label: 'Calendario',
+    description:
+      'Días no laborables y días hábiles por mes.',
+    icon: CalendarDays,
   },
   {
     id: 'system',
@@ -1905,6 +1920,10 @@ export function SettingsPage() {
 
       {activeSection === 'roles' && (
         <RolesSettings />
+      )}
+
+      {activeSection === 'calendar' && (
+        <CalendarSettings />
       )}
 
       {activeSection === 'system' && (

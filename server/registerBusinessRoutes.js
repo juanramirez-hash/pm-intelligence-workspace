@@ -7,6 +7,7 @@ import { loadAuthenticatedUser } from './middleware/loadAuthenticatedUser.js'
 import { createActionsRouter } from './routes/actions.js'
 import { createMetricsRouter } from './routes/metrics.js'
 import { createBrandPortfolioRouter } from './routes/brandPortfolio.js'
+import { createBusinessCalendarRouter } from './routes/businessCalendar.js'
 import { createBrandsRouter } from './routes/brands.js'
 import { createMyDayRouter } from './routes/myDay.js'
 import { createDataStatusRouter } from './routes/dataStatus.js'
@@ -104,6 +105,15 @@ export function registerBusinessRoutes(app, pool) {
     requireAuth,
     authenticatedUser,
     createBrandPortfolioRouter(pool),
+  )
+
+  // CAL-001: calendar of non-working days. Any signed-in user can read it
+  // (dates and descriptions only). Rate limited in index.js.
+  app.use(
+    '/api/business-calendar',
+    requireAuth,
+    authenticatedUser,
+    createBusinessCalendarRouter(pool),
   )
 
   // NAV-001: "Datos al corte" of the top bar. Session only, no brand scope

@@ -545,6 +545,21 @@ Los contadores de límite viven en memoria: se reinician con el backend y supone
 - Pendiente de C-001 (retiro de endpoints sin llamador; no se tocó ninguno): `POST /api/data/sales/analytics/summary`, `/group-by`, `/filter-options` y `/detail-rows` (sin llamador en el repo; sus pruebas siguen en `tests/services/salesAnalytics*.test.ts` y `tests/routes/salesAnalytics.test.ts`) y `GET /api/metrics/brands`, `/brands/:brand/comparison` y `/brands/:brand/lost-customers` (sin llamador en `src/`; Mi día solo reutiliza sus reglas). Antes de retirarlos, confirmar que ningún consumidor externo (n8n, DNR, scripts) los usa.
 - Pendiente: MB-002 (Pronóstico), MB-003 (Inteligencia en servidor) y C-001.
 
+## Calendario — CAL-001 (fase A)
+
+| Entrega | Alcance | Estado |
+|---|---|---|
+| CAL-001A | Calendario de días no laborables y regla única de días hábiles en el servidor | Implementada · pendiente de aprobar los números, aplicar la migración 043 y desplegar |
+
+- Regla: días hábiles = lunes a viernes menos los feriados oficiales y los días de la empresa. Reemplaza el conteo de lunes a viernes de Mi día y de la ficha (incluido el comparativo año contra año y sus ventanas equivalentes) y la cartera. Las ventas de días no laborables se siguen sumando: solo cambia el conteo de días.
+- Migración 043 (`business_calendar`: fecha PK, tipo `official|company`, descripción, creado y actualizado por): con carga inicial de 2024, 2025 y 2026 (35 fechas, `ON CONFLICT DO NOTHING`), rollback que BORRA la tabla (y lo cargado desde la pantalla; el encabezado lo avisa), permisos para `pm_intelligence`, en `REQUIRED_SCHEMA` y sin subir `data_cache_version`. Se aplica como postgres.
+- Servidor: `server/services/businessCalendar.js` (calendario puro, `loadBusinessCalendar`, semilla), `metricPeriods`, `myDayRules` (`resolvePeriodWindow`, `withTemplateWorkingDays`) y `brandRules` (ventanas equivalentes, plan año contra año y comparativo mes contra mes) reciben el calendario (por defecto vacío = lunes a viernes). `GET /api/business-calendar` (cualquier usuario autenticado) y `GET /api/settings/business-calendar?year=`, `PUT` y `DELETE /:date` (solo administradores).
+- Año sin calendario: `calendarMissingYears` en Mi día, ficha, directorio y cartera, con aviso en pantalla y conteo de lunes a viernes.
+- Plantilla contra calendario: manda el calendario; `workingDays` trae `templateTotal` y `mismatch`, nota discreta en pantalla y lista de avisos en Configuración (febrero de 2026: plantilla 20, calendario 19; diciembre: 23 contra 21).
+- Configuración > Calendario (solo administrador): días por año con tipo y descripción, días hábiles por mes, alta, edición y baja, aviso de año sin calendario y avisos de plantilla.
+- Simulación de solo lectura antes de aplicar la migración: `node server/scripts/simulateBusinessCalendar.js --cutoff=2026-11-26` (con el calendario dentro del script; `--no-db` solo días y cortes; `--from-db` después de migrar para comparar).
+- Cancelada la fase B (cliente): Panorama ejecutivo se retira en EX-001; Pronóstico e Inteligencia usarán el calendario del servidor al reescribirse (MB-002 y MB-003). No se tocaron `dateAnalytics.ts`, `forecastCalendar.ts` ni los motores del cliente. La prueba de paridad Mi día ↔ tabla del Panorama ejecutivo (`tests/server/myDayParity.test.ts`) compara con calendario vacío (lunes a viernes); con calendario, Mi día difiere de esa tabla por diseño.
+
 ## Pendientes de seguridad
 
 - S8 — Separar usuarios de PostgreSQL: la app usa pm_intelligence, dueño de casi todos los objetos (excepto app_users, app_roles y app_user_brand_assignments, que son de postgres). Crear un usuario de aplicación con solo SELECT/INSERT/UPDATE/DELETE/EXECUTE y dejar la propiedad y las migraciones a otro usuario.

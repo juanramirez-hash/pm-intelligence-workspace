@@ -30,6 +30,7 @@ import { createPricingRouter } from './routes/pricing.js'
 import { createCustomersRouter } from './routes/customers.js'
 import { createSettingsUsersRouter } from './routes/settingsUsers.js'
 import { createSettingsRolesRouter } from './routes/settingsRoles.js'
+import { createSettingsBusinessCalendarRouter } from './routes/businessCalendar.js'
 import {
   loadAuthenticatedUser,
 } from './middleware/loadAuthenticatedUser.js'
@@ -308,6 +309,11 @@ app.use(
   createApiRateLimit(),
 )
 
+app.use(
+  '/api/business-calendar',
+  createApiRateLimit(),
+)
+
 registerBusinessRoutes(app, pool)
 
 app.use(
@@ -401,6 +407,15 @@ app.use(
   authenticatedUser,
   requireAdmin,
   createSettingsRolesRouter(pool),
+)
+
+// CAL-001: calendar of non-working days (administrators only).
+app.use(
+  '/api/settings/business-calendar',
+  requireAuth,
+  authenticatedUser,
+  requireAdmin,
+  createSettingsBusinessCalendarRouter(pool),
 )
 
 app.use(payloadTooLargeHandler)

@@ -24,6 +24,14 @@ import {
 } from '../format/brandsFormat'
 
 import {
+  CalendarNotes,
+} from '../../../shared/calendar/CalendarNotes'
+
+import {
+  missingCalendarNote,
+} from '../../../shared/calendar/calendarText'
+
+import {
   EMPTY_VALUE,
   formatInteger,
   formatMoney,
@@ -214,6 +222,11 @@ export function YearComparison({ data }: { data: BrandYearOverYear | undefined }
 
   return (
     <div>
+      <CalendarNotes
+        className="mb-3"
+        notes={[missingCalendarNote(data.calendarMissingYears)].filter((note): note is string => note !== null)}
+      />
+
       <div role="tablist" aria-label="Comparativo año contra año" className="mb-3 inline-flex rounded-xl border border-slate-200 bg-white p-1">
         {YEAR_MODES.map((option) => (
           <button
